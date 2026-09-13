@@ -9,11 +9,11 @@ import { agentConnection } from "../services/agentConnection";
 
 const activeItems = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard, tag: "Overview" },
+  { label: "Hardware Guide", to: "/agent-guide", icon: MonitorSmartphone, tag: "Setup" },
   { label: "Storage Inventory", to: "/devices", icon: HardDrive, tag: "Live" },
   { label: "Forensics Hub", to: "/forensics", icon: FileSearch, tag: "Cases" },
   { label: "Data Sanitization", to: "/sanitization", icon: ShieldAlert, tag: "Wipe" },
   { label: "File Recovery", to: "/recovery", icon: RotateCcw, tag: "NTFS" },
-  { label: "Hardware Guide", to: "/agent-guide", icon: MonitorSmartphone, tag: "Setup" }
 ];
 
 export function Sidebar() {
