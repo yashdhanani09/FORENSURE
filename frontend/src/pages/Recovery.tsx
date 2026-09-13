@@ -41,10 +41,9 @@ export function Recovery() {
       const res = await deviceApi.list({ refresh: force });
       const list = res.devices || [];
       setDevices(list);
-      // Auto-select first non-system or accessible data volume/drive
-      const defaultDev = list.find(d => !d.system_disk) || list[0];
-      if (defaultDev) {
-        setSelectedDeviceId(defaultDev.id);
+      // Auto-select "all" for whole machine recovery or maintain selection
+      if (!selectedDeviceId) {
+        setSelectedDeviceId("all");
       }
     } catch (e: any) {
       console.error("Failed to load devices", e);
@@ -208,6 +207,9 @@ export function Recovery() {
                 onChange={(e) => setSelectedDeviceId(e.target.value)}
                 className="w-full bg-[#090d16] border border-[#1e2c40] rounded-xl px-4 py-2.5 text-slate-100 text-xs focus:border-cyan-500 outline-none font-mono"
               >
+                <option value="all">
+                  💻 Entire Machine & All Recycle Bins (C:\, D:\, Desktop, etc.)
+                </option>
                 {devices.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.vendor || "Storage"} {d.model || d.device_path} ({formatBytes(d.capacity_bytes || d.size_bytes || 0)}) {d.system_disk ? "— [SYSTEM OS]" : ""}

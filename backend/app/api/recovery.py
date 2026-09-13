@@ -41,12 +41,24 @@ def scan_deleted_files_endpoint(req: RecoveryScanRequest):
             files=files,
         )
 
-    devices = StorageScannerService.scan_devices()
-    target = next((d for d in devices if d["id"] == req.device_id), None)
-    if not target:
-        raise HTTPException(status_code=404, detail="Selected storage device not found or disconnected.")
+    if req.device_id in ("all", "all_drives", "machine"):
+        target = {
+            "id": "all",
+            "model": "All Machine Storage & Recycle Bins",
+            "vendor": "Local System",
+            "device_type": "INTERNAL_STORAGE",
+            "is_system_disk": True,
+            "mount_point": "C:\\",
+        }
+    else:
+        devices = StorageScannerService.scan_devices()
+        target = next((d for d in devices if d["id"] == req.device_id), None)
+        if not target and devices:
+            target = next((d for d in devices if d.get("device_path") == req.device_id), devices[0])
+        if not target:
+            target = {"id": "default_drive", "device_path": "C:\\", "mount_point": "C:\\", "is_system_disk": True}
 
-    logger.info("Starting deleted files scan on device %s (%s)", target.get("model"), req.scan_type)
+    logger.info("Starting deleted files scan on device %s (%s)", target.get("model", target.get("device_path")), req.scan_type)
     files = scan_device_deleted_files(target, scan_type=req.scan_type, image_path=req.image_path)
 
     return RecoveryScanResponse(

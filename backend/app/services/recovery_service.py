@@ -100,141 +100,138 @@ def _parse_dollar_i_file(i_path: str) -> Tuple[Optional[str], Optional[str], Opt
         return None, None, None, None
 
 
-def _parse_ntfs_recycle_bin(mount_root: str) -> List[DeletedFileItem]:
-    """Scans Windows NTFS $RECYCLE.BIN directory on the given mount point."""
+def _parse_ntfs_recycle_bin(mount_root: str, max_items: int = 300) -> List[DeletedFileItem]:
+    """Scans Windows NTFS $RECYCLE.BIN directory on the given mount point cleanly and safely."""
     items: List[DeletedFileItem] = []
-    recycle_bin_path = os.path.join(mount_root, "$RECYCLE.BIN")
-    if not os.path.exists(recycle_bin_path):
-        recycle_bin_path = os.path.join(mount_root, "$Recycle.Bin")
-        if not os.path.exists(recycle_bin_path):
-            return items
+    checked_paths = set()
 
-    logger.info("Scanning NTFS Recycle Bin at %s", recycle_bin_path)
+    candidate_bins = [
+        os.path.join(mount_root, "$RECYCLE.BIN"),
+        os.path.join(mount_root, "$Recycle.Bin"),
+    ]
 
-    # Collect $I (metadata) and $R (data) files
-    i_files: Dict[str, str] = {}
-    r_files: Dict[str, str] = {}
+    for recycle_bin_path in candidate_bins:
+        norm_path = os.path.normcase(os.path.abspath(recycle_bin_path))
+        if norm_path in checked_paths or not os.path.exists(recycle_bin_path):
+            continue
+        checked_paths.add(norm_path)
 
-    try:
-        for root, dirs, files in os.walk(recycle_bin_path):
-            for f in files:
-                full_path = os.path.join(root, f)
-                if f.startswith("$I") or f.startswith("$i"):
-                    key = f[2:].lower()
-                    i_files[key] = full_path
-                elif f.startswith("$R") or f.startswith("$r"):
-                    key = f[2:].lower()
-                    r_files[key] = full_path
-                else:
-                    # Generic deleted file remnant
-                    try:
-                        sz = os.path.getsize(full_path)
-                        if sz > 0:
-                            ext = Path(f).suffix.lstrip(".")
-                            mtime = datetime.fromtimestamp(os.path.getmtime(full_path), tz=timezone.utc)
+        logger.info("Scanning NTFS Recycle Bin at %s", recycle_bin_path)
+        try:
+            # Find all user SID directories inside $RECYCLE.BIN
+            sid_dirs: List[str] = []
+            try:
+                for entry in os.scandir(recycle_bin_path):
+                    if entry.is_dir(follow_symlinks=False):
+                        sid_dirs.append(entry.path)
+            except (PermissionError, OSError) as pe:
+                logger.debug("Access denied scanning root of %s: %s", recycle_bin_path, pe)
+                continue
+
+            for sid_dir in sid_dirs:
+                if len(items) >= max_items:
+                    break
+                try:
+                    i_files: Dict[str, str] = {}
+                    r_files: Dict[str, str] = {}
+                    # Read direct children of this SID folder (no recursive descent into deleted folders)
+                    for entry in os.scandir(sid_dir):
+                        fn = entry.name
+                        if fn.startswith(("$I", "$i")):
+                            i_files[fn[2:].lower()] = entry.path
+                        elif fn.startswith(("$R", "$r")):
+                            r_files[fn[2:].lower()] = entry.path
+
+                    # Correlate $I metadata and $R payload
+                    for key, r_path in r_files.items():
+                        if len(items) >= max_items:
+                            break
+                        try:
+                            is_file = os.path.isfile(r_path)
+                            sz = os.path.getsize(r_path) if is_file else 0
+                            i_path = i_files.get(key)
+                            orig_name = Path(r_path).name
+                            orig_path = r_path
+                            del_time = datetime.fromtimestamp(os.path.getmtime(r_path), tz=timezone.utc)
+                            method = "ntfs_remnant"
+
+                            if i_path and os.path.exists(i_path):
+                                parsed_name, parsed_path, parsed_time, parsed_size = _parse_dollar_i_file(i_path)
+                                if parsed_name:
+                                    orig_name = parsed_name
+                                    method = "ntfs_metadata"
+                                if parsed_path:
+                                    orig_path = parsed_path
+                                if parsed_time:
+                                    del_time = parsed_time
+                                if parsed_size and parsed_size > 0:
+                                    sz = parsed_size
+
+                            ext = Path(orig_name).suffix.lstrip(".")
                             fid = f"del_{uuid.uuid4().hex[:12]}"
                             item = DeletedFileItem(
                                 id=fid,
-                                filename=f,
-                                original_path=os.path.relpath(full_path, mount_root),
-                                source_path=full_path,
+                                filename=orig_name,
+                                original_path=orig_path,
+                                source_path=r_path,
                                 size_bytes=sz,
-                                extension=ext or "bin",
+                                extension=ext or ("dir" if not is_file else "bin"),
                                 category=_get_category(ext),
-                                deleted_at=mtime,
+                                deleted_at=del_time,
                                 confidence="HIGH",
-                                confidence_score=85,
-                                validation_details="Recycle Bin payload file located",
-                                recovery_method="ntfs_remnant",
-                                recoverable=True,
+                                confidence_score=95 if method == "ntfs_metadata" else 85,
+                                validation_details="Verified NTFS Recycle Bin metadata ($I companion record)" if method == "ntfs_metadata" else "Recycle Bin payload located",
+                                recovery_method=method,
+                                recoverable=is_file,
                             )
                             items.append(item)
                             SCANNED_DELETED_CACHE[fid] = item
-                    except Exception:
-                        pass
-    except Exception as exc:
-        logger.warning("Error walking $RECYCLE.BIN: %s", exc)
+                        except Exception as exc:
+                            logger.debug("Error processing $R file %s: %s", r_path, exc)
 
-    # Correlate $I and $R files
-    for key, r_path in r_files.items():
-        try:
-            sz = os.path.getsize(r_path)
-            i_path = i_files.get(key)
-            orig_name = Path(r_path).name
-            orig_path = r_path
-            del_time = datetime.fromtimestamp(os.path.getmtime(r_path), tz=timezone.utc)
-            method = "ntfs_remnant"
+                    # Also capture historical $I files where $R payload was emptied
+                    for key, i_path in i_files.items():
+                        if len(items) >= max_items:
+                            break
+                        if key not in r_files:
+                            try:
+                                parsed_name, parsed_path, parsed_time, parsed_size = _parse_dollar_i_file(i_path)
+                                if parsed_name:
+                                    ext = Path(parsed_name).suffix.lstrip(".")
+                                    fid = f"del_{uuid.uuid4().hex[:12]}"
+                                    item = DeletedFileItem(
+                                        id=fid,
+                                        filename=parsed_name,
+                                        original_path=parsed_path or i_path,
+                                        source_path=i_path,
+                                        size_bytes=parsed_size or 0,
+                                        extension=ext or "bin",
+                                        category=_get_category(ext),
+                                        deleted_at=parsed_time or datetime.fromtimestamp(os.path.getmtime(i_path), tz=timezone.utc),
+                                        confidence="MEDIUM",
+                                        confidence_score=60,
+                                        validation_details="NTFS metadata record preserved ($I); payload unallocated",
+                                        recovery_method="ntfs_metadata_header",
+                                        recoverable=False,
+                                    )
+                                    items.append(item)
+                                    SCANNED_DELETED_CACHE[fid] = item
+                            except Exception:
+                                pass
+                except (PermissionError, OSError) as pe:
+                    logger.debug("Access denied reading SID folder %s: %s", sid_dir, pe)
+                    continue
 
-            # Parse original filename and timestamp from companion $I file
-            if i_path and os.path.exists(i_path):
-                parsed_name, parsed_path, parsed_time, parsed_size = _parse_dollar_i_file(i_path)
-                if parsed_name:
-                    orig_name = parsed_name
-                    method = "ntfs_metadata"
-                if parsed_path:
-                    orig_path = parsed_path
-                if parsed_time:
-                    del_time = parsed_time
-                if parsed_size and parsed_size > 0:
-                    sz = parsed_size
-
-            ext = Path(orig_name).suffix.lstrip(".")
-            fid = f"del_{uuid.uuid4().hex[:12]}"
-            item = DeletedFileItem(
-                id=fid,
-                filename=orig_name,
-                original_path=orig_path,
-                source_path=r_path,
-                size_bytes=sz,
-                extension=ext or "bin",
-                category=_get_category(ext),
-                deleted_at=del_time,
-                confidence="HIGH",
-                confidence_score=95 if method == "ntfs_metadata" else 85,
-                validation_details="Verified NTFS Recycle Bin metadata ($I companion record)" if method == "ntfs_metadata" else "Recycle Bin payload file located",
-                recovery_method=method,
-                recoverable=True,
-            )
-            items.append(item)
-            SCANNED_DELETED_CACHE[fid] = item
         except Exception as exc:
-            logger.debug("Error processing $R file %s: %s", r_path, exc)
-
-    # Also capture any historical $I files that may have lost their $R counterpart
-    for key, i_path in i_files.items():
-        if key not in r_files:
-            try:
-                parsed_name, parsed_path, parsed_time, parsed_size = _parse_dollar_i_file(i_path)
-                if parsed_name:
-                    ext = Path(parsed_name).suffix.lstrip(".")
-                    fid = f"del_{uuid.uuid4().hex[:12]}"
-                    item = DeletedFileItem(
-                        id=fid,
-                        filename=parsed_name,
-                        original_path=parsed_path or i_path,
-                        source_path=i_path,
-                        size_bytes=parsed_size or 0,
-                        extension=ext or "bin",
-                        category=_get_category(ext),
-                        deleted_at=parsed_time or datetime.fromtimestamp(os.path.getmtime(i_path), tz=timezone.utc),
-                        confidence="MEDIUM",
-                        confidence_score=60,
-                        validation_details="NTFS metadata record preserved ($I); raw payload unallocated",
-                        recovery_method="ntfs_metadata_header",
-                        recoverable=False,
-                    )
-                    items.append(item)
-                    SCANNED_DELETED_CACHE[fid] = item
-            except Exception:
-                pass
+            logger.warning("Error scanning %s: %s", recycle_bin_path, exc)
 
     return items
 
 
-def _scan_raw_carver(mount_root: str, max_files: int = 100) -> List[DeletedFileItem]:
+def _scan_raw_carver(mount_root: str, max_files: int = 150) -> List[DeletedFileItem]:
     """
     Performs raw binary signature carving from physical/logical storage volumes,
-    disk images, or unallocated slack areas. Supports JPG, PNG, PDF, DOCX, XLSX, ZIP, MP4.
+    disk images, temporary clusters, and unallocated slack. Supports JPG, PNG, PDF, DOCX, XLSX, ZIP, MP4.
     """
     items: List[DeletedFileItem] = []
     logger.info("Initiating forensic raw file carving on %s", mount_root)
@@ -245,7 +242,6 @@ def _scan_raw_carver(mount_root: str, max_files: int = 100) -> List[DeletedFileI
         raw_handle_path = f"\\\\.\\{drive_prefix}"
         try:
             with open(raw_handle_path, "rb") as rf:
-                # Stream first 64MB of raw sectors for fast carving
                 raw_chunk = rf.read(64 * 1024 * 1024)
                 if raw_chunk:
                     carved = raw_file_carver.carve_bytes(raw_chunk, base_offset=0)
@@ -272,10 +268,9 @@ def _scan_raw_carver(mount_root: str, max_files: int = 100) -> List[DeletedFileI
         except (PermissionError, OSError) as exc:
             logger.debug("Raw volume direct access unprivileged on %s: %s", raw_handle_path, exc)
 
-    # Strategy B: Scan any local forensic disk images (.dd, .raw, .img, .bin, .iso) in target locations
+    # Strategy B: Scan forensic disk images in target evidence/downloads locations
     candidate_images: List[str] = []
     search_dirs = [
-        mount_root,
         os.path.join(mount_root, "evidence"),
         os.path.join(mount_root, "evidence", "images"),
         os.path.join(os.path.expanduser("~"), "Downloads"),
@@ -285,11 +280,11 @@ def _scan_raw_carver(mount_root: str, max_files: int = 100) -> List[DeletedFileI
     for s_dir in search_dirs:
         if os.path.exists(s_dir):
             try:
-                for root, _, files in os.walk(s_dir):
-                    for fn in files:
-                        low = fn.lower()
+                for entry in os.scandir(s_dir):
+                    if entry.is_file(follow_symlinks=False):
+                        low = entry.name.lower()
                         if low.endswith((".dd", ".raw", ".img", ".bin", ".iso")):
-                            candidate_images.append(os.path.join(root, fn))
+                            candidate_images.append(entry.path)
                     if len(candidate_images) >= 5:
                         break
             except Exception:
@@ -324,28 +319,35 @@ def _scan_raw_carver(mount_root: str, max_files: int = 100) -> List[DeletedFileI
 
     # Strategy C: Deep scanning of unallocated slack, orphaned caches, and temporary clusters
     unallocated_dirs = [
-        os.path.join(mount_root, "AppData", "Local", "Temp"),
+        os.environ.get("LOCALAPPDATA", "") + r"\Temp" if os.environ.get("LOCALAPPDATA") else None,
+        os.environ.get("TEMP"),
+        os.path.join(os.path.expanduser("~"), "AppData", "Local", "Microsoft", "Office", "UnsavedFiles"),
         os.path.join(mount_root, "Temp"),
-        os.path.join(mount_root, "$Recycle.Bin"),
-        os.path.join(mount_root, "$RECYCLE.BIN"),
+        os.path.join(mount_root, "evidence"),
         os.path.join(mount_root, ".Trash-1000"),
     ]
 
-    for u_dir in unallocated_dirs:
+    for u_dir in filter(None, unallocated_dirs):
         if len(items) >= max_files:
             break
         if os.path.exists(u_dir):
             try:
+                scanned_in_dir = 0
                 for entry in os.scandir(u_dir):
-                    if len(items) >= max_files:
+                    if len(items) >= max_files or scanned_in_dir >= 40:
                         break
                     if entry.is_file(follow_symlinks=False):
-                        # Carve raw bytes from temporary and unlinked files
+                        low_name = entry.name.lower()
+                        # Target likely remnant/temporary payload files
+                        if not low_name.endswith((".tmp", ".dat", ".bak", ".chk", ".dmp", ".bin", ".swp", ".part", ".crdownload")) and not low_name.startswith("~"):
+                            continue
                         try:
                             file_sz = entry.stat().st_size
-                            if 32 <= file_sz <= 50 * 1024 * 1024:
+                            # Carve files between 64 bytes and 20 MB
+                            if 64 <= file_sz <= 20 * 1024 * 1024:
+                                scanned_in_dir += 1
                                 with open(entry.path, "rb") as ef:
-                                    buf = ef.read(min(file_sz, 10 * 1024 * 1024))
+                                    buf = ef.read(min(file_sz, 5 * 1024 * 1024))
                                 carved_entries = raw_file_carver.carve_bytes(buf)
                                 for c in carved_entries:
                                     if len(items) >= max_files:
@@ -353,7 +355,7 @@ def _scan_raw_carver(mount_root: str, max_files: int = 100) -> List[DeletedFileI
                                     item = DeletedFileItem(
                                         id=c.id,
                                         filename=c.filename,
-                                        original_path=f"{os.path.relpath(entry.path, mount_root)} [Carved Remnant]",
+                                        original_path=f"{os.path.basename(entry.path)} [Carved Cluster]",
                                         source_path=f"carved://{c.id}",
                                         size_bytes=c.size_bytes,
                                         extension=c.extension,
@@ -423,43 +425,65 @@ def scan_device_deleted_files(
         with Digital Image Analysis & Fragment Reconstruction (JPG, PNG, PDF, DOCX, XLSX, ZIP, MP4).
       - 'forensic_image': Directly carves a raw disk image file (.dd, .raw, .img).
     """
-    results: List[DeletedFileItem] = []
-
-    # If an image path is explicitly provided or scan_type is forensic_image
     if image_path and os.path.exists(image_path):
         return carve_forensic_image_file(image_path)
 
-    # Find the mount point
-    mount_point = device.get("mount_point")
-    if not mount_point:
-        for p in device.get("partitions", []):
-            if p.get("mount_point"):
-                mount_point = p.get("mount_point")
-                break
+    # Collect all candidate mount points / drives associated with this device
+    mount_points: List[str] = []
+    if device.get("mount_point"):
+        mount_points.append(device["mount_point"])
+    for p in device.get("partitions", []):
+        mp = p.get("mount_point")
+        if mp and mp not in mount_points:
+            mount_points.append(mp)
 
-    if not mount_point and os.path.exists(device.get("device_path", "")):
-        mount_point = device.get("device_path")
+    # If device path is a drive letter (e.g. 'D:\')
+    dev_path = device.get("device_path", "")
+    if len(dev_path) >= 2 and dev_path[1] == ":" and dev_path not in mount_points:
+        norm_dp = dev_path if dev_path.endswith("\\") else dev_path + "\\"
+        mount_points.append(norm_dp)
 
-    if not mount_point:
-        logger.warning("No mount point found for device %s", device.get("id"))
-        return results
+    # If device is an internal disk or system drive, include all local machine drives (C:\, D:\)
+    # so that deleted files from Desktop, Downloads, and Documents are always discovered!
+    if device.get("is_system_disk") or device.get("device_type") == "INTERNAL_STORAGE" or not mount_points:
+        import platform
+        if platform.system() == "Windows":
+            sys_drive = os.environ.get("SystemDrive", "C:")
+            if not sys_drive.endswith("\\"):
+                sys_drive += "\\"
+            if sys_drive not in mount_points:
+                mount_points.append(sys_drive)
+            for extra in ["D:\\", "E:\\"]:
+                if os.path.exists(extra) and extra not in mount_points:
+                    mount_points.append(extra)
+        else:
+            if "/" not in mount_points:
+                mount_points.append("/")
 
-    # Normalize Windows mount point (e.g. 'D:\')
-    if len(mount_point) == 2 and mount_point[1] == ":":
-        mount_point = mount_point + "\\"
+    results: List[DeletedFileItem] = []
+    seen_keys = set()
 
-    # 1. NTFS Recycle Bin / Trash scanning (Quick and Deep)
-    ntfs_items = _parse_ntfs_recycle_bin(mount_point)
-    results.extend(ntfs_items)
+    for mp in mount_points:
+        # 1. NTFS Recycle Bin scanning
+        ntfs_items = _parse_ntfs_recycle_bin(mp)
+        for item in ntfs_items:
+            key = (item.filename, item.size_bytes, item.original_path)
+            if key not in seen_keys:
+                seen_keys.add(key)
+                results.append(item)
 
-    # 2. Raw Data File Carving & Fragment Reconstruction (Deep / Carving)
-    if scan_type in {"deep", "carving"} or len(results) == 0:
-        carved_items = _scan_raw_carver(mount_point)
-        results.extend(carved_items)
+        # 2. Raw Data File Carving & Fragment Reconstruction (Deep / Carving or fallback)
+        if scan_type in {"deep", "carving"}:
+            carved_items = _scan_raw_carver(mp)
+            for item in carved_items:
+                key = (item.filename, item.size_bytes, item.original_path)
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    results.append(item)
 
     # Sort by deleted_at descending
     results.sort(key=lambda x: x.deleted_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
-    logger.info("Found %d deleted / carved files on %s", len(results), mount_point)
+    logger.info("Found %d deleted / carved files across targets %s", len(results), mount_points)
     return results
 
 
