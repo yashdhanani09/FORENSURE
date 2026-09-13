@@ -1,0 +1,1 @@
+# Windows USB adapter package

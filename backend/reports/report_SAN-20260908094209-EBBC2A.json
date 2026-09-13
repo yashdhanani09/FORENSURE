@@ -1,0 +1,29 @@
+{
+  "certificate_id": "CERT-SAN-20260908094209-EBBC2A",
+  "job_id": "SAN-20260908094209-EBBC2A",
+  "device": {
+    "device_id": "dev-3de24b724b3ddc4b",
+    "vendor": "SanDisk",
+    "model": "Cruzer Blade",
+    "serial": null,
+    "capacity_bytes": 19,
+    "connection": "USB"
+  },
+  "sanitization": {
+    "target_file_path": "Delete/Mahek.pdf",
+    "method": "overwrite",
+    "pattern": "zero",
+    "passes": 1,
+    "started_at": "2026-09-08T09:42:10.782102",
+    "completed_at": null
+  },
+  "verification": {
+    "method": "file_absence_check",
+    "scope": "file_system",
+    "result": "PASSED"
+  },
+  "result": "VERIFYING",
+  "limitations": [
+    "Software overwrite cannot guarantee physical NAND-cell erasure on all flash storage due to wear-leveling and spare blocks."
+  ]
+}

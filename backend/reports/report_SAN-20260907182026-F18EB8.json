@@ -1,0 +1,29 @@
+{
+  "certificate_id": "CERT-SAN-20260907182026-F18EB8",
+  "job_id": "SAN-20260907182026-F18EB8",
+  "device": {
+    "device_id": "dev-3de24b724b3ddc4b",
+    "vendor": "SanDisk",
+    "model": "Cruzer Blade",
+    "serial": null,
+    "capacity_bytes": 82,
+    "connection": "USB"
+  },
+  "sanitization": {
+    "target_file_path": "Delete/hi.pdf",
+    "method": "overwrite",
+    "pattern": "zero",
+    "passes": 1,
+    "started_at": "2026-09-07T18:20:27.694229",
+    "completed_at": null
+  },
+  "verification": {
+    "method": "file_absence_check",
+    "scope": "file_system",
+    "result": "PASSED"
+  },
+  "result": "VERIFYING",
+  "limitations": [
+    "Software overwrite cannot guarantee physical NAND-cell erasure on all flash storage due to wear-leveling and spare blocks."
+  ]
+}

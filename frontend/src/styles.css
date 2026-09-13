@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 98%;
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --primary: 189 94% 43%;
+    --primary-foreground: 222 47% 6%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 347 77% 50%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 158 64% 45%;
+    --success-foreground: 210 40% 98%;
+    --ring: 189 94% 43%;
+    --radius: 0.75rem;
+  }
+
+  body {
+    background-color: #090d16;
+    color: #f1f5f9;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Custom dark scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #090d16;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1e2c40;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2a3d58;
+  }
+}
+
+/* ─── HoverRevealCard animations ─────────────────────────────────────────── */
+@keyframes irid-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes shimmer-sweep {
+  0%   { background-position: 200% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
+@keyframes object-rise {
+  0%   { transform: translateY(110%) scale(0.88); opacity: 0; }
+  65%  { transform: translateY(-14%) scale(1.05); opacity: 1; }
+  80%  { transform: translateY(4%)   scale(0.98); }
+  100% { transform: translateY(0%)   scale(1);    opacity: 1; }
+}
+
+@keyframes object-drop {
+  0%   { transform: translateY(0%)   scale(1);    opacity: 1; }
+  100% { transform: translateY(120%) scale(0.88); opacity: 0; }
+}
+
+.hrc-panel-irid {
+  background-size: 400% 400%;
+  animation: irid-shift 4s ease infinite;
+}
+
+.hrc-sweep {
+  background-size: 300% 100%;
+  animation: shimmer-sweep 2.4s linear infinite;
+}
+
+.hrc-rise {
+  animation: object-rise 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.hrc-drop {
+  animation: object-drop 0.35s ease-in forwards;
+}

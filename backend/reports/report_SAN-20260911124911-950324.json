@@ -1,0 +1,29 @@
+{
+  "certificate_id": "CERT-SAN-20260911124911-950324",
+  "job_id": "SAN-20260911124911-950324",
+  "device": {
+    "device_id": "dev-b711776f410df56b",
+    "vendor": "Local Storage",
+    "model": "colleg  (D:)",
+    "serial": "\\\\?\\Volume{236c40cc-00f3-481f-acee-798b10331ba3}\\",
+    "capacity_bytes": 18,
+    "connection": "Storage Device"
+  },
+  "sanitization": {
+    "target_file_path": "yash dhanani/New Text Document.txt",
+    "method": "overwrite",
+    "pattern": "zero",
+    "passes": 1,
+    "started_at": "2026-09-11T12:49:18.433470",
+    "completed_at": null
+  },
+  "verification": {
+    "method": "file_absence_check",
+    "scope": "file_system",
+    "result": "PASSED"
+  },
+  "result": "VERIFYING",
+  "limitations": [
+    "Software overwrite cannot guarantee physical NAND-cell erasure on all flash storage due to wear-leveling and spare blocks."
+  ]
+}
