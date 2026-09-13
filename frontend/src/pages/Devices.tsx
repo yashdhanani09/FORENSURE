@@ -5,7 +5,7 @@ import { EmptyState } from "../components/EmptyState";
 import { useDevices } from "../hooks/useDevices";
 import { Search, HardDrive, Smartphone, Usb, Filter, ShieldCheck } from "lucide-react";
 
-type FilterCategory = "all" | "usb" | "data_volume" | "mobile" | "system";
+type FilterCategory = "all" | "internal" | "usb" | "data_volume" | "mobile" | "system";
 
 export function Devices() {
   const { devices, loading, error, refresh } = useDevices();
@@ -15,9 +15,10 @@ export function Devices() {
   const filteredDevices = useMemo(() => {
     return devices.filter((d) => {
       // Category filter
+      if (filter === "internal" && d.device_type !== "INTERNAL_STORAGE" && (d.is_usb || d.transport === "usb")) return false;
       if (filter === "usb" && !d.is_usb && d.transport !== "usb") return false;
       if (filter === "mobile" && d.device_type !== "MOBILE_DEVICE") return false;
-      if (filter === "data_volume" && d.device_type !== "DATA_VOLUME") return false;
+      if (filter === "data_volume" && d.device_type !== "DATA_VOLUME" && d.device_type !== "INTERNAL_STORAGE") return false;
       if (filter === "system" && !d.system_disk) return false;
 
       // Text search
@@ -36,8 +37,9 @@ export function Devices() {
   const counts = useMemo(() => {
     return {
       all: devices.length,
+      internal: devices.filter(d => d.device_type === "INTERNAL_STORAGE" || (!d.is_usb && d.transport !== "usb" && d.device_type !== "MOBILE_DEVICE")).length,
       usb: devices.filter(d => d.is_usb || d.transport === "usb").length,
-      data_volume: devices.filter(d => d.device_type === "DATA_VOLUME").length,
+      data_volume: devices.filter(d => d.device_type === "DATA_VOLUME" || d.device_type === "INTERNAL_STORAGE").length,
       mobile: devices.filter(d => d.device_type === "MOBILE_DEVICE").length,
       system: devices.filter(d => d.system_disk).length
     };
@@ -65,6 +67,16 @@ export function Devices() {
               }`}
             >
               All Storage ({counts.all})
+            </button>
+            <button
+              onClick={() => setFilter("internal")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+                filter === "internal"
+                  ? "bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-glow"
+                  : "border border-[#1e2c40] bg-[#0f172a] text-slate-400 hover:text-white"
+              }`}
+            >
+              Internal Machine ({counts.internal})
             </button>
             <button
               onClick={() => setFilter("data_volume")}

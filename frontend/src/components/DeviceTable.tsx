@@ -29,6 +29,7 @@ export function DeviceTable({ devices }: { devices: UsbDevice[] }) {
                     <div className={`p-2.5 rounded-xl shrink-0 ${
                       isSystem ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
                       isMobile ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" :
+                      device.device_type === "INTERNAL_STORAGE" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
                       "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
                     }`}>
                       {isMobile ? <Smartphone className="h-4 w-4" /> : <HardDrive className="h-4 w-4" />}
@@ -44,9 +45,10 @@ export function DeviceTable({ devices }: { devices: UsbDevice[] }) {
                   <span className={`shrink-0 whitespace-nowrap px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                     isSystem ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" :
                     isMobile ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
+                    device.device_type === "INTERNAL_STORAGE" ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" :
                     "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
                   }`}>
-                    {isSystem ? "SYSTEM OS" : (device.device_type || (device.transport ?? "Storage"))}
+                    {isSystem ? "SYSTEM OS" : device.device_type === "INTERNAL_STORAGE" ? "INTERNAL MACHINE" : (device.device_type || (device.transport ?? "Storage"))}
                   </span>
                 </td>
 

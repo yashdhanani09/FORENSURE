@@ -31,10 +31,8 @@ def _device_type(record: UsbDeviceRecord) -> str:
     tran = (record.transport or "").lower()
     if tran == "usb":
         return "USB_STORAGE"
-    if tran == "nvme":
-        return "NVME"
-    if tran in ("sata", "ata"):
-        return "SATA"
+    if tran in ("nvme", "sata", "ata", "scsi"):
+        return "INTERNAL_STORAGE"
     if tran == "mmc":
         return "SD_CARD"
     if tran == "scsi":

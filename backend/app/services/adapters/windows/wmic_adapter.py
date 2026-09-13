@@ -84,24 +84,27 @@ foreach ($disk in $disks) {
     }
 }
 
-# Enumerate accessible data volumes (e.g. D:\, E:\)
-$vols = Get-Volume | Where-Object { $_.DriveLetter -and $_.DriveLetter -ne 'C' -and $_.DriveType -in @('Fixed', 'Removable') }
+# Enumerate accessible storage volumes (Internal C:\, D:\, external drives)
+$vols = Get-Volume | Where-Object { $_.DriveLetter -and $_.DriveType -in @('Fixed', 'Removable') }
 foreach ($v in $vols) {
     $dl = ('{0}:\' -f $v.DriveLetter)
-    $lbl = if ($v.FileSystemLabel) { ('{0} ({1}:)' -f $v.FileSystemLabel, $v.DriveLetter) } else { ('Data Volume ({0}:)' -f $v.DriveLetter) }
+    $isSys = ($v.DriveLetter -eq 'C' -or ($v.FileSystemLabel -and $v.FileSystemLabel -imatch 'os|boot|system'))
+    $lbl = if ($v.FileSystemLabel) { ('{0} ({1}:)' -f $v.FileSystemLabel, $v.DriveLetter) } else { ('Volume ({0}:)' -f $v.DriveLetter) }
+    $devType = if ($v.DriveType -eq 'Removable') { 'REMOVABLE_STORAGE' } else { 'INTERNAL_STORAGE' }
+    $vendorName = if ($isSys) { 'Internal Machine (System)' } else { 'Internal Storage' }
     $result += @{
         device_path    = $dl
         kernel_name    = ('Volume-{0}' -f $v.DriveLetter)
-        vendor         = 'Local Storage'
+        vendor         = $vendorName
         model          = $lbl
         serial         = $v.UniqueId
         size_bytes     = [int64]$v.Size
-        bus            = if ($v.DriveType -eq 'Removable') { 'usb' } else { 'sata' }
+        bus            = if ($v.DriveType -eq 'Removable') { 'usb' } else { 'nvme' }
         is_usb         = ($v.DriveType -eq 'Removable')
         is_removable   = ($v.DriveType -eq 'Removable')
-        is_system_disk = $false
-        is_read_only   = $false
-        device_type    = if ($v.DriveType -eq 'Removable') { 'REMOVABLE_STORAGE' } else { 'DATA_VOLUME' }
+        is_system_disk = [bool]$isSys
+        is_read_only   = [bool]$isSys
+        device_type    = $devType
         partitions     = @(@{
             partition_path       = $dl
             partition_number     = '1'

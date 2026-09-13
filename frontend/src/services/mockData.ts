@@ -1,7 +1,56 @@
-﻿import type { DeviceListResponse, UsbDeviceDetail, DeviceAnalysis, FileBrowserResponse, EvidenceListResponse, VerificationResult } from "../types/device";
+import type { DeviceListResponse, UsbDeviceDetail, DeviceAnalysis, FileBrowserResponse, EvidenceListResponse, VerificationResult } from "../types/device";
 import type { RecoveryScanResponse, RestoreFileResponse } from "./recoveryApi";
 
 export const MOCK_DEVICES: UsbDeviceDetail[] = [
+  {
+    id: "internal_samsung_nvme_512gb",
+    device_path: "\\\\.\\PHYSICALDRIVE0",
+    vendor: "Samsung",
+    model: "NVMe SSD 980 PRO (Internal Machine Storage)",
+    serial: "S5GXNF0R123456K",
+    capacity_bytes: 512110190592,
+    size_bytes: 512110190592,
+    filesystem: "NTFS",
+    mount_point: "C:\\",
+    removable: false,
+    read_only: false,
+    transport: "nvme",
+    device_type: "INTERNAL_STORAGE",
+    system_disk: true,
+    is_protected: true,
+    is_usb: false,
+    analysis_available: true,
+    detected_at: new Date().toISOString(),
+    partitions: [
+      {
+        name: "PHYSICALDRIVE0p1",
+        device_path: "\\\\.\\PHYSICALDRIVE0p1",
+        filesystem: "FAT32",
+        label: "SYSTEM_EFI",
+        uuid: "C284-91A0",
+        capacity_bytes: 104857600,
+        mount_points: [],
+      },
+      {
+        name: "PHYSICALDRIVE0p2",
+        device_path: "\\\\.\\PHYSICALDRIVE0p2",
+        filesystem: "NTFS",
+        label: "OS (C:)",
+        uuid: "4A21B903-8821",
+        capacity_bytes: 209071374336,
+        mount_points: ["C:\\"],
+      },
+      {
+        name: "PHYSICALDRIVE0p3",
+        device_path: "\\\\.\\PHYSICALDRIVE0p3",
+        filesystem: "NTFS",
+        label: "DATA (D:)",
+        uuid: "8891CA02-3319",
+        capacity_bytes: 301735084032,
+        mount_points: ["D:\\"],
+      },
+    ],
+  },
   {
     id: "usb_sandisk_extreme_64gb",
     device_path: "\\\\.\\PHYSICALDRIVE1",

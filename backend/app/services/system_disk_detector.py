@@ -40,6 +40,8 @@ class SystemDiskDetector:
                 if res.returncode == 0 and res.stdout.strip():
                     disk_num = res.stdout.strip()
                     protected.add(f"\\\\.\\PHYSICALDRIVE{disk_num}")
+                protected.add("C:\\")
+                protected.add("C:")
 
             else:
                 # Linux: Use findmnt to trace / and /boot back to their physical disks.
