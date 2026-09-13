@@ -33,11 +33,11 @@ const STEPS = [
     number: "02",
     icon: Cpu,
     title: "Extract & Launch the Bridge",
-    task: "Unzip the package, then double-click START-BRIDGE.bat to start",
+    task: "Unzip the package, then double-click START-BRIDGE.bat",
     detail:
-      "Right-click the downloaded zip → Extract All. Open the extracted folder and double-click START-BRIDGE.bat. It will automatically request Administrator access — click Yes on the UAC prompt. The terminal window will stay open the entire time the bridge is running. Do NOT close it.",
-    badge: "UAC Elevation Required",
-    badgeColor: "amber",
+      "Right-click the downloaded zip → Extract All. Open the extracted folder and double-click START-BRIDGE.bat. A terminal window will appear — keep it open the entire time you are using FORENSURE. That's it, no installation needed.",
+    badge: "Zero Install",
+    badgeColor: "cyan",
     command: `[+] Physical Disk & MTP Probe : ACTIVE
 [+] Local API Endpoint       : http://127.0.0.1:8000
 [+] STATUS : LISTENING FOR WEB CLIENTS`,
