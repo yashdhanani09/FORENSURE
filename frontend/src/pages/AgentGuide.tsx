@@ -32,10 +32,10 @@ const STEPS = [
     id: "extract",
     number: "02",
     icon: Cpu,
-    title: "Extract & Run as Administrator",
-    task: "Unzip the package, then launch the agent with elevated privileges",
+    title: "Extract & Launch the Bridge",
+    task: "Unzip the package, then double-click START-BRIDGE.bat to start",
     detail:
-      "Right-click the downloaded zip → Extract All. Inside the folder, right-click FORENSURE-Bridge.exe and choose Run as administrator. Click Yes on the Windows UAC prompt. Raw disk sector access requires admin elevation.",
+      "Right-click the downloaded zip → Extract All. Open the extracted folder and double-click START-BRIDGE.bat. It will automatically request Administrator access — click Yes on the UAC prompt. The terminal window will stay open the entire time the bridge is running. Do NOT close it.",
     badge: "UAC Elevation Required",
     badgeColor: "amber",
     command: `[+] Physical Disk & MTP Probe : ACTIVE
