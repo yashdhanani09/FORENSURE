@@ -1,4 +1,4 @@
-﻿"""Admin privilege detection utility for Windows.
+"""Admin privilege detection utility for Windows.
 
 Provides is_admin() and require_admin_or_warn() that other services can call.
 On non-Windows platforms is_admin() always returns True (no restriction needed).
@@ -35,6 +35,6 @@ def require_admin_or_warn(context: str = "device detection") -> None:
             "SecureData is NOT running as Administrator. "
             "%s will be limited or unavailable. "
             "Please restart the backend terminal as Administrator "
-            "(right-click → Run as Administrator).",
+            "(right-click -> Run as Administrator).",
             context,
         )

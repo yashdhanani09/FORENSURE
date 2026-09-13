@@ -22,7 +22,7 @@ def main():
  HOW TO USE:
   1. Keep THIS WINDOW OPEN the entire time you are inspecting hardware.
   2. Open the FORENSURE web app in Chrome or Edge.
-  3. The portal auto-connects — the status bar turns GREEN when live.
+  3. The portal auto-connects -- the status bar turns GREEN when live.
   4. To stop: close this window or press Ctrl+C.
 ======================================================================
 """)

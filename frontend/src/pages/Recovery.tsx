@@ -148,6 +148,9 @@ export function Recovery() {
   });
 
   const selectedDevice = devices.find(d => d.id === selectedDeviceId);
+  const isMobileTarget = selectedDevice?.device_type === "MOBILE_DEVICE" || 
+                         (selectedDevice?.device_path?.includes("WPD") ?? false) ||
+                         (selectedDevice?.partitions?.some(p => p.filesystem === "MTP") ?? false);
 
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 select-none">
@@ -161,7 +164,7 @@ export function Recovery() {
             Deleted File Recovery & Carver
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            NTFS `$RECYCLE.BIN` parser, cluster remnant carver, and cryptographic SHA-256 verified restoration.
+            NTFS `$RECYCLE.BIN` parser, Android Scoped Storage carver, and cryptographic SHA-256 verified restoration.
           </p>
         </div>
 
@@ -212,7 +215,7 @@ export function Recovery() {
                 </option>
                 {devices.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.vendor || "Storage"} {d.model || d.device_path} ({formatBytes(d.capacity_bytes || d.size_bytes || 0)}) {d.system_disk ? "— [SYSTEM OS]" : ""}
+                    {d.device_type === "MOBILE_DEVICE" ? "📱 " : ""}{d.vendor || "Storage"} {d.model || d.device_path} ({formatBytes(d.capacity_bytes || d.size_bytes || 0)}) {d.system_disk ? "— [SYSTEM OS]" : ""}{d.device_type === "MOBILE_DEVICE" ? " — [MTP PHONE]" : ""}
                   </option>
                 ))}
               </select>
@@ -234,7 +237,7 @@ export function Recovery() {
                     : "bg-[#090d16] border-[#1e2c40] text-slate-400 hover:text-white"
                 }`}
               >
-                NTFS Metadata
+                {isMobileTarget ? "Scoped Trash" : "NTFS Metadata"}
               </button>
               <button
                 type="button"
@@ -245,7 +248,7 @@ export function Recovery() {
                     : "bg-[#090d16] border-[#1e2c40] text-slate-400 hover:text-white"
                 }`}
               >
-                Raw Carver
+                {isMobileTarget ? "Deep Remnants" : "Raw Carver"}
               </button>
               <button
                 type="button"
@@ -270,7 +273,7 @@ export function Recovery() {
               variant="primary"
               className="w-full h-10 shadow-glow"
             >
-              <Search className="w-4 h-4" /> {scanning ? "Analyzing Sectors..." : "Scan & Carve Files"}
+              <Search className="w-4 h-4" /> {scanning ? "Analyzing Sectors..." : isMobileTarget ? "Scan Phone Storage" : "Scan & Carve Files"}
             </Button>
           </div>
         </div>
@@ -296,6 +299,50 @@ export function Recovery() {
             <div><span className="text-slate-500">Type:</span> <span className="text-cyan-400 font-semibold">{selectedDevice.device_type || "STORAGE"}</span></div>
             <div><span className="text-slate-500">Mount:</span> <span className="text-slate-200">{selectedDevice.mount_point || "Unmounted"}</span></div>
             <div><span className="text-slate-500">Status:</span> <span className="text-emerald-400 font-semibold">Active & Scannable</span></div>
+          </div>
+        )}
+
+        {/* Mobile Device Forensic Advisory Banner */}
+        {isMobileTarget && (
+          <div className="bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-purple-950/20 border border-cyan-500/40 rounded-xl p-4 text-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-cyan-300 font-bold tracking-wide uppercase text-[11px]">
+                <Smartphone className="w-4 h-4 text-cyan-400" />
+                <span>Connected Mobile Device Detected (MTP / Portable Device)</span>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-mono text-[10px] font-semibold">
+                Android Scoped Recovery Mode
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300 text-[11px] leading-relaxed pt-1">
+              <div className="bg-black/30 p-3 rounded-lg border border-white/5 space-y-1">
+                <div className="font-semibold text-white flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> USB & Screen Requirements
+                </div>
+                <p className="text-slate-400 text-[10px]">
+                  Keep the phone screen <strong className="text-slate-200">unlocked</strong> during scanning, and verify USB mode is set to <strong className="text-slate-200">"File Transfer / MTP"</strong> (not "Charging only").
+                </p>
+              </div>
+
+              <div className="bg-black/30 p-3 rounded-lg border border-white/5 space-y-1">
+                <div className="font-semibold text-white flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" /> Active Recovery Scope
+                </div>
+                <p className="text-slate-400 text-[10px]">
+                  Scans Android Scoped Storage Trash (<code className="text-cyan-300">.trashed</code> 30-day retention), Gallery / Google Photos (<code className="text-cyan-300">.tmfs</code>), and high-resolution thumbnail media caches.
+                </p>
+              </div>
+
+              <div className="bg-black/30 p-3 rounded-lg border border-white/5 space-y-1">
+                <div className="font-semibold text-white flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Deep Erasure & MicroSD Carving
+                </div>
+                <p className="text-slate-400 text-[10px]">
+                  Android internal storage enforces File-Based Encryption (FBE). If files were lost on an external <strong className="text-slate-200">MicroSD Card</strong>, plug the SD card directly into a PC card reader for 100% raw sector bitstream carving.
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -479,6 +526,8 @@ export function Recovery() {
                           <div className="text-[10px] font-mono text-cyan-400/80 uppercase">
                             {file.recovery_method.startsWith("raw_carver")
                               ? `Raw Carver (${file.extension.toUpperCase()})`
+                              : file.recovery_method.startsWith("android_")
+                              ? file.recovery_method.replace("android_", "Android ").replace(/_/g, " ")
                               : "NTFS Metadata"}
                           </div>
                         </div>

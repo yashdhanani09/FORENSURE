@@ -54,7 +54,11 @@ def scan_deleted_files_endpoint(req: RecoveryScanRequest):
         devices = StorageScannerService.scan_devices()
         target = next((d for d in devices if d["id"] == req.device_id), None)
         if not target and devices:
-            target = next((d for d in devices if d.get("device_path") == req.device_id), devices[0])
+            target = next((d for d in devices if d.get("device_path") == req.device_id), None)
+        if not target and devices:
+            target = next((d for d in devices if req.device_id in d.get("device_path", "") or req.device_id in d.get("kernel_name", "") or req.device_id in d.get("model", "")), None)
+        if not target and devices:
+            target = devices[0]
         if not target:
             target = {"id": "default_drive", "device_path": "C:\\", "mount_point": "C:\\", "is_system_disk": True}
 

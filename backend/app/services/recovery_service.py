@@ -424,9 +424,29 @@ def scan_device_deleted_files(
       - 'deep' / 'carving': Combines NTFS metadata and byte-level Raw Data File Carving
         with Digital Image Analysis & Fragment Reconstruction (JPG, PNG, PDF, DOCX, XLSX, ZIP, MP4).
       - 'forensic_image': Directly carves a raw disk image file (.dd, .raw, .img).
+      - Mobile Devices (Android, iPhone, MTP/WPD): Scans Android Scoped Storage Trash (.trashed),
+        Google Photos & Gallery Trash (.tmfs), cached thumbnail remnants (.thumbnails), and LOST.DIR.
     """
     if image_path and os.path.exists(image_path):
         return carve_forensic_image_file(image_path)
+
+    # Check if target is a mobile device (Android / iPhone / MTP / WPD)
+    dev_type = device.get("device_type", "")
+    dev_path = device.get("device_path", "")
+    mount_pt = device.get("mount_point", "")
+    is_mobile = (
+        dev_type == "MOBILE_DEVICE"
+        or dev_path.startswith(r"\\.\WPD")
+        or mount_pt.startswith(r"\\.\WPD")
+        or any(p.get("partition_filesystem") == "MTP" for p in device.get("partitions", []))
+    )
+    if is_mobile:
+        logger.info("Routing scan to Mobile Forensic Recovery Service for device %s", device.get("model", dev_path))
+        from app.services.mobile_recovery import scan_mobile_deleted_files
+        mobile_items = scan_mobile_deleted_files(device, max_items=300)
+        for item in mobile_items:
+            SCANNED_DELETED_CACHE[item.id] = item
+        return mobile_items
 
     # Collect all candidate mount points / drives associated with this device
     mount_points: List[str] = []
@@ -527,10 +547,76 @@ def restore_files(file_ids: List[str], destination_folder: Optional[str] = None)
             item = SCANNED_DELETED_CACHE.get(fid)
             raw_payload = CARVED_DATA_CACHE.get(fid)
 
-            if not item or (raw_payload is None and not os.path.exists(item.source_path)):
+            if not item:
                 restored.append(RestoredItem(
                     file_id=fid,
-                    filename=item.filename if item else "Unknown",
+                    filename="Unknown",
+                    output_path="",
+                    size_bytes=0,
+                    sha256="",
+                    status="FAILED",
+                    error="File record not found in session cache.",
+                ))
+                continue
+
+            # Special handling for mobile MTP files (Android / WPD)
+            if item.recovery_method and item.recovery_method.startswith("android_"):
+                try:
+                    from app.services.mobile_recovery import restore_mobile_file
+                    ok, out_path, sz, digest, err = restore_mobile_file(fid, item, output_dir)
+                    if not ok:
+                        restored.append(RestoredItem(
+                            file_id=fid,
+                            filename=item.filename,
+                            output_path="",
+                            size_bytes=0,
+                            sha256="",
+                            status="FAILED",
+                            error=err or "Failed to transfer file from mobile device.",
+                        ))
+                        continue
+
+                    rec_model = RecoveredFile(
+                        recovery_id=f"REC-{uuid.uuid4().hex[:8].upper()}",
+                        case_id=default_case.id,
+                        evidence_id=default_ev.id,
+                        filename=os.path.basename(out_path),
+                        original_path=item.original_path,
+                        output_path=out_path,
+                        size_bytes=sz,
+                        recovery_method=item.recovery_method,
+                        confidence=item.confidence,
+                        sha256=digest,
+                        status="RECOVERED",
+                    )
+                    db.add(rec_model)
+                    db.commit()
+
+                    restored.append(RestoredItem(
+                        file_id=fid,
+                        filename=os.path.basename(out_path),
+                        output_path=out_path,
+                        size_bytes=sz,
+                        sha256=digest,
+                        status="RECOVERED",
+                    ))
+                except Exception as mexc:
+                    logger.error("Error restoring mobile file %s: %s", item.filename, mexc)
+                    restored.append(RestoredItem(
+                        file_id=fid,
+                        filename=item.filename,
+                        output_path="",
+                        size_bytes=0,
+                        sha256="",
+                        status="FAILED",
+                        error=str(mexc),
+                    ))
+                continue
+
+            if raw_payload is None and not os.path.exists(item.source_path):
+                restored.append(RestoredItem(
+                    file_id=fid,
+                    filename=item.filename,
                     output_path="",
                     size_bytes=0,
                     sha256="",
