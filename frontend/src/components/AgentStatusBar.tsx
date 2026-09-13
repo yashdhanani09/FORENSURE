@@ -197,8 +197,8 @@ export function AgentStatusBar() {
                   Close
                 </button>
                 <a
-                  href="/SecureData-Agent-Windows.zip"
-                  download="SecureData-Agent-Windows.zip"
+                  href="https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-Windows.zip"
+                  download="FORENSURE-Bridge-Windows.zip"
                   className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition shadow-glow"
                 >
                   <Download className="h-4 w-4" /> Download Agent (.zip)

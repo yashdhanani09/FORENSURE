@@ -65,8 +65,8 @@ export function AgentGuide() {
             Test Agent Ping
           </Button>
           <a
-            href="/SecureData-Agent-Windows.zip"
-            download="SecureData-Agent-Windows.zip"
+            href="https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-Windows.zip"
+            download="FORENSURE-Bridge-Windows.zip"
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition shadow-glow"
           >
             <Download className="h-3.5 w-3.5" /> Download Agent (.zip)
@@ -190,11 +190,11 @@ export function AgentGuide() {
             </p>
             <div className="mt-5 pt-4 border-t border-[#1e2c40] flex items-center justify-between">
               <a
-                href="/SecureData-Agent-Windows.zip"
-                download="SecureData-Agent-Windows.zip"
+                href="https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-Windows.zip"
+                download="FORENSURE-Bridge-Windows.zip"
                 className="inline-flex items-center gap-2 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition"
               >
-                <Download className="h-4 w-4" /> Download SecureData-Agent-Windows.zip
+                <Download className="h-4 w-4" /> Download FORENSURE-Bridge-Windows.zip
               </a>
             </div>
           </div>

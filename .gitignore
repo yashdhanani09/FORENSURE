@@ -31,10 +31,12 @@ coverage/
 htmlcov/
 
 # Large compiled binaries & zip distributions
-# (distribute via GitHub Releases or external storage instead)
 *.exe
-*.zip
 backend/dist/
+
+# Zip files are ignored everywhere EXCEPT the public download folder
+*.zip
+!frontend/public/*.zip
 
 # PyInstaller build artifacts
 backend/build/
