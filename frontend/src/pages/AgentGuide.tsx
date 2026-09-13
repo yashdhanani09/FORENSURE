@@ -1,365 +1,557 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { agentConnection, type AgentStatus } from "../services/agentConnection";
-import { Button } from "../components/ui/button";
-import { 
-  MonitorSmartphone, Download, ShieldCheck, CheckCircle2, 
-  AlertTriangle, RefreshCw, Sparkles, Terminal, HardDrive, 
-  ExternalLink, ArrowRight, HelpCircle, Lock, ShieldAlert, 
-  ChevronDown, ChevronUp, Radio
+import {
+  Download, Terminal, HardDrive, RefreshCw, CheckCircle2,
+  ArrowRight, Cpu, MonitorSmartphone, Plug, ShieldCheck,
+  LayoutDashboard, Sparkles, ChevronLeft
 } from "lucide-react";
 
+// ─────────────────────────────────────────────────────────────────
+// STEP CONFIG — edit this array to customise the entire flow
+// ─────────────────────────────────────────────────────────────────
+const STEPS = [
+  {
+    id: "download",
+    number: "01",
+    icon: Download,
+    title: "Download FORENSURE Bridge",
+    task: "Get the pre-compiled local hardware agent for Windows",
+    detail:
+      "The Bridge is a zero-install standalone binary (~29 MB). No Python, Node.js, or any runtime is required. Everything is pre-bundled — just download the zip and you're ready for the next step.",
+    badge: "29 MB • Standalone EXE",
+    badgeColor: "cyan",
+    command: null,
+    actionLabel: "Download FORENSURE-Bridge-Windows.zip",
+    actionHref:
+      "https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-Windows.zip",
+    actionDownload: "FORENSURE-Bridge-Windows.zip",
+    confirmLabel: "I've downloaded the zip file",
+  },
+  {
+    id: "extract",
+    number: "02",
+    icon: Cpu,
+    title: "Extract & Run as Administrator",
+    task: "Unzip the package, then launch the agent with elevated privileges",
+    detail:
+      "Right-click the downloaded zip → Extract All. Inside the folder, right-click FORENSURE-Bridge.exe and choose Run as administrator. Click Yes on the Windows UAC prompt. Raw disk sector access requires admin elevation.",
+    badge: "UAC Elevation Required",
+    badgeColor: "amber",
+    command: `[+] Physical Disk & MTP Probe : ACTIVE
+[+] Local API Endpoint       : http://127.0.0.1:8000
+[+] STATUS : LISTENING FOR WEB CLIENTS`,
+    actionLabel: null,
+    confirmLabel: "Agent is running — I can see the console",
+  },
+  {
+    id: "connect",
+    number: "03",
+    icon: Plug,
+    title: "Plug In Your Storage Device",
+    task: "Connect the physical hardware you want to inspect",
+    detail:
+      "Connect any USB thumb drive, external HDD/SSD, SD card reader, or Android phone in MTP mode. The agent uses PowerShell Get-Disk to discover and enumerate physical units in real-time. Hot-plug is fully supported.",
+    badge: "Hot-Plug Supported",
+    badgeColor: "emerald",
+    command: null,
+    chips: ["USB 3.0 / 3.2", "NVMe Enclosure", "Android MTP", "SD / MicroSD", "External HDD"],
+    actionLabel: null,
+    confirmLabel: "Device is connected and visible in Windows",
+  },
+  {
+    id: "verify",
+    number: "04",
+    icon: RefreshCw,
+    title: "Verify Bridge Connection",
+    task: "Confirm the web app can reach your local agent",
+    detail:
+      "Click the button below to ping the local bridge. Chrome and Edge authorize the Private Network Access (PNA) handshake automatically — no browser extension needed. When the status turns green you are live.",
+    badge: "PNA Auto-Handshake",
+    badgeColor: "cyan",
+    command: null,
+    actionLabel: "Test Connection Now",
+    confirmLabel: "Connection verified — status is green",
+    isVerify: true,
+  },
+  {
+    id: "complete",
+    number: "05",
+    icon: ShieldCheck,
+    title: "All Systems Ready",
+    task: "Physical hardware inspection is fully operational",
+    detail:
+      "Your local bridge is online, your device is connected, and FORENSURE is ready for real-time sector-level forensics. Head to the dashboard to start investigating.",
+    badge: "LIVE",
+    badgeColor: "emerald",
+    command: null,
+    isFinal: true,
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────
+const BADGE_COLORS: Record<string, string> = {
+  cyan: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+  amber: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  emerald: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+};
+
+const NODE_COLORS: Record<string, string> = {
+  cyan: "border-cyan-500 bg-cyan-500/20 text-cyan-300 shadow-[0_0_16px_rgba(6,182,212,0.4)]",
+  amber: "border-amber-500 bg-amber-500/20 text-amber-300 shadow-[0_0_16px_rgba(245,158,11,0.4)]",
+  emerald:
+    "border-emerald-500 bg-emerald-500/20 text-emerald-300 shadow-[0_0_16px_rgba(16,185,129,0.4)]",
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────────────────────────
+
+/** Animated SVG checkmark that strokes in */
+function Checkmark({ visible }: { visible: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <polyline
+        points="4,13 9,18 20,7"
+        stroke="currentColor"
+        strokeDasharray={24}
+        strokeDashoffset={visible ? 0 : 24}
+        style={{
+          transition: visible ? "stroke-dashoffset 0.35s cubic-bezier(.4,0,.2,1)" : "none",
+        }}
+      />
+    </svg>
+  );
+}
+
+/** Left rail node */
+function RailNode({
+  step,
+  index,
+  active,
+  completed,
+  onClick,
+}: {
+  step: (typeof STEPS)[number];
+  index: number;
+  active: boolean;
+  completed: boolean;
+  onClick: () => void;
+}) {
+  const Icon = step.icon;
+  const prefersReduced =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const baseNode =
+    "relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 font-mono text-xs font-black transition-all duration-300 cursor-pointer select-none";
+
+  const nodeStyle = completed
+    ? "border-emerald-500 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.35)]"
+    : active
+    ? NODE_COLORS[step.badgeColor] || NODE_COLORS.cyan
+    : "border-slate-700 bg-[#0b0f19] text-slate-600";
+
+  const scale = active && !prefersReduced ? "scale-110" : "scale-100";
+
+  return (
+    <button
+      onClick={onClick}
+      aria-label={`Go to step ${index + 1}: ${step.title}`}
+      className={`${baseNode} ${nodeStyle} ${scale} focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400`}
+      style={{ transform: active && !prefersReduced ? "scale(1.12)" : "scale(1)" }}
+    >
+      {completed ? (
+        <span className="text-emerald-400">
+          <Checkmark visible={completed} />
+        </span>
+      ) : (
+        <Icon className="h-4 w-4" />
+      )}
+    </button>
+  );
+}
+
+/** The connector line segment between two nodes */
+function Connector({ filled }: { filled: boolean }) {
+  return (
+    <div className="mx-auto my-1 w-0.5 flex-1 overflow-hidden rounded-full bg-slate-800" style={{ minHeight: 28 }}>
+      <div
+        className="w-full rounded-full bg-emerald-500 transition-all duration-500 ease-in-out"
+        style={{ height: filled ? "100%" : "0%" }}
+        aria-hidden="true"
+      />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────────────────────────
 export function AgentGuide() {
-  const [status, setStatus] = useState<AgentStatus>(agentConnection.getStatus());
+  const [agentStatus, setAgentStatus] = useState<AgentStatus>(agentConnection.getStatus());
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [completed, setCompleted] = useState<boolean[]>(Array(STEPS.length).fill(false));
   const [checking, setChecking] = useState(false);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [customPort, setCustomPort] = useState("8000");
+  const [panelKey, setPanelKey] = useState(0); // force re-mount for animation
   const navigate = useNavigate();
 
+  const prefersReduced =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
   useEffect(() => {
-    const unsub = agentConnection.subscribe((newStatus) => {
-      setStatus(newStatus);
-    });
+    const unsub = agentConnection.subscribe(setAgentStatus);
     return unsub;
   }, []);
 
-  const handleTestConnection = async () => {
+  // Auto-advance verify step when connection becomes live
+  useEffect(() => {
+    const verifyIdx = STEPS.findIndex((s) => s.isVerify);
+    if (agentStatus.connected && activeIdx === verifyIdx && !completed[verifyIdx]) {
+      const t = setTimeout(() => markComplete(verifyIdx), 800);
+      return () => clearTimeout(t);
+    }
+  }, [agentStatus.connected, activeIdx]);
+
+  function goTo(idx: number) {
+    if (idx === activeIdx) return;
+    setPanelKey((k) => k + 1);
+    setActiveIdx(idx);
+  }
+
+  function markComplete(idx: number) {
+    setCompleted((prev) => {
+      const next = [...prev];
+      next[idx] = true;
+      return next;
+    });
+    const nextIdx = idx + 1;
+    if (nextIdx < STEPS.length) {
+      setTimeout(() => {
+        setPanelKey((k) => k + 1);
+        setActiveIdx(nextIdx);
+      }, prefersReduced ? 0 : 450);
+    }
+  }
+
+  async function handleVerify() {
     setChecking(true);
     await agentConnection.checkConnection();
     setChecking(false);
-  };
+  }
 
-  const handleToggleDemo = (active: boolean) => {
-    agentConnection.setDemoMode(active);
-  };
+  const allDone = completed.every(Boolean);
+  const step = STEPS[activeIdx];
 
-  const toggleFaq = (index: number) => {
-    setOpenFaq(openFaq === index ? null : index);
-  };
+  // ── Mobile progress bar ──────────────────────────────────────
+  const progressPct = Math.round((completed.filter(Boolean).length / STEPS.length) * 100);
 
   return (
-    <div className="p-6 lg:p-10 max-w-6xl mx-auto space-y-8 select-none text-slate-100">
-      {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1e2c40] pb-6">
+    <div className="min-h-screen bg-[#060a12] text-slate-100 p-4 md:p-8 lg:p-12 select-none font-sans">
+      {/* ── Page title ── */}
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-extrabold tracking-[0.2em] text-cyan-400 uppercase mb-1">
-            <Radio className="h-3.5 w-3.5 animate-pulse text-cyan-400" />
-            HARDWARE INTEGRATION ARCHITECTURE
+          <div className="flex items-center gap-2 text-[10px] font-extrabold tracking-[0.22em] text-cyan-400 uppercase mb-1">
+            <MonitorSmartphone className="h-3.5 w-3.5" />
+            Hardware Bridge Setup
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            Local Hardware Agent Connection Guide
+          <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-white">
+            Physical Hardware Connection Guide
           </h1>
-          <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
-            Follow this step-by-step setup to bridge physical USB flash drives, non-system SSDs, and mobile storage devices to this cloud-accessible forensic workstation.
+          <p className="text-xs text-slate-500 mt-1">
+            Follow each step to enable real-time sector-level forensics on your machine.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleTestConnection} 
-            loading={checking}
-          >
-            <RefreshCw className={`h-3 w-3 ${checking ? "animate-spin" : ""}`} /> 
-            Test Agent Ping
-          </Button>
-          <a
-            href="https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-Windows.zip"
-            download="FORENSURE-Bridge-Windows.zip"
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition shadow-glow"
-          >
-            <Download className="h-3.5 w-3.5" /> Download Agent (.zip)
-          </a>
-        </div>
+        {/* Demo mode shortcut */}
+        <button
+          onClick={() => { agentConnection.setDemoMode(true); navigate("/dashboard"); }}
+          className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200 text-xs font-semibold transition"
+        >
+          <Sparkles className="h-3.5 w-3.5" /> Try Demo instead
+        </button>
       </div>
 
-      {/* ── Live Connection Diagnostic Card ── */}
-      <div className={`rounded-2xl border p-5 backdrop-blur-sm transition-all duration-300 ${
-        status.connected 
-          ? "border-emerald-500/30 bg-emerald-950/10 shadow-[0_0_30px_rgba(16,185,129,0.1)]"
-          : status.demoMode 
-          ? "border-amber-500/30 bg-amber-950/10"
-          : "border-rose-500/30 bg-rose-950/10"
-      }`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className={`h-12 w-12 rounded-xl flex items-center justify-center border ${
-              status.connected 
-                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
-                : status.demoMode 
-                ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
-                : "bg-rose-500/20 border-rose-500/40 text-rose-400"
-            }`}>
-              {status.connected ? (
-                <CheckCircle2 className="h-6 w-6" />
-              ) : status.demoMode ? (
-                <Sparkles className="h-6 w-6" />
-              ) : (
-                <AlertTriangle className="h-6 w-6" />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white font-mono">
-                  {status.connected 
-                    ? "LOCAL AGENT ACTIVE & COMMUNICATING" 
-                    : status.demoMode 
-                    ? "INTERACTIVE DEMO MODE ACTIVE" 
-                    : "HARDWARE AGENT DISCONNECTED"}
-                </h3>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider font-mono ${
-                  status.connected 
-                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                    : status.demoMode 
-                    ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                    : "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                }`}>
-                  {status.connected ? "Online (Port 8000)" : status.demoMode ? "Simulation" : "Offline"}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {status.connected 
-                  ? "Real-time hardware probe is online. Physical drive detection, NTFS parsing, and NIST wiping are operational."
-                  : status.demoMode 
-                  ? "You are exploring simulated storage devices with high-confidence forensic evidence. No installation required."
-                  : "Browser security prevents websites from querying raw disk sectors directly. Start the agent or try Demo Mode."}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {status.connected ? (
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={() => navigate('/devices')}
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold"
-              >
-                Go to Live Inventory <ArrowRight className="h-3.5 w-3.5 ml-1" />
-              </Button>
-            ) : status.demoMode ? (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleToggleDemo(false)}
-              >
-                Exit Demo Mode
-              </Button>
-            ) : (
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={() => handleToggleDemo(true)}
-                className="border-amber-500/40 text-amber-300 bg-amber-500/10 hover:bg-amber-500/20"
-              >
-                <Sparkles className="h-3.5 w-3.5 mr-1 text-amber-400" /> Enable Demo Mode
-              </Button>
-            )}
-          </div>
+      {/* ── Mobile horizontal progress bar ── */}
+      <div className="flex md:hidden mb-6 flex-col gap-2">
+        <div className="flex justify-between text-[10px] font-mono text-slate-500">
+          <span>Step {Math.min(activeIdx + 1, STEPS.length)} of {STEPS.length}</span>
+          <span>{progressPct}% complete</span>
         </div>
-      </div>
-
-      {/* ── Visual 4-Step Process ── */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <MonitorSmartphone className="h-5 w-5 text-cyan-400" /> 4-Step Hardware Connection Workflow
-          </h2>
-          <p className="text-xs text-slate-400">
-            Complete these straightforward steps to enable physical storage scanning on your Windows machine.
-          </p>
+        <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-cyan-500 transition-all duration-500"
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Step 1 */}
-          <div className="rounded-2xl border border-[#1e2c40] bg-[#0f172a]/80 backdrop-blur-sm p-6 relative overflow-hidden group hover:border-cyan-500/40 transition">
-            <div className="flex items-start justify-between mb-4">
-              <span className="flex items-center justify-center h-8 w-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono font-black text-sm">
-                01
-              </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-400 border border-slate-700">
-                12 MB • Standalone
-              </span>
-            </div>
-            <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition">
-              Download Pre-Compiled Agent
-            </h3>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Download the zero-install binary package. No Python, Node.js, or code repository is required. All drivers and dependencies are pre-bundled inside.
-            </p>
-            <div className="mt-5 pt-4 border-t border-[#1e2c40] flex items-center justify-between">
-              <a
-                href="https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-Windows.zip"
-                download="FORENSURE-Bridge-Windows.zip"
-                className="inline-flex items-center gap-2 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition"
-              >
-                <Download className="h-4 w-4" /> Download FORENSURE-Bridge-Windows.zip
-              </a>
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className="rounded-2xl border border-[#1e2c40] bg-[#0f172a]/80 backdrop-blur-sm p-6 relative overflow-hidden group hover:border-cyan-500/40 transition">
-            <div className="flex items-start justify-between mb-4">
-              <span className="flex items-center justify-center h-8 w-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono font-black text-sm">
-                02
-              </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/30">
-                UAC Elevation Required
-              </span>
-            </div>
-            <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition">
-              Extract & Run as Administrator
-            </h3>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Extract the zip file, then double-click <strong className="text-white font-mono">SecureData-Agent.exe</strong>. Click <strong className="text-cyan-400">Yes</strong> when Windows asks for Administrator elevation to read hardware drive sectors.
-            </p>
-            <div className="mt-4 p-3 rounded-xl bg-[#090d16] border border-[#1e2c40] font-mono text-[11px] text-slate-300">
-              <div className="flex items-center gap-1.5 text-emerald-400 mb-1">
-                <Terminal className="h-3 w-3" /> Console Output:
-              </div>
-              <p className="text-slate-400">[+] Physical Disk & MTP Probe : ACTIVE</p>
-              <p className="text-slate-400">[+] Local API Endpoint       : http://127.0.0.1:8000</p>
-              <p className="text-emerald-400 font-semibold">[+] STATUS : LISTENING FOR WEB CLIENTS</p>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="rounded-2xl border border-[#1e2c40] bg-[#0f172a]/80 backdrop-blur-sm p-6 relative overflow-hidden group hover:border-cyan-500/40 transition">
-            <div className="flex items-start justify-between mb-4">
-              <span className="flex items-center justify-center h-8 w-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono font-black text-sm">
-                03
-              </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
-                Hot-Plug Supported
-              </span>
-            </div>
-            <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition">
-              Plug In Your Storage Hardware
-            </h3>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Connect any USB thumb drive, external HDD/SSD, SD card, or Android smartphone (MTP mode). The agent uses PowerShell <code className="text-cyan-300 bg-black/40 px-1 py-0.5 rounded">Get-Disk</code> to discover physical units in real time.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-mono">
-              <span className="px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">USB 3.0 / 3.2</span>
-              <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300">NVMe Enclosures</span>
-              <span className="px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300">Android MTP</span>
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">SD / MicroSD</span>
-            </div>
-          </div>
-
-          {/* Step 4 */}
-          <div className="rounded-2xl border border-[#1e2c40] bg-[#0f172a]/80 backdrop-blur-sm p-6 relative overflow-hidden group hover:border-cyan-500/40 transition">
-            <div className="flex items-start justify-between mb-4">
-              <span className="flex items-center justify-center h-8 w-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono font-black text-sm">
-                04
-              </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
-                PNA Auto-Handshake
-              </span>
-            </div>
-            <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition">
-              Refresh Browser & Begin Forensics
-            </h3>
-            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-              Return to this browser window. Chrome and Edge will automatically authorize the local Private Network connection. The top status turns green and your connected drives appear instantly.
-            </p>
-            <div className="mt-4 pt-3 border-t border-[#1e2c40] flex items-center justify-between">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleTestConnection} 
-                className="w-full text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 mr-2 ${checking ? "animate-spin" : ""}`} /> 
-                Check Connection Status Now
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Architecture Explainer ── */}
-      <div className="rounded-2xl border border-[#1e2c40] bg-[#0b0f19] p-6 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-bold text-white">
-          <ShieldCheck className="h-5 w-5 text-emerald-400" />
-          Zero Data Leakage — Local-First Security Architecture
-        </div>
-        <p className="text-xs text-slate-400 leading-relaxed">
-          Unlike ordinary cloud apps that require uploading sensitive forensic drive images to third-party servers, <strong className="text-white">FORENSURE uses a split-plane model</strong>:
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
-          <div className="p-4 rounded-xl bg-[#090d16] border border-[#1e2c40]">
-            <div className="text-cyan-400 font-bold mb-1">1. Cloud UI Plane</div>
-            <p className="text-slate-400 text-[11px]">
-              The React frontend is hosted on high-availability cloud infrastructure (Vercel) for seamless access from any judge laptop or mobile phone.
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-[#090d16] border border-[#1e2c40]">
-            <div className="text-emerald-400 font-bold mb-1">2. Local Execution Plane</div>
-            <p className="text-slate-400 text-[11px]">
-              The agent runs entirely on your local machine. All bitstream reading, carving calculations, and cryptographic wiping remain 100% on your local disk.
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-[#090d16] border border-[#1e2c40]">
-            <div className="text-amber-400 font-bold mb-1">3. OS Boot Protection</div>
-            <p className="text-slate-400 text-[11px]">
-              System boot disk (C:) is write-locked by policy. Sanitization cannot accidentally erase the host operating system.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Frequently Asked Questions ── */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-bold text-white flex items-center gap-2">
-          <HelpCircle className="h-5 w-5 text-cyan-400" /> Frequently Asked Questions & Troubleshooting
-        </h2>
-
-        <div className="space-y-3">
-          {[
-            {
-              q: "Why does the agent require Administrator privileges?",
-              a: "Windows security prevents standard non-privileged processes from querying raw physical disk sectors (e.g. \\\\.\\PHYSICALDRIVE1) or invoking PowerShell's Get-Disk cmdlet. Administrator elevation is required for raw sector forensics and NIST sanitization.",
-            },
-            {
-              q: "Can judges evaluate the software without downloading the agent?",
-              a: "Yes! Simply click 'Enable Demo Mode' at the top of this page or on the dashboard. You will be able to test device analysis, deleted file carving, confidence scoring, and NIST wiping with realistic sample forensic storage.",
-            },
-            {
-              q: "How does the cloud frontend communicate with the local agent?",
-              a: "The cloud web application connects to http://127.0.0.1:8000 using Chrome and Edge's Private Network Access (PNA) standard. The local agent sets CORS headers and 'Access-Control-Allow-Private-Network: true' so requests are authorized seamlessly.",
-            },
-            {
-              q: "What if port 8000 is already in use on my machine?",
-              a: "By default the agent listens on 8000. If needed, you can launch the agent with a custom port or change the endpoint in the connection settings.",
-            },
-          ].map((item, idx) => (
-            <div 
-              key={idx} 
-              className="rounded-xl border border-[#1e2c40] bg-[#0f172a]/60 overflow-hidden"
+        {/* Mobile step pills */}
+        <div className="flex gap-1.5 mt-1 overflow-x-auto pb-1">
+          {STEPS.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => goTo(i)}
+              className={`shrink-0 px-3 py-1 rounded-lg text-[10px] font-mono font-bold border transition ${
+                completed[i]
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                  : i === activeIdx
+                  ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300"
+                  : "border-slate-700 bg-slate-800/50 text-slate-500"
+              }`}
             >
-              <button
-                onClick={() => toggleFaq(idx)}
-                className="w-full p-4 text-left flex items-center justify-between text-xs font-bold text-white hover:text-cyan-300 transition"
-              >
-                <span>{item.q}</span>
-                {openFaq === idx ? (
-                  <ChevronUp className="h-4 w-4 text-cyan-400" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-slate-500" />
-                )}
-              </button>
-              {openFaq === idx && (
-                <div className="px-4 pb-4 text-xs text-slate-400 leading-relaxed border-t border-[#1e2c40]/60 pt-3">
-                  {item.a}
-                </div>
-              )}
-            </div>
+              {s.number}
+            </button>
           ))}
         </div>
       </div>
+
+      {/* ── Main layout: rail + panel ── */}
+      <div className="flex gap-8 lg:gap-12">
+
+        {/* ── LEFT: Vertical step rail (desktop only) ── */}
+        <div className="hidden md:flex flex-col items-center w-14 shrink-0 pt-1">
+          {STEPS.map((s, i) => (
+            <React.Fragment key={s.id}>
+              <RailNode
+                step={s}
+                index={i}
+                active={i === activeIdx}
+                completed={completed[i]}
+                onClick={() => goTo(i)}
+              />
+              {i < STEPS.length - 1 && <Connector filled={completed[i]} />}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* ── RIGHT: Detail panel ── */}
+        <div className="flex-1 min-w-0">
+          {/* Panel — key changes force re-animation */}
+          <div
+            key={panelKey}
+            className="rounded-2xl border border-[#1e2c40] bg-[#0b1120]/90 backdrop-blur-sm p-6 md:p-8 space-y-6"
+            style={{
+              animation: prefersReduced
+                ? "none"
+                : "panelIn 0.32s cubic-bezier(.4,0,.2,1) both",
+            }}
+          >
+            {/* Step badge + number */}
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-4xl font-black text-slate-800 leading-none select-none">
+                {step.number}
+              </span>
+              <div>
+                <span
+                  className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-wider border ${
+                    BADGE_COLORS[step.badgeColor] || BADGE_COLORS.cyan
+                  }`}
+                >
+                  {step.badge}
+                </span>
+              </div>
+            </div>
+
+            {/* Title & task */}
+            <div className="space-y-1">
+              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white leading-tight">
+                {step.title}
+              </h2>
+              <p className="text-sm font-semibold text-cyan-400">{step.task}</p>
+            </div>
+
+            {/* Detail paragraph */}
+            <p className="text-sm text-slate-400 leading-relaxed max-w-2xl">{step.detail}</p>
+
+            {/* Terminal block (for extract step) */}
+            {step.command && (
+              <div className="rounded-xl bg-[#020508] border border-[#1e2c40] p-4 font-mono text-xs space-y-1">
+                <div className="flex items-center gap-2 text-emerald-400 mb-3 text-[11px]">
+                  <Terminal className="h-3.5 w-3.5" />
+                  <span className="font-bold tracking-wider">CONSOLE OUTPUT</span>
+                  <span className="ml-auto flex gap-1">
+                    <span className="h-2.5 w-2.5 rounded-full bg-rose-500/70" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
+                  </span>
+                </div>
+                {step.command.split("\n").map((line, i) => (
+                  <p
+                    key={i}
+                    className={
+                      line.includes("LISTENING")
+                        ? "text-emerald-400 font-bold"
+                        : "text-slate-400"
+                    }
+                  >
+                    {line}
+                  </p>
+                ))}
+              </div>
+            )}
+
+            {/* Device chips (for connect step) */}
+            {step.chips && (
+              <div className="flex flex-wrap gap-2">
+                {step.chips.map((chip) => (
+                  <span
+                    key={chip}
+                    className="px-3 py-1 rounded-lg text-xs font-mono font-semibold bg-[#0f172a] border border-[#1e2c40] text-slate-300"
+                  >
+                    {chip}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Connection status card (verify step) */}
+            {step.isVerify && (
+              <div
+                className={`rounded-xl border p-4 flex items-center gap-4 transition-all duration-500 ${
+                  agentStatus.connected
+                    ? "border-emerald-500/40 bg-emerald-500/5"
+                    : "border-slate-700 bg-slate-800/30"
+                }`}
+              >
+                <div
+                  className={`h-3 w-3 rounded-full flex-shrink-0 transition-colors duration-500 ${
+                    agentStatus.connected ? "bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.6)]" : "bg-slate-600"
+                  }`}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white">
+                    {agentStatus.connected ? "Bridge Connected" : "Bridge Not Detected"}
+                  </p>
+                  <p className="text-xs text-slate-500 font-mono truncate">
+                    {agentStatus.connected
+                      ? "http://127.0.0.1:8000 — responding"
+                      : "http://127.0.0.1:8000 — no response"}
+                  </p>
+                </div>
+                <button
+                  onClick={handleVerify}
+                  disabled={checking}
+                  className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-60 text-slate-950 font-bold text-xs transition"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
+                  {checking ? "Checking…" : "Test Ping"}
+                </button>
+              </div>
+            )}
+
+            {/* Final / completion state */}
+            {step.isFinal && (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-6 flex flex-col items-center text-center gap-4">
+                <div className="h-16 w-16 rounded-full border-2 border-emerald-500 bg-emerald-500/10 flex items-center justify-center text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+                  <ShieldCheck className="h-8 w-8" />
+                </div>
+                <div>
+                  <p className="text-xl font-extrabold text-white">You're all set!</p>
+                  <p className="text-sm text-slate-400 mt-1">
+                    FORENSURE Bridge is live. Physical storage devices are now accessible for forensic inspection.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+                  <button
+                    onClick={() => navigate("/devices")}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm transition"
+                  >
+                    <HardDrive className="h-4 w-4" /> Storage Inventory
+                  </button>
+                  <button
+                    onClick={() => navigate("/dashboard")}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-700 hover:border-slate-500 text-slate-300 font-bold text-sm transition"
+                  >
+                    <LayoutDashboard className="h-4 w-4" /> Dashboard
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Download action button */}
+            {step.actionHref && !step.isVerify && (
+              <a
+                href={step.actionHref}
+                download={step.actionDownload}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm transition shadow-[0_0_20px_rgba(6,182,212,0.25)]"
+              >
+                <Download className="h-4 w-4" />
+                {step.actionLabel}
+              </a>
+            )}
+
+            {/* Nav: back + mark complete */}
+            {!step.isFinal && (
+              <div className="flex items-center justify-between pt-4 border-t border-[#1e2c40]">
+                <button
+                  onClick={() => activeIdx > 0 && goTo(activeIdx - 1)}
+                  disabled={activeIdx === 0}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Back
+                </button>
+
+                <button
+                  onClick={() => markComplete(activeIdx)}
+                  disabled={completed[activeIdx]}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-sm transition ${
+                    completed[activeIdx]
+                      ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 cursor-default"
+                      : "bg-[#0f172a] border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 hover:border-cyan-400"
+                  }`}
+                >
+                  {completed[activeIdx] ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Done
+                    </>
+                  ) : (
+                    <>
+                      {step.confirmLabel} <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Completed steps summary (below panel) */}
+          {completed.some(Boolean) && !allDone && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {STEPS.slice(0, -1).map((s, i) =>
+                completed[i] ? (
+                  <span
+                    key={s.id}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/5 text-emerald-400 text-[11px] font-mono font-semibold"
+                  >
+                    <CheckCircle2 className="h-3 w-3" /> {s.title}
+                  </span>
+                ) : null
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Keyframe for panel slide-in */}
+      <style>{`
+        @keyframes panelIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [style*="panelIn"] { animation: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
