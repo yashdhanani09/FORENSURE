@@ -4,8 +4,23 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-BACKEND_ROOT = Path(__file__).resolve().parents[2]
-PROJECT_ROOT = BACKEND_ROOT.parent
+import sys
+
+
+def _get_project_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[2].parent
+
+
+def _get_backend_root() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[2]
+
+
+BACKEND_ROOT = _get_backend_root()
+PROJECT_ROOT = _get_project_root()
 
 
 class Settings(BaseSettings):

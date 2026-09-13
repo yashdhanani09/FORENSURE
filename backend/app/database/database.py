@@ -6,11 +6,29 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from app.core.config import get_settings
 
 
+import sys
+from pathlib import Path
+
+
 def _engine_url() -> str:
     url = get_settings().database_url
-    # Resolve the development default against backend/ instead of process CWD.
-    if url == "sqlite:///./securedata.db":
-        return f"sqlite:///{get_settings().project_root / 'backend' / 'securedata.db'}"
+    if getattr(sys, "frozen", False):
+        # When packaged as a standalone binary, store the DB in the executable's directory
+        app_dir = Path(sys.executable).resolve().parent
+        db_path = app_dir / "securedata.db"
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        return f"sqlite:///{db_path.as_posix()}"
+    elif url == "sqlite:///./securedata.db":
+        # Resolve the development default against backend/ instead of process CWD.
+        db_path = get_settings().project_root / "backend" / "securedata.db"
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        return f"sqlite:///{db_path.as_posix()}"
+    elif url.startswith("sqlite:///"):
+        # Auto-create parent directory for any custom sqlite database path
+        raw_path = url.replace("sqlite:///", "")
+        custom_path = Path(raw_path)
+        if custom_path.parent:
+            custom_path.parent.mkdir(parents=True, exist_ok=True)
     return url
 
 
