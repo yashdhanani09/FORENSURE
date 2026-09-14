@@ -7,6 +7,7 @@ import {
   Printer, X, KeyRound, ArrowUpDown, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { deviceApi } from "../services/api";
+import { agentConnection } from "../services/agentConnection";
 import { recoveryApi, DeletedFileItem, RecoveredFileRecord, ForensicReportResponse, RestoredItem } from "../services/recoveryApi";
 import type { UsbDeviceDetail } from "../types/device";
 import { formatBytes, formatDate } from "../utils/format";
@@ -42,6 +43,7 @@ export function Recovery() {
   // Newly Restored Files Download Popup State
   const [showRestoredModal, setShowRestoredModal] = useState(false);
   const [newlyRestoredItems, setNewlyRestoredItems] = useState<RestoredItem[]>([]);
+  const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
 
   // Full List Sorting (Default: Recent to Old) & Pagination State
   const [sortBy, setSortBy] = useState<"recent" | "oldest" | "size_desc" | "name" | "confidence">("recent");
@@ -155,22 +157,54 @@ export function Recovery() {
     }
   };
 
-  const downloadFile = (filename: string) => {
-    const link = document.createElement("a");
-    link.href = `/api/recovery/download/${encodeURIComponent(filename)}`;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadFile = async (filename: string) => {
+    setDownloadingFile(filename);
+    try {
+      // 1. Fetch raw binary blob from the verified backend API
+      const blob = await recoveryApi.downloadFile(filename);
+
+      // 2. Strict validation: Ensure response is actual file data and not an HTML fallback page
+      if (blob.type && blob.type.includes("text/html")) {
+        const text = await blob.text();
+        if (text.includes("<!doctype html>") || text.includes("<html") || text.includes("<div id=\"root\">")) {
+          throw new Error("Backend connection error: Received HTML fallback page instead of the recovered file.");
+        }
+      }
+
+      // 3. Create blob URL and trigger direct browser machine download
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+    } catch (e: any) {
+      console.warn("Direct blob download failed, attempting backend agent URL fallback:", e);
+      try {
+        const backendBase = agentConnection.getApiBaseUrl() || "http://127.0.0.1:8000";
+        const directUrl = `${backendBase.replace(/\/$/, "")}/api/recovery/download/${encodeURIComponent(filename)}`;
+        const link = document.createElement("a");
+        link.href = directUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err: any) {
+        alert(`Failed to download ${filename}: ${e.message || err.message}`);
+      }
+    } finally {
+      setDownloadingFile(null);
+    }
   };
 
-  const downloadAllRestored = () => {
+  const downloadAllRestored = async () => {
     const successful = newlyRestoredItems.filter(r => r.status === "RECOVERED");
-    successful.forEach((item, idx) => {
-      setTimeout(() => {
-        downloadFile(item.filename);
-      }, idx * 300);
-    });
+    for (let i = 0; i < successful.length; i++) {
+      await downloadFile(successful[i].filename);
+      await new Promise(res => setTimeout(res, 400));
+    }
   };
 
   const getCategoryIcon = (category: string) => {
@@ -624,13 +658,13 @@ export function Recovery() {
                         {formatDate(rec.created_at)}
                       </td>
                       <td className="px-4 py-3 text-right font-sans">
-                        <a
-                          href={`/api/recovery/download/${encodeURIComponent(rec.filename)}`}
-                          download
-                          className="px-3 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 rounded-lg border border-cyan-500/30 text-xs font-semibold inline-flex items-center gap-1.5 transition"
+                        <button
+                          onClick={() => downloadFile(rec.filename)}
+                          disabled={downloadingFile === rec.filename}
+                          className="px-3 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 rounded-lg border border-cyan-500/30 text-xs font-semibold inline-flex items-center gap-1.5 transition disabled:opacity-50"
                         >
-                          <Download className="w-3.5 h-3.5" /> Download
-                        </a>
+                          <Download className="w-3.5 h-3.5" /> {downloadingFile === rec.filename ? "Downloading..." : "Download"}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -991,11 +1025,13 @@ export function Recovery() {
                   {item.status === "RECOVERED" && (
                     <Button
                       onClick={() => downloadFile(item.filename)}
+                      disabled={downloadingFile === item.filename}
+                      loading={downloadingFile === item.filename}
                       variant="primary"
                       size="sm"
                       className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex-shrink-0 shadow-lg shadow-emerald-950/50"
                     >
-                      <Download className="w-3.5 h-3.5 mr-1.5" /> Download to Machine
+                      <Download className="w-3.5 h-3.5 mr-1.5" /> {downloadingFile === item.filename ? "Downloading..." : "Download to Machine"}
                     </Button>
                   )}
                 </div>

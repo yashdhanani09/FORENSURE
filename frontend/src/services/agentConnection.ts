@@ -98,14 +98,7 @@ class AgentConnectionManager {
     if (import.meta.env.VITE_API_BASE_URL) {
       return import.meta.env.VITE_API_BASE_URL;
     }
-    if (typeof window !== "undefined") {
-      const host = window.location.hostname;
-      // If we are testing on localhost with Vite proxy, use relative ""
-      if ((host === "localhost" || host === "127.0.0.1") && window.location.port === "5174") {
-        return "";
-      }
-    }
-    return this.status.agentUrl;
+    return this.status.agentUrl ? this.status.agentUrl.replace(/\/$/, "") : "http://127.0.0.1:8000";
   }
 }
 

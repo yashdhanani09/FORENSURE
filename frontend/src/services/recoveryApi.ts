@@ -137,4 +137,11 @@ export const recoveryApi = {
   getReport: async (deviceId: string): Promise<ForensicReportResponse> => {
     return (await api.get(`/api/recovery/report?device_id=${encodeURIComponent(deviceId)}`)).data;
   },
+
+  downloadFile: async (filename: string): Promise<Blob> => {
+    const res = await api.get(`/api/recovery/download/${encodeURIComponent(filename)}`, {
+      responseType: "blob",
+    });
+    return res.data;
+  },
 };

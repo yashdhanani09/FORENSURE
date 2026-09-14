@@ -1,10 +1,14 @@
 import os
 import logging
+import mimetypes
+import urllib.parse
 from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+
+from app.core.config import BACKEND_ROOT, PROJECT_ROOT
 
 from app.schemas.recovery import (
     RecoveryScanRequest,
@@ -110,27 +114,79 @@ def get_recovered_history_endpoint():
 
 @router.get("/download/{filename}")
 def download_recovered_file(filename: str):
-    """Downloads a recovered file from the evidence directory."""
-    # Sanitize filename
-    safe_name = os.path.basename(filename)
-    file_path = os.path.join("evidence", "recovered", safe_name)
-    if not os.path.exists(file_path):
+    """Downloads a recovered file from the evidence directory with multi-location resolution."""
+    raw_name = urllib.parse.unquote(filename)
+    safe_name = os.path.basename(raw_name)
+
+    candidate_paths = [
+        os.path.join(str(BACKEND_ROOT), "evidence", "recovered", safe_name),
+        os.path.join(str(PROJECT_ROOT), "evidence", "recovered", safe_name),
+        os.path.join(os.getcwd(), "evidence", "recovered", safe_name),
+        os.path.join("evidence", "recovered", safe_name),
+    ]
+
+    file_path = None
+    for cp in candidate_paths:
+        if os.path.isfile(cp):
+            file_path = cp
+            break
+
+    if not file_path:
         from app.database import SessionLocal
         from app.models.forensic import RecoveredFile
         db = SessionLocal()
         try:
-            rec = db.query(RecoveredFile).filter(RecoveredFile.filename == safe_name).order_by(RecoveredFile.created_at.desc()).first()
-            if rec and rec.output_path and os.path.exists(rec.output_path):
-                file_path = rec.output_path
-            else:
-                raise HTTPException(status_code=404, detail="Recovered file not found.")
+            rec = (
+                db.query(RecoveredFile)
+                .filter((RecoveredFile.filename == safe_name) | (RecoveredFile.recovery_id == safe_name))
+                .order_by(RecoveredFile.created_at.desc())
+                .first()
+            )
+            if rec and rec.output_path:
+                if os.path.isfile(rec.output_path):
+                    file_path = rec.output_path
+                else:
+                    for base in (str(BACKEND_ROOT), str(PROJECT_ROOT), os.getcwd()):
+                        alt = os.path.join(base, rec.output_path)
+                        if os.path.isfile(alt):
+                            file_path = alt
+                            break
         finally:
             db.close()
 
+    # Fallback to session cache if payload or source is present
+    if not file_path:
+        from app.services.recovery_service import SCANNED_DELETED_CACHE, CARVED_DATA_CACHE
+        for fid, item in SCANNED_DELETED_CACHE.items():
+            if item.filename == safe_name or item.id == safe_name or fid == safe_name:
+                if fid in CARVED_DATA_CACHE:
+                    payload = CARVED_DATA_CACHE[fid]
+                    mtype, _ = mimetypes.guess_type(safe_name)
+                    return Response(
+                        content=payload,
+                        media_type=mtype or "application/octet-stream",
+                        headers={
+                            "Content-Disposition": f'attachment; filename="{safe_name}"',
+                            "Content-Length": str(len(payload)),
+                            "Access-Control-Expose-Headers": "Content-Disposition",
+                        },
+                    )
+                if item.source_path and os.path.isfile(item.source_path):
+                    file_path = item.source_path
+                    break
+
+    if not file_path or not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail=f"Recovered file '{safe_name}' not found on storage.")
+
+    mtype, _ = mimetypes.guess_type(safe_name)
     return FileResponse(
         path=file_path,
         filename=safe_name,
-        media_type="application/octet-stream",
+        media_type=mtype or "application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
     )
 
 

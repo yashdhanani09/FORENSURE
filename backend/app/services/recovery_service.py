@@ -15,6 +15,7 @@ from app.models.forensic import ForensicCase, EvidenceItem, RecoveredFile, Chain
 from app.schemas.recovery import DeletedFileItem, RestoredItem, RecoveredFileRecord, ForensicReportResponse
 from app.services.file_carver import raw_file_carver, CarvedFile
 from app.services.fat_recovery import scan_fat_deleted_files, _try_read_raw_volume_sectors
+from app.core.config import BACKEND_ROOT, PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -713,7 +714,8 @@ def scan_device_deleted_files(
 
 def restore_files(file_ids: List[str], destination_folder: Optional[str] = None) -> List[RestoredItem]:
     """Restores selected deleted files to the destination directory and computes hashes."""
-    output_dir = destination_folder or os.path.join("evidence", "recovered")
+    output_dir = destination_folder or os.path.join(str(BACKEND_ROOT), "evidence", "recovered")
+    output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
     db: Session = SessionLocal()
