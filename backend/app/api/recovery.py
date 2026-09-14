@@ -12,12 +12,15 @@ from app.schemas.recovery import (
     RestoreFileRequest,
     RestoreFileResponse,
     RecoveredFileRecord,
+    ForensicReportResponse,
 )
 from app.services.storage_scanner import StorageScannerService
 from app.services.recovery_service import (
     scan_device_deleted_files,
     restore_files,
     list_all_recovered_files,
+    get_last_scan_metadata,
+    generate_forensic_recovery_report,
 )
 
 router = APIRouter(prefix="/recovery", tags=["Recovery"])
@@ -31,14 +34,18 @@ def scan_deleted_files_endpoint(req: RecoveryScanRequest):
         if not req.image_path or not os.path.exists(req.image_path):
             raise HTTPException(status_code=400, detail=f"Forensic image file not found: {req.image_path}")
         logger.info("Starting forensic image file carving on %s", req.image_path)
-        files = scan_device_deleted_files({}, scan_type="forensic_image", image_path=req.image_path)
+        img_id = os.path.basename(req.image_path)
+        files = scan_device_deleted_files({"id": img_id}, scan_type="forensic_image", image_path=req.image_path)
+        profile, acq_hash = get_last_scan_metadata(img_id)
         return RecoveryScanResponse(
-            device_id="forensic_image",
-            device_name=f"Forensic Image ({os.path.basename(req.image_path)})",
+            device_id=img_id,
+            device_name=f"Forensic Image ({img_id})",
             scan_type="forensic_image",
             scanned_at=datetime.now(timezone.utc),
             total_found=len(files),
             files=files,
+            device_profile=profile,
+            acquisition_hash=acq_hash,
         )
 
     if req.device_id in ("all", "all_drives", "machine"):
@@ -64,6 +71,7 @@ def scan_deleted_files_endpoint(req: RecoveryScanRequest):
 
     logger.info("Starting deleted files scan on device %s (%s)", target.get("model", target.get("device_path")), req.scan_type)
     files = scan_device_deleted_files(target, scan_type=req.scan_type, image_path=req.image_path)
+    profile, acq_hash = get_last_scan_metadata(target["id"])
 
     return RecoveryScanResponse(
         device_id=target["id"],
@@ -72,6 +80,8 @@ def scan_deleted_files_endpoint(req: RecoveryScanRequest):
         scanned_at=datetime.now(timezone.utc),
         total_found=len(files),
         files=files,
+        device_profile=profile,
+        acquisition_hash=acq_hash,
     )
 
 
@@ -112,3 +122,13 @@ def download_recovered_file(filename: str):
         filename=safe_name,
         media_type="application/octet-stream",
     )
+
+
+@router.get("/report", response_model=ForensicReportResponse)
+def get_recovery_report_endpoint(device_id: str = Query(..., description="Device ID or 'all' to generate report")):
+    """Generates a formal ISO/IEC 27037 forensic examination report with device profiling and hashes."""
+    try:
+        return generate_forensic_recovery_report(device_id)
+    except Exception as exc:
+        logger.error("Failed to generate forensic report for device %s: %s", device_id, exc)
+        raise HTTPException(status_code=500, detail=f"Failed to generate forensic report: {exc}")

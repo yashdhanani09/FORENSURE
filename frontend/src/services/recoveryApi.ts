@@ -35,6 +35,25 @@ export interface RecoveryScanResponse {
   scanned_at: string;
   total_found: number;
   files: DeletedFileItem[];
+  device_profile?: any;
+  acquisition_hash?: string;
+}
+
+export interface ForensicReportResponse {
+  report_id: string;
+  generated_at: string;
+  case_id: string;
+  case_name: string;
+  device_id: string;
+  device_name: string;
+  device_profile: any;
+  acquisition_hash: string;
+  total_discovered: number;
+  total_recovered: number;
+  discovered_files: DeletedFileItem[];
+  recovered_files: any[];
+  chain_of_custody: any[];
+  executive_summary: string;
 }
 
 export interface RestoredItem {
@@ -67,7 +86,7 @@ export interface RecoveredFileRecord {
 export const recoveryApi = {
   scan: async (
     deviceId: string,
-    scanType: "quick" | "deep" | "carving" | "forensic_image" = "quick",
+    scanType: "auto" | "quick" | "deep" | "carving" | "forensic_image" = "auto",
     targetPath?: string,
     imagePath?: string
   ): Promise<RecoveryScanResponse> => {
@@ -113,5 +132,9 @@ export const recoveryApi = {
       return [];
     }
     return (await api.get("/api/recovery/recovered")).data;
+  },
+
+  getReport: async (deviceId: string): Promise<ForensicReportResponse> => {
+    return (await api.get(`/api/recovery/report?device_id=${encodeURIComponent(deviceId)}`)).data;
   },
 };

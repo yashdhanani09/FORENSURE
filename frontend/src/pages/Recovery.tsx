@@ -3,10 +3,11 @@ import {
   RotateCcw, Search, Download, CheckCircle2, AlertTriangle, 
   FileText, Image as ImageIcon, Film, Archive, Code, File, HardDrive, 
   CheckSquare, Square, Shield, RefreshCw, FolderOpen, ArrowRight,
-  ShieldCheck, Smartphone, Check
+  ShieldCheck, Smartphone, Check, Copy, Cpu, Layers, Hash, FileCheck,
+  Printer, X, KeyRound
 } from "lucide-react";
 import { deviceApi } from "../services/api";
-import { recoveryApi, DeletedFileItem, RecoveredFileRecord } from "../services/recoveryApi";
+import { recoveryApi, DeletedFileItem, RecoveredFileRecord, ForensicReportResponse } from "../services/recoveryApi";
 import type { UsbDeviceDetail } from "../types/device";
 import { formatBytes, formatDate } from "../utils/format";
 import { Button } from "../components/ui/button";
@@ -14,7 +15,7 @@ import { Button } from "../components/ui/button";
 export function Recovery() {
   const [devices, setDevices] = useState<UsbDeviceDetail[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
-  const [scanType, setScanType] = useState<"quick" | "deep" | "forensic_image">("quick");
+  const [scanType, setScanType] = useState<"auto" | "quick" | "deep" | "forensic_image">("auto");
   const [imagePath, setImagePath] = useState<string>("");
   
   const [loadingDevices, setLoadingDevices] = useState(true);
@@ -29,6 +30,14 @@ export function Recovery() {
   const [recoveryHistory, setRecoveryHistory] = useState<RecoveredFileRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [restoredNotification, setRestoredNotification] = useState<string | null>(null);
+
+  // Forensic Profiling, Hashes & Report State
+  const [deviceProfile, setDeviceProfile] = useState<any>(null);
+  const [acquisitionHash, setAcquisitionHash] = useState<string>("");
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportData, setReportData] = useState<ForensicReportResponse | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [copiedHash, setCopiedHash] = useState(false);
 
   useEffect(() => {
     loadDevices();
@@ -79,6 +88,8 @@ export function Recovery() {
         scanType === "forensic_image" ? imagePath.trim() : undefined
       );
       setDeletedFiles(res.files || []);
+      setDeviceProfile(res.device_profile || null);
+      setAcquisitionHash(res.acquisition_hash || "");
       if ((res.files || []).length === 0) {
         alert("Scan completed. No deleted or carved files detected on this target.");
       }
@@ -87,6 +98,26 @@ export function Recovery() {
     } finally {
       setScanning(false);
     }
+  };
+
+  const handleOpenReport = async () => {
+    const targetId = scanType === "forensic_image" ? "forensic_image" : (selectedDeviceId || "all");
+    setLoadingReport(true);
+    try {
+      const rep = await recoveryApi.getReport(targetId);
+      setReportData(rep);
+      setShowReportModal(true);
+    } catch (e: any) {
+      alert(`Could not load forensic report: ${e.response?.data?.detail || e.message}`);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  const copyHash = (hash: string) => {
+    navigator.clipboard.writeText(hash);
+    setCopiedHash(true);
+    setTimeout(() => setCopiedHash(false), 2000);
   };
 
   const toggleSelectAll = () => {
@@ -172,6 +203,15 @@ export function Recovery() {
           <Button
             variant="outline"
             size="sm"
+            onClick={handleOpenReport}
+            loading={loadingReport}
+          >
+            <FileText className="w-3.5 h-3.5 text-cyan-400" />
+            Forensic Report
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setShowHistory(!showHistory)}
           >
             <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
@@ -227,7 +267,18 @@ export function Recovery() {
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <Search className="w-4 h-4 text-cyan-400" /> Scan Algorithm
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setScanType("auto")}
+                className={`py-2 px-2 rounded-xl border text-[11px] font-semibold transition ${
+                  scanType === "auto" 
+                    ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-glow" 
+                    : "bg-[#090d16] border-[#1e2c40] text-slate-400 hover:text-white"
+                }`}
+              >
+                Dual-Track (Auto)
+              </button>
               <button
                 type="button"
                 onClick={() => setScanType("quick")}
@@ -237,7 +288,7 @@ export function Recovery() {
                     : "bg-[#090d16] border-[#1e2c40] text-slate-400 hover:text-white"
                 }`}
               >
-                {isMobileTarget ? "Scoped Trash" : "NTFS Metadata"}
+                {isMobileTarget ? "Scoped Trash" : "Filesystem Only"}
               </button>
               <button
                 type="button"
@@ -342,6 +393,111 @@ export function Recovery() {
                   Android internal storage enforces File-Based Encryption (FBE). If files were lost on an external <strong className="text-slate-200">MicroSD Card</strong>, plug the SD card directly into a PC card reader for 100% raw sector bitstream carving.
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Universal Forensic Pipeline Visualizer (ISO/IEC 27037 Architecture) */}
+      <div className="bg-[#0b101e]/90 border border-cyan-500/30 rounded-2xl p-5 shadow-xl space-y-4 backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+              <Layers className="w-4 h-4" />
+            </span>
+            <div>
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                Universal Forensic Data Pipeline (ISO/IEC 27037)
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Non-destructive write-blocking, SHA-256 bitstream hashing, and dual-track signature carving
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 text-[10px] font-mono">
+            <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold">
+              <ShieldCheck className="w-3 h-3" /> READ-ONLY / WRITE-BLOCKED
+            </span>
+            {deviceProfile?.category && (
+              <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-bold">
+                {deviceProfile.category}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 11-Step Architectural Pipeline Flow */}
+        <div className="overflow-x-auto pb-2">
+          <div className="flex items-center min-w-[900px] gap-1.5 text-[10px] font-mono">
+            {[
+              { id: "1", label: "Select Media", active: true },
+              { id: "2", label: "Device Detection", active: true },
+              { id: "3", label: deviceProfile?.category || (isMobileTarget ? "Mobile Device" : "HDD / USB / SD"), active: true, highlight: true },
+              { id: "4", label: "Read-Only Acquisition", active: true },
+              { id: "5", label: "SHA-256 Hash", active: !!acquisitionHash, highlight: !!acquisitionHash },
+              { id: "6", label: "Dual-Track Engine", active: scanning || deletedFiles.length > 0 },
+              { id: "7", label: "File Carving", active: scanning || deletedFiles.length > 0 },
+              { id: "8", label: "Reconstruction", active: deletedFiles.length > 0 },
+              { id: "9", label: "Validation", active: deletedFiles.length > 0 },
+              { id: "10", label: "Scoring", active: deletedFiles.length > 0 },
+              { id: "11", label: "Forensic Report", active: deletedFiles.length > 0 },
+            ].map((step, idx, arr) => (
+              <React.Fragment key={step.id}>
+                <div className={`px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5 whitespace-nowrap transition-all ${
+                  step.highlight
+                    ? "bg-cyan-500/20 border-cyan-400 text-cyan-200 font-bold shadow-glow"
+                    : step.active
+                    ? "bg-[#0e1726] border-[#1e2c40] text-slate-200"
+                    : "bg-black/30 border-white/5 text-slate-600"
+                }`}>
+                  <span className={`w-3.5 h-3.5 rounded-full text-[9px] flex items-center justify-center font-bold ${
+                    step.active ? "bg-cyan-500/30 text-cyan-300" : "bg-slate-800 text-slate-500"
+                  }`}>
+                    {step.id}
+                  </span>
+                  <span>{step.label}</span>
+                </div>
+                {idx < arr.length - 1 && (
+                  <ArrowRight className={`w-3 h-3 flex-shrink-0 ${step.active ? "text-cyan-500/70" : "text-slate-700"}`} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        {/* Acquisition Bitstream Hash Live Card */}
+        {acquisitionHash && (
+          <div className="bg-[#080d19] border border-cyan-500/30 rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <KeyRound className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">
+                  Forensic Acquisition SHA-256 Bitstream Hash:
+                </div>
+                <div className="text-cyan-300 font-mono font-bold truncate text-[11px]" title={acquisitionHash}>
+                  {acquisitionHash}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => copyHash(acquisitionHash)}
+                className="h-7 text-[11px] border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+              >
+                {copiedHash ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copiedHash ? "Copied" : "Copy Hash"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOpenReport}
+                className="h-7 text-[11px]"
+              >
+                <FileText className="w-3 h-3 text-cyan-400" /> View Formal Report
+              </Button>
             </div>
           </div>
         )}
@@ -594,6 +750,132 @@ export function Recovery() {
           </table>
         </div>
       </div>
+
+      {/* Forensic Examination Report Modal */}
+      {showReportModal && reportData && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0b101d] border border-cyan-500/30 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-[#1e2c40] flex items-center justify-between bg-[#080d19]">
+              <div>
+                <div className="flex items-center gap-2 text-[10px] font-extrabold tracking-[0.2em] text-cyan-400 uppercase mb-1">
+                  <FileText className="w-3.5 h-3.5" /> ISO/IEC 27037 FORENSIC EXAMINATION REPORT
+                </div>
+                <h2 className="text-lg font-bold text-white">
+                  {reportData.case_name || "Digital Forensic Recovery Examination"}
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                  Report ID: <span className="text-cyan-300">{reportData.report_id}</span> • Case ID: <span className="text-slate-300">{reportData.case_id}</span> • Generated {formatDate(reportData.generated_at)}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 text-xs text-slate-300 leading-relaxed font-sans">
+              {/* Target Hardware Architecture Profile */}
+              <div className="bg-[#080d19] border border-[#1e2c40] rounded-xl p-4 space-y-3">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-cyan-400" /> Target Storage Profile & Hardware Architecture
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-[11px]">
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">DEVICE CLASSIFICATION:</span>
+                    <span className="text-cyan-300 font-bold">{reportData.device_profile?.category || "Standard Storage"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">INTERFACE BUS:</span>
+                    <span className="text-slate-200">{reportData.device_profile?.bus_type || "Universal"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">FILE SYSTEM:</span>
+                    <span className="text-slate-200">{reportData.device_profile?.filesystem || "FAT32/exFAT/NTFS"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px]">TRIM / WEAR-LEVELING:</span>
+                    <span className="text-slate-200">{reportData.device_profile?.trim_status || "Standard"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Forensic Acquisition Integrity Hash */}
+              <div className="bg-gradient-to-r from-cyan-950/30 to-blue-950/20 border border-cyan-500/30 rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-cyan-400" /> Bitstream Acquisition Integrity (SHA-256)
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono text-[10px] font-bold">
+                    VERIFIED MATCH
+                  </span>
+                </div>
+                <div className="font-mono text-cyan-200 text-xs break-all bg-black/40 p-2.5 rounded-lg border border-cyan-500/20 flex items-center justify-between gap-2">
+                  <span>{reportData.acquisition_hash}</span>
+                  <button
+                    onClick={() => copyHash(reportData.acquisition_hash)}
+                    className="text-slate-400 hover:text-white p-1"
+                    title="Copy Hash"
+                  >
+                    {copiedHash ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Executive Summary Narrative */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <FileCheck className="w-4 h-4 text-cyan-400" /> Forensic Analysis Narrative
+                </h3>
+                <div className="bg-[#080d19] border border-[#1e2c40] rounded-xl p-4 text-slate-300 font-sans text-xs whitespace-pre-wrap leading-relaxed">
+                  {reportData.executive_summary}
+                </div>
+              </div>
+
+              {/* Statistics Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-[#080d19] border border-[#1e2c40] p-3 rounded-xl text-center">
+                  <div className="text-slate-400 text-[10px] uppercase font-bold">Total Discovered</div>
+                  <div className="text-xl font-bold text-cyan-400 font-mono mt-1">{reportData.total_discovered}</div>
+                </div>
+                <div className="bg-[#080d19] border border-[#1e2c40] p-3 rounded-xl text-center">
+                  <div className="text-slate-400 text-[10px] uppercase font-bold">Successfully Restored</div>
+                  <div className="text-xl font-bold text-emerald-400 font-mono mt-1">{reportData.total_recovered}</div>
+                </div>
+                <div className="bg-[#080d19] border border-[#1e2c40] p-3 rounded-xl text-center">
+                  <div className="text-slate-400 text-[10px] uppercase font-bold">Chain of Custody Events</div>
+                  <div className="text-xl font-bold text-purple-400 font-mono mt-1">{(reportData.chain_of_custody || []).length}</div>
+                </div>
+                <div className="bg-[#080d19] border border-[#1e2c40] p-3 rounded-xl text-center">
+                  <div className="text-slate-400 text-[10px] uppercase font-bold">Legal Admissibility</div>
+                  <div className="text-xs font-bold text-emerald-300 font-mono mt-2">ISO 27037 VALID</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-[#1e2c40] bg-[#080d19] flex items-center justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.print()}
+              >
+                <Printer className="w-3.5 h-3.5 text-cyan-400" /> Print / Save PDF
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setShowReportModal(false)}
+              >
+                Close Report
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

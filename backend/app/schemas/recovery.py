@@ -22,7 +22,7 @@ class DeletedFileItem(BaseModel):
 
 class RecoveryScanRequest(BaseModel):
     device_id: str
-    scan_type: Literal["quick", "deep", "carving", "forensic_image"] = "quick"
+    scan_type: Literal["auto", "quick", "deep", "carving", "forensic_image"] = "auto"
     target_path: Optional[str] = None
     image_path: Optional[str] = None
 
@@ -34,6 +34,25 @@ class RecoveryScanResponse(BaseModel):
     scanned_at: datetime
     total_found: int
     files: List[DeletedFileItem]
+    device_profile: Optional[dict] = None
+    acquisition_hash: Optional[str] = None
+
+
+class ForensicReportResponse(BaseModel):
+    report_id: str
+    generated_at: datetime
+    case_id: str
+    case_name: str
+    device_id: str
+    device_name: str
+    device_profile: dict
+    acquisition_hash: str
+    total_discovered: int
+    total_recovered: int
+    discovered_files: List[DeletedFileItem]
+    recovered_files: List[dict]
+    chain_of_custody: List[dict]
+    executive_summary: str
 
 
 class RestoreFileRequest(BaseModel):

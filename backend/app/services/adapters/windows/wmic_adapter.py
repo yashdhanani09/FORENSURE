@@ -90,8 +90,8 @@ foreach ($v in $vols) {
     $dl = ('{0}:\' -f $v.DriveLetter)
     $isSys = ($v.DriveLetter -eq 'C' -or ($v.FileSystemLabel -and $v.FileSystemLabel -imatch 'os|boot|system'))
     $lbl = if ($v.FileSystemLabel) { ('{0} ({1}:)' -f $v.FileSystemLabel, $v.DriveLetter) } else { ('Volume ({0}:)' -f $v.DriveLetter) }
-    $devType = if ($v.DriveType -eq 'Removable') { 'REMOVABLE_STORAGE' } else { 'INTERNAL_STORAGE' }
-    $vendorName = if ($isSys) { 'Internal Machine (System)' } else { 'Internal Storage' }
+    $devType = if ($v.DriveType -eq 'Removable') { 'USB_STORAGE' } else { 'INTERNAL_STORAGE' }
+    $vendorName = if ($isSys) { 'Internal Machine (System)' } elseif ($v.DriveType -eq 'Removable') { 'Removable USB / Flash Drive' } else { 'Internal Storage' }
     $result += @{
         device_path    = $dl
         kernel_name    = ('Volume-{0}' -f $v.DriveLetter)
@@ -105,6 +105,7 @@ foreach ($v in $vols) {
         is_system_disk = [bool]$isSys
         is_read_only   = [bool]$isSys
         device_type    = $devType
+        filesystem     = $v.FileSystemType
         partitions     = @(@{
             partition_path       = $dl
             partition_number     = '1'
@@ -117,25 +118,20 @@ foreach ($v in $vols) {
     }
 }
 
-# Enumerate connected mobile devices (WPD / MTP / Android / iPhone)
-# Only include devices that look like real smartphones/tablets — not smart speakers,
-# Kindle e-readers, Echo devices, or other Amazon consumer electronics.
-$phonePattern = 'android|phone|smartphone|tablet|galaxy|pixel|redmi|poco|realme|oneplus|iphone|ipad|moto|nokia|oppo|vivo|huawei|mi\s|xiaomi|lg\s|htc|sony|asus|lenovo\s.*tab'
+# Enumerate connected mobile devices (WPD / MTP / Android / iPhone / Windows Portable Devices)
 $excludePattern = 'echo|kindle|fire\s*hd|fire\s*7|fire\s*10|alexa|firetv|fire\s*tv|ring|blink|amazon\s*echo|amazon\s*alexa'
 
-$wpdList = Get-PnpDevice -Class 'WPD' -PresentOnly -ErrorAction SilentlyContinue | Where-Object {
-    $fn = $_.FriendlyName
-    # Must match phone pattern OR be a known USB\VID_ with MTP interface
-    ($fn -imatch $phonePattern) -and (-not ($fn -imatch $excludePattern))
+$wpdList = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object {
+    ($_.Class -in @('WPD', 'Portable Device') -or $_.InstanceId -like 'USB\VID_*') -and
+    $_.FriendlyName -and
+    (-not ($_.FriendlyName -imatch $excludePattern))
 }
-if (-not $wpdList) {
-    # Fallback: any USB WPD device that isn't an obvious consumer gadget
-    $wpdList = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object {
-        ($_.Class -eq 'Portable Device' -or $_.InstanceId -like 'USB\VID_*') -and
-        ($_.FriendlyName -imatch $phonePattern) -and
-        (-not ($_.FriendlyName -imatch $excludePattern))
-    }
-}
+
+# Cross-reference with Shell.Application namespace 17 (This PC portable devices)
+$sh = New-Object -ComObject Shell.Application
+$thisPc = $sh.NameSpace(17)
+$knownWpdNames = @($wpdList | ForEach-Object { $_.FriendlyName })
+
 foreach ($wpd in $wpdList) {
     $friendly = if ($wpd.FriendlyName) { $wpd.FriendlyName } else { 'Mobile Device' }
     $parts_name = $friendly -split ' ', 2
@@ -155,6 +151,7 @@ foreach ($wpd in $wpdList) {
         is_system_disk = $false
         is_read_only   = $false
         device_type    = 'MOBILE_DEVICE'
+        filesystem     = 'MTP'
         partitions     = @(@{
             partition_path       = ('{0}\Storage' -f $wpdPath)
             partition_number     = '1'
@@ -164,6 +161,42 @@ foreach ($wpd in $wpdList) {
             partition_label      = 'Phone Storage'
             mount_point          = $wpdPath
         })
+    }
+}
+
+# Fallback: Check Shell COM items if no WPD device was registered
+if ($wpdList.Count -eq 0 -and $thisPc) {
+    foreach ($item in $thisPc.Items()) {
+        if ($item.Type -like "*Portable*" -and (-not ($item.Name -imatch $excludePattern))) {
+            $fName = $item.Name
+            $p_name = $fName -split ' ', 2
+            $v_name = if ($p_name.Count -gt 0) { $p_name[0] } else { 'Mobile' }
+            $m_name = if ($p_name.Count -gt 1) { $p_name[1] } else { $fName }
+            $result += @{
+                device_path    = "\\.\WPD\$($item.Path)"
+                kernel_name    = $item.Path
+                vendor         = $v_name
+                model          = $m_name
+                serial         = $item.Path
+                size_bytes     = [int64]0
+                bus            = 'usb'
+                is_usb         = $true
+                is_removable   = $true
+                is_system_disk = $false
+                is_read_only   = $false
+                device_type    = 'MOBILE_DEVICE'
+                filesystem     = 'MTP'
+                partitions     = @(@{
+                    partition_path       = "\\.\WPD\$($item.Path)\Storage"
+                    partition_number     = '1'
+                    partition_size       = [int64]0
+                    partition_filesystem = 'MTP'
+                    partition_uuid       = $null
+                    partition_label      = 'Phone Storage'
+                    mount_point          = "\\.\WPD\$($item.Path)"
+                })
+            }
+        }
     }
 }
 
