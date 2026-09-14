@@ -107,7 +107,7 @@ def _parse_dollar_i_file(i_path: str) -> Tuple[Optional[str], Optional[str], Opt
         return None, None, None, None
 
 
-def _parse_ntfs_recycle_bin(mount_root: str, max_items: int = 300) -> List[DeletedFileItem]:
+def _parse_ntfs_recycle_bin(mount_root: str, max_items: int = 10000) -> List[DeletedFileItem]:
     """Scans Windows NTFS $RECYCLE.BIN directory on the given mount point cleanly and safely."""
     items: List[DeletedFileItem] = []
     checked_paths = set()
@@ -235,7 +235,7 @@ def _parse_ntfs_recycle_bin(mount_root: str, max_items: int = 300) -> List[Delet
     return items
 
 
-def _scan_raw_carver(mount_root: str, max_files: int = 150) -> List[DeletedFileItem]:
+def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFileItem]:
     """
     Performs raw binary signature carving from physical/logical storage volumes,
     disk images, temporary clusters, and unallocated slack. Supports JPG, PNG, PDF, DOCX, XLSX, ZIP, MP4.
@@ -667,7 +667,7 @@ def scan_device_deleted_files(
         # 1. FAT32 / exFAT / Removable unallocated remnant scanning
         fat_items = scan_fat_deleted_files(
             mp,
-            max_items=250,
+            max_items=5000,
             scanned_cache=SCANNED_DELETED_CACHE,
             carved_cache=CARVED_DATA_CACHE,
         )
@@ -678,7 +678,7 @@ def scan_device_deleted_files(
                 results.append(item)
 
         # 2. NTFS Recycle Bin metadata and payload scanning
-        ntfs_items = _parse_ntfs_recycle_bin(mp)
+        ntfs_items = _parse_ntfs_recycle_bin(mp, max_items=10000)
         for item in ntfs_items:
             key = (item.filename, item.size_bytes, item.original_path)
             if key not in seen_keys:
@@ -687,15 +687,25 @@ def scan_device_deleted_files(
 
         # 3. Raw Data File Carving & Fragment Reconstruction (Enabled by default in 'auto', 'deep', 'carving')
         if scan_type in {"auto", "deep", "carving"}:
-            carved_items = _scan_raw_carver(mp)
+            carved_items = _scan_raw_carver(mp, max_files=5000)
             for item in carved_items:
                 key = (item.filename, item.size_bytes, item.original_path)
                 if key not in seen_keys:
                     seen_keys.add(key)
                     results.append(item)
 
-    # Sort by deleted_at descending
-    results.sort(key=lambda x: x.deleted_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    # Sort strictly from most recent to oldest (Recent -> Old)
+    def _safe_sort_timestamp(dt: Optional[datetime]) -> float:
+        if dt is None:
+            return 0.0
+        try:
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc).timestamp()
+            return dt.timestamp()
+        except Exception:
+            return 0.0
+
+    results.sort(key=lambda x: _safe_sort_timestamp(x.deleted_at), reverse=True)
     logger.info("Found %d deleted / carved files across targets %s", len(results), mount_points)
     LAST_SCANNED_FILES[dev_id] = results
     return results

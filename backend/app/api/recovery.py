@@ -115,7 +115,17 @@ def download_recovered_file(filename: str):
     safe_name = os.path.basename(filename)
     file_path = os.path.join("evidence", "recovered", safe_name)
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Recovered file not found.")
+        from app.database import SessionLocal
+        from app.models.forensic import RecoveredFile
+        db = SessionLocal()
+        try:
+            rec = db.query(RecoveredFile).filter(RecoveredFile.filename == safe_name).order_by(RecoveredFile.created_at.desc()).first()
+            if rec and rec.output_path and os.path.exists(rec.output_path):
+                file_path = rec.output_path
+            else:
+                raise HTTPException(status_code=404, detail="Recovered file not found.")
+        finally:
+            db.close()
 
     return FileResponse(
         path=file_path,

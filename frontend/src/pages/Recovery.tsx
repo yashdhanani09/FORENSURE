@@ -4,10 +4,10 @@ import {
   FileText, Image as ImageIcon, Film, Archive, Code, File, HardDrive, 
   CheckSquare, Square, Shield, RefreshCw, FolderOpen, ArrowRight,
   ShieldCheck, Smartphone, Check, Copy, Cpu, Layers, Hash, FileCheck,
-  Printer, X, KeyRound
+  Printer, X, KeyRound, ArrowUpDown, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { deviceApi } from "../services/api";
-import { recoveryApi, DeletedFileItem, RecoveredFileRecord, ForensicReportResponse } from "../services/recoveryApi";
+import { recoveryApi, DeletedFileItem, RecoveredFileRecord, ForensicReportResponse, RestoredItem } from "../services/recoveryApi";
 import type { UsbDeviceDetail } from "../types/device";
 import { formatBytes, formatDate } from "../utils/format";
 import { Button } from "../components/ui/button";
@@ -38,6 +38,15 @@ export function Recovery() {
   const [reportData, setReportData] = useState<ForensicReportResponse | null>(null);
   const [loadingReport, setLoadingReport] = useState(false);
   const [copiedHash, setCopiedHash] = useState(false);
+
+  // Newly Restored Files Download Popup State
+  const [showRestoredModal, setShowRestoredModal] = useState(false);
+  const [newlyRestoredItems, setNewlyRestoredItems] = useState<RestoredItem[]>([]);
+
+  // Full List Sorting (Default: Recent to Old) & Pagination State
+  const [sortBy, setSortBy] = useState<"recent" | "oldest" | "size_desc" | "name" | "confidence">("recent");
+  const [pageSize, setPageSize] = useState<number>(0); // 0 means Show All Files
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   useEffect(() => {
     loadDevices();
@@ -120,24 +129,6 @@ export function Recovery() {
     setTimeout(() => setCopiedHash(false), 2000);
   };
 
-  const toggleSelectAll = () => {
-    if (selectedFileIds.size === filteredFiles.length) {
-      setSelectedFileIds(new Set());
-    } else {
-      setSelectedFileIds(new Set(filteredFiles.map(f => f.id)));
-    }
-  };
-
-  const toggleSelectFile = (id: string) => {
-    const next = new Set(selectedFileIds);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setSelectedFileIds(next);
-  };
-
   const handleRecoverFiles = async (fileIds: string[]) => {
     if (fileIds.length === 0) return;
     setRecovering(true);
@@ -146,6 +137,10 @@ export function Recovery() {
       const successful = (res.restored_items || []).filter(r => r.status === "RECOVERED");
       setRestoredNotification(`Successfully restored ${successful.length} of ${fileIds.length} file(s) with SHA-256 integrity verification.`);
       
+      // Open instant download modal with restored files
+      setNewlyRestoredItems(res.restored_items || []);
+      setShowRestoredModal(true);
+
       // Refresh history
       loadHistory();
       
@@ -158,6 +153,24 @@ export function Recovery() {
     } finally {
       setRecovering(false);
     }
+  };
+
+  const downloadFile = (filename: string) => {
+    const link = document.createElement("a");
+    link.href = `/api/recovery/download/${encodeURIComponent(filename)}`;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const downloadAllRestored = () => {
+    const successful = newlyRestoredItems.filter(r => r.status === "RECOVERED");
+    successful.forEach((item, idx) => {
+      setTimeout(() => {
+        downloadFile(item.filename);
+      }, idx * 300);
+    });
   };
 
   const getCategoryIcon = (category: string) => {
@@ -177,6 +190,54 @@ export function Recovery() {
     const matchesCategory = categoryFilter === "All" || f.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
+
+  // Strict sorting: Default is Recent to Old (Newest deletion at top)
+  const sortedFiles = [...filteredFiles].sort((a, b) => {
+    if (sortBy === "recent") {
+      const tA = a.deleted_at ? new Date(a.deleted_at).getTime() : 0;
+      const tB = b.deleted_at ? new Date(b.deleted_at).getTime() : 0;
+      return tB - tA; // Recent to Old
+    }
+    if (sortBy === "oldest") {
+      const tA = a.deleted_at ? new Date(a.deleted_at).getTime() : 0;
+      const tB = b.deleted_at ? new Date(b.deleted_at).getTime() : 0;
+      return tA - tB; // Old to Recent
+    }
+    if (sortBy === "size_desc") {
+      return (b.size_bytes || 0) - (a.size_bytes || 0);
+    }
+    if (sortBy === "name") {
+      return a.filename.localeCompare(b.filename);
+    }
+    if (sortBy === "confidence") {
+      return (b.confidence_score || 0) - (a.confidence_score || 0);
+    }
+    return 0;
+  });
+
+  const displayFiles = pageSize > 0 
+    ? sortedFiles.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : sortedFiles;
+
+  const totalPages = pageSize > 0 ? Math.ceil(sortedFiles.length / pageSize) : 1;
+
+  const toggleSelectAll = () => {
+    if (selectedFileIds.size === displayFiles.length && displayFiles.length > 0) {
+      setSelectedFileIds(new Set());
+    } else {
+      setSelectedFileIds(new Set(displayFiles.map(f => f.id)));
+    }
+  };
+
+  const toggleSelectFile = (id: string) => {
+    const next = new Set(selectedFileIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedFileIds(next);
+  };
 
   const selectedDevice = devices.find(d => d.id === selectedDeviceId);
   const isMobileTarget = selectedDevice?.device_type === "MOBILE_DEVICE" || 
@@ -624,12 +685,51 @@ export function Recovery() {
           </div>
         </div>
 
-        {/* Results Info */}
-        <div className="flex justify-between items-center text-xs text-slate-400 pt-1">
-          <span>Discovered <strong className="text-white">{filteredFiles.length}</strong> of <strong className="text-white">{deletedFiles.length}</strong> deleted record(s)</span>
-          {selectedFileIds.size > 0 && (
-            <span className="text-cyan-400 font-semibold">{selectedFileIds.size} file(s) selected for recovery</span>
-          )}
+        {/* Results Info & Sequence Controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t border-[#1e2c40]/60 text-xs">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 text-slate-400">
+              <ArrowUpDown className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="font-medium">Sequence:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-[#090d16] border border-[#1e2c40] rounded-xl px-2.5 py-1 text-xs text-cyan-300 outline-none focus:border-cyan-500 font-sans cursor-pointer"
+              >
+                <option value="recent">⚡ Recent to Old (Newest Deletion First)</option>
+                <option value="oldest">⏳ Oldest to Recent (Oldest First)</option>
+                <option value="size_desc">📦 File Size (Largest First)</option>
+                <option value="name">🔤 File Name (A to Z)</option>
+                <option value="confidence">🎯 Evidence Quality Score</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-slate-400">
+              <span className="font-medium">Display:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-[#090d16] border border-[#1e2c40] rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-cyan-500 font-sans cursor-pointer"
+              >
+                <option value={0}>♾️ All Files (Full Comprehensive List)</option>
+                <option value={50}>50 per page</option>
+                <option value={100}>100 per page</option>
+                <option value={200}>200 per page</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-slate-400">
+            <span>
+              Showing <strong className="text-white">{displayFiles.length}</strong> of <strong className="text-white">{filteredFiles.length}</strong> matching ({deletedFiles.length} total)
+            </span>
+            {selectedFileIds.size > 0 && (
+              <span className="text-cyan-400 font-semibold">• {selectedFileIds.size} selected</span>
+            )}
+          </div>
         </div>
 
         {/* Table */}
@@ -639,24 +739,62 @@ export function Recovery() {
               <tr>
                 <th className="px-4 py-3 w-10">
                   <button onClick={toggleSelectAll} className="text-slate-400 hover:text-white flex items-center">
-                    {selectedFileIds.size === filteredFiles.length && filteredFiles.length > 0 ? (
+                    {selectedFileIds.size === displayFiles.length && displayFiles.length > 0 ? (
                       <CheckSquare className="w-4 h-4 text-cyan-400" />
                     ) : (
                       <Square className="w-4 h-4" />
                     )}
                   </button>
                 </th>
-                <th className="px-4 py-3">File Name & Source</th>
+                <th 
+                  className="px-4 py-3 cursor-pointer hover:text-white transition select-none"
+                  onClick={() => setSortBy(sortBy === "name" ? "recent" : "name")}
+                  title="Click to sort by filename"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>File Name & Source</span>
+                    {sortBy === "name" && <span className="text-cyan-400 font-bold">↑</span>}
+                  </div>
+                </th>
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Storage Location / Path</th>
-                <th className="px-4 py-3">Size</th>
-                <th className="px-4 py-3">Timestamp</th>
-                <th className="px-4 py-3">Evidence Quality</th>
+                <th 
+                  className="px-4 py-3 cursor-pointer hover:text-white transition select-none"
+                  onClick={() => setSortBy(sortBy === "size_desc" ? "recent" : "size_desc")}
+                  title="Click to sort by file size"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Size</span>
+                    {sortBy === "size_desc" && <span className="text-cyan-400 font-bold">↓</span>}
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3 cursor-pointer hover:text-cyan-300 transition select-none"
+                  onClick={() => setSortBy(sortBy === "recent" ? "oldest" : "recent")}
+                  title="Click to toggle Newest / Oldest sequence"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Timestamp</span>
+                    {sortBy === "recent" && <span className="text-cyan-400 font-bold">↓ (Recent)</span>}
+                    {sortBy === "oldest" && <span className="text-cyan-400 font-bold">↑ (Oldest)</span>}
+                    {sortBy !== "recent" && sortBy !== "oldest" && <ArrowUpDown className="w-3 h-3 text-slate-600" />}
+                  </div>
+                </th>
+                <th 
+                  className="px-4 py-3 cursor-pointer hover:text-white transition select-none"
+                  onClick={() => setSortBy(sortBy === "confidence" ? "recent" : "confidence")}
+                  title="Click to sort by evidence quality"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>Evidence Quality</span>
+                    {sortBy === "confidence" && <span className="text-cyan-400 font-bold">↓</span>}
+                  </div>
+                </th>
                 <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1e2c40]/60 font-mono">
-              {filteredFiles.map((file) => {
+              {displayFiles.map((file) => {
                 const isSelected = selectedFileIds.has(file.id);
                 return (
                   <tr 
@@ -729,7 +867,7 @@ export function Recovery() {
                 );
               })}
 
-              {filteredFiles.length === 0 && (
+              {displayFiles.length === 0 && (
                 <tr>
                   <td colSpan={8} className="text-center py-16 text-slate-500 font-sans">
                     {deletedFiles.length === 0 ? (
@@ -749,7 +887,149 @@ export function Recovery() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {pageSize > 0 && totalPages > 1 && (
+          <div className="flex items-center justify-between pt-3 border-t border-[#1e2c40] text-xs">
+            <div className="text-slate-400">
+              Page <strong className="text-white">{currentPage}</strong> of <strong className="text-white">{totalPages}</strong> ({sortedFiles.length} total files)
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="h-8 px-3"
+              >
+                <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Previous
+              </Button>
+              <span className="px-2 font-mono text-cyan-300">{currentPage} / {totalPages}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="h-8 px-3"
+              >
+                Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Newly Restored Files Direct Download Modal Popup */}
+      {showRestoredModal && newlyRestoredItems.length > 0 && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-[#0b101d] border border-emerald-500/40 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-[#1e2c40] flex items-center justify-between bg-[#080d19]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-glow">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 text-[10px] font-extrabold tracking-[0.2em] text-emerald-400 uppercase">
+                    FORENSIC RESTORATION SUCCESSFUL
+                  </div>
+                  <h2 className="text-lg font-bold text-white">
+                    Recovered File(s) Ready to Download
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Cryptographic SHA-256 integrity verified. Download directly into your machine below.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRestoredModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Restored Items List */}
+            <div className="p-6 overflow-y-auto space-y-3">
+              {newlyRestoredItems.map((item, idx) => (
+                <div 
+                  key={idx}
+                  className="bg-[#080d19] border border-[#1e2c40] hover:border-emerald-500/40 transition rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      <span className="font-semibold text-sm text-white truncate max-w-xs md:max-w-md" title={item.filename}>
+                        {item.filename}
+                      </span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono ${
+                        item.status === "RECOVERED"
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                          : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                      }`}>
+                        {item.status}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] text-slate-400 font-mono flex flex-wrap items-center gap-3">
+                      <span>Size: <strong className="text-slate-200">{formatBytes(item.size_bytes)}</strong></span>
+                      {item.sha256 && (
+                        <span className="flex items-center gap-1 truncate max-w-xs" title={item.sha256}>
+                          SHA-256: <strong className="text-cyan-300 font-mono">{item.sha256.slice(0, 16)}...</strong>
+                          <button
+                            onClick={() => copyHash(item.sha256)}
+                            className="text-slate-400 hover:text-white ml-1 p-0.5"
+                            title="Copy full SHA-256 hash"
+                          >
+                            <Copy className="w-3 h-3" />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {item.status === "RECOVERED" && (
+                    <Button
+                      onClick={() => downloadFile(item.filename)}
+                      variant="primary"
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex-shrink-0 shadow-lg shadow-emerald-950/50"
+                    >
+                      <Download className="w-3.5 h-3.5 mr-1.5" /> Download to Machine
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-[#1e2c40] bg-[#080d19] flex items-center justify-between">
+              <div className="text-xs text-slate-400">
+                {newlyRestoredItems.filter(i => i.status === "RECOVERED").length} file(s) restored with integrity verification
+              </div>
+              <div className="flex items-center gap-3">
+                {newlyRestoredItems.filter(i => i.status === "RECOVERED").length > 1 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadAllRestored}
+                    className="border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1.5" /> Download All ({newlyRestoredItems.filter(i => i.status === "RECOVERED").length})
+                  </Button>
+                )}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setShowRestoredModal(false)}
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Forensic Examination Report Modal */}
       {showReportModal && reportData && (
