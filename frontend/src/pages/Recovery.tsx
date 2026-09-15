@@ -16,8 +16,9 @@ import { Button } from "../components/ui/button";
 export function Recovery() {
   const [devices, setDevices] = useState<UsbDeviceDetail[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
-  const [scanType, setScanType] = useState<"auto" | "quick" | "deep" | "forensic_image">("auto");
+  const [scanType, setScanType] = useState<"unified" | "auto" | "quick" | "deep" | "forensic_image">("unified");
   const [imagePath, setImagePath] = useState<string>("");
+  const [showAdvancedImage, setShowAdvancedImage] = useState<boolean>(false);
   
   const [loadingDevices, setLoadingDevices] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -82,8 +83,9 @@ export function Recovery() {
   };
 
   const handleStartScan = async () => {
-    if (scanType !== "forensic_image" && !selectedDeviceId) return;
-    if (scanType === "forensic_image" && !imagePath.trim()) {
+    const effectiveScanType = showAdvancedImage && imagePath.trim() ? "forensic_image" : "unified";
+    if (effectiveScanType !== "forensic_image" && !selectedDeviceId) return;
+    if (effectiveScanType === "forensic_image" && !imagePath.trim()) {
       alert("Please specify a valid path to a forensic disk image (.dd, .raw, .img, .iso).");
       return;
     }
@@ -93,10 +95,10 @@ export function Recovery() {
     setRestoredNotification(null);
     try {
       const res = await recoveryApi.scan(
-        scanType === "forensic_image" ? "forensic_image" : selectedDeviceId,
-        scanType,
+        effectiveScanType === "forensic_image" ? "forensic_image" : selectedDeviceId,
+        effectiveScanType,
         undefined,
-        scanType === "forensic_image" ? imagePath.trim() : undefined
+        effectiveScanType === "forensic_image" ? imagePath.trim() : undefined
       );
       setDeletedFiles(res.files || []);
       setDeviceProfile(res.device_profile || null);
@@ -323,15 +325,15 @@ export function Recovery() {
         </div>
       </div>
 
-      {/* Control Panel: Device Selector & Scan Mode */}
+      {/* Control Panel: Device Selector & Unified Single Scan */}
       <div className="bg-[#0f172a]/90 border border-[#1e2c40] rounded-2xl p-6 shadow-xl space-y-6 backdrop-blur-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
           {/* Target Drive Selector */}
-          <div className="space-y-2">
+          <div className="lg:col-span-5 space-y-2">
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
               <HardDrive className="w-4 h-4 text-cyan-400" /> Target Storage Source
             </label>
-            {scanType === "forensic_image" ? (
+            {showAdvancedImage ? (
               <input
                 type="text"
                 value={imagePath}
@@ -346,7 +348,7 @@ export function Recovery() {
                 className="w-full bg-[#090d16] border border-[#1e2c40] rounded-xl px-4 py-2.5 text-slate-100 text-xs focus:border-cyan-500 outline-none font-mono"
               >
                 <option value="all">
-                  💻 Entire Machine & All Recycle Bins (C:\, D:\, Desktop, etc.)
+                  💻 Entire Machine &amp; All Volumes (C:\, D:\, All Recycle Bins)
                 </option>
                 {devices.map((d) => (
                   <option key={d.id} value={d.id}>
@@ -357,69 +359,46 @@ export function Recovery() {
             )}
           </div>
 
-          {/* Scan Technique */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-              <Search className="w-4 h-4 text-cyan-400" /> Scan Algorithm
+          {/* Integrated Scanning Subsystems Status */}
+          <div className="lg:col-span-4 space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-cyan-400" /> Unified All-in-One Engine
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedImage(!showAdvancedImage)}
+                className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-mono"
+              >
+                {showAdvancedImage ? "← Drive Mode" : "Disk Image Mode (.raw)"}
+              </button>
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setScanType("auto")}
-                className={`py-2 px-2 rounded-xl border text-[11px] font-semibold transition ${
-                  scanType === "auto" 
-                    ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-glow" 
-                    : "bg-[#090d16] border-[#1e2c40] text-slate-400 hover:text-white"
-                }`}
-              >
-                Dual-Track (Auto)
-              </button>
-              <button
-                type="button"
-                onClick={() => setScanType("quick")}
-                className={`py-2 px-2 rounded-xl border text-[11px] font-semibold transition ${
-                  scanType === "quick" 
-                    ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-glow" 
-                    : "bg-[#090d16] border-[#1e2c40] text-slate-400 hover:text-white"
-                }`}
-              >
-                {isMobileTarget ? "Scoped Trash" : "Filesystem Only"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setScanType("deep")}
-                className={`py-2 px-2 rounded-xl border text-[11px] font-semibold transition ${
-                  scanType === "deep" 
-                    ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-glow" 
-                    : "bg-[#090d16] border-[#1e2c40] text-slate-400 hover:text-white"
-                }`}
-              >
-                {isMobileTarget ? "Deep Remnants" : "Raw Carver"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setScanType("forensic_image")}
-                className={`py-2 px-2 rounded-xl border text-[11px] font-semibold transition ${
-                  scanType === "forensic_image" 
-                    ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-glow" 
-                    : "bg-[#090d16] border-[#1e2c40] text-slate-400 hover:text-white"
-                }`}
-              >
-                Disk Image (.raw)
-              </button>
+            <div className="bg-[#090d16] border border-[#1e2c40] rounded-xl p-2.5 grid grid-cols-2 gap-1.5 text-[10.5px]">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> NTFS &amp; FAT Metadata
+              </div>
+              <div className="flex items-center gap-1.5 text-cyan-400 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Raw Sector Carver
+              </div>
+              <div className="flex items-center gap-1.5 text-amber-400 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Text &amp; Docs (.txt, .json)
+              </div>
+              <div className="flex items-center gap-1.5 text-purple-400 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Slack &amp; Temp Buffers
+              </div>
             </div>
           </div>
 
           {/* Action Trigger */}
-          <div className="flex items-end">
+          <div className="lg:col-span-3">
             <Button
               onClick={handleStartScan}
-              disabled={scanning || (scanType !== "forensic_image" && !selectedDeviceId)}
+              disabled={scanning || (!showAdvancedImage && !selectedDeviceId)}
               loading={scanning}
               variant="primary"
-              className="w-full h-10 shadow-glow"
+              className="w-full h-11 text-xs font-bold tracking-wide shadow-glow"
             >
-              <Search className="w-4 h-4" /> {scanning ? "Analyzing Sectors..." : isMobileTarget ? "Scan Phone Storage" : "Scan & Carve Files"}
+              <Search className="w-4 h-4" /> {scanning ? "Analyzing Sectors..." : isMobileTarget ? "Scan Phone Storage" : "Run Unified Forensic Scan"}
             </Button>
           </div>
         </div>
@@ -427,15 +406,15 @@ export function Recovery() {
         {/* Supported Formats Banner */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#1e2c40]/80 text-[11px]">
           <div className="flex flex-wrap items-center gap-2 text-slate-400">
-            <span className="font-semibold text-slate-300">Supported Carving Formats:</span>
-            {["JPG", "PNG", "PDF", "DOCX", "XLSX", "ZIP", "MP4"].map((fmt) => (
+            <span className="font-semibold text-slate-300">Supported Formats:</span>
+            {["TXT", "JSON", "MD", "JPG", "PNG", "PDF", "DOCX", "XLSX", "ZIP", "MP4"].map((fmt) => (
               <span key={fmt} className="px-2 py-0.5 rounded bg-cyan-950/40 text-cyan-300 border border-cyan-800/40 font-mono text-[10px] font-bold">
                 {fmt}
               </span>
             ))}
           </div>
           <span className="text-slate-400 font-sans">
-            Digital Image Analysis • Fragment Reconstruction • File Validation
+            Filesystem Records • Raw Sector Carving • Text Heuristics • Structural Verification
           </span>
         </div>
 

@@ -12,8 +12,10 @@ Features:
 from __future__ import annotations
 
 import io
+import json
 import logging
 import os
+import re
 import struct
 import uuid
 import zipfile
@@ -553,6 +555,96 @@ class RawFileCarver:
             pos += 1
 
         return results
+
+    # =========================================================================
+    # 6. Plain Text & Structured Document Carving (TXT, JSON, MD, LOG, CODE)
+    # =========================================================================
+    def carve_text_documents(
+        self,
+        data: bytes,
+        base_offset: int = 0,
+        min_len: int = 24,
+        max_files: int = 40
+    ) -> List[CarvedFile]:
+        """
+        Heuristically carves coherent plain-text documents and structured scripts
+        (TXT, JSON, MD, LOG, PY, JS) from unallocated memory, temporary buffers,
+        and disk slack where binary magic bytes are not present.
+        """
+        carved: List[CarvedFile] = []
+        if not data:
+            return carved
+
+        # Regex for contiguous runs of printable characters with standard line breaks
+        text_block_pattern = re.compile(rb"[\x20-\x7E\r\n\t]{" + str(min_len).encode() + rb",}")
+        for match in text_block_pattern.finditer(data):
+            if len(carved) >= max_files:
+                break
+            block = match.group()
+            stripped = block.strip(b"\x00\r\n\t ")
+            if len(stripped) < min_len:
+                continue
+
+            try:
+                decoded = stripped.decode("utf-8")
+            except UnicodeDecodeError:
+                try:
+                    decoded = stripped.decode("latin-1")
+                except Exception:
+                    continue
+
+            # Default classification: Plain text document
+            ext = "txt"
+            cat = "Document"
+            score = 75
+            validation = "Printable ASCII/UTF-8 coherent text document extracted from unallocated cluster"
+
+            trimmed = decoded.strip()
+            # 1. JSON Detection
+            if (trimmed.startswith("{") and trimmed.endswith("}")) or (trimmed.startswith("[") and trimmed.endswith("]")):
+                try:
+                    json.loads(trimmed)
+                    ext = "json"
+                    score = 90
+                    validation = "Valid structured JSON payload verified"
+                except Exception:
+                    pass
+            # 2. Markdown Detection
+            elif re.search(r"^(#\s|##\s|\*\s|-\s|\[.+\]\(.+\))", trimmed, re.MULTILINE):
+                ext = "md"
+                score = 80
+                validation = "Markdown document with headers/lists verified"
+            # 3. Source Code Detection
+            elif "\n" in trimmed and re.search(r"\b(def |class |import |from |function |const |let |var |public |private )\b", trimmed):
+                ext = "py" if ("def " in trimmed or "import " in trimmed) else "js"
+                cat = "Code"
+                score = 85
+                validation = f"Source code script ({ext.upper()}) structure identified"
+            # 4. CSV / Tabular Detection
+            elif "\n" in trimmed and (trimmed.count(",") > 4 or trimmed.count(";") > 4):
+                lines = [ln for ln in trimmed.splitlines() if ln.strip()]
+                if len(lines) >= 2 and all("," in ln or ";" in ln for ln in lines[:4]):
+                    ext = "csv"
+                    score = 85
+                    validation = "Delimited tabular CSV data records identified"
+
+            cid = f"carve_doc_{uuid.uuid4().hex[:8]}"
+            conf = "HIGH" if score >= 80 else "MEDIUM"
+            carved.append(CarvedFile(
+                id=cid,
+                filename=f"recovered_{ext}_{match.start():08x}.{ext}",
+                extension=ext,
+                category=cat,
+                size_bytes=len(stripped),
+                offset_bytes=base_offset + match.start(),
+                confidence=conf,
+                confidence_score=score,
+                validation_details=validation,
+                data=stripped,
+                created_at=datetime.now(timezone.utc),
+            ))
+
+        return carved
 
     def carve_file_stream(self, file_path: str, max_bytes: int = 1024 * 1024 * 512) -> List[CarvedFile]:
         """
