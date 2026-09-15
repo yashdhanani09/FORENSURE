@@ -86,7 +86,7 @@ export interface RecoveredFileRecord {
 export const recoveryApi = {
   scan: async (
     deviceId: string,
-    scanType: "unified" | "auto" | "quick" | "deep" | "carving" | "forensic_image" = "unified",
+    scanType: "auto" | "unified" | "quick" | "deep" | "carving" | "forensic_image" = "auto",
     targetPath?: string,
     imagePath?: string
   ): Promise<RecoveryScanResponse> => {

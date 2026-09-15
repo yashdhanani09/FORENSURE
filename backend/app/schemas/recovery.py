@@ -22,7 +22,7 @@ class DeletedFileItem(BaseModel):
 
 class RecoveryScanRequest(BaseModel):
     device_id: str
-    scan_type: Literal["unified", "auto", "quick", "deep", "carving", "forensic_image"] = "unified"
+    scan_type: Literal["auto", "unified", "quick", "deep", "carving", "forensic_image"] = "auto"
     target_path: Optional[str] = None
     image_path: Optional[str] = None
 

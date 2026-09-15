@@ -83,7 +83,7 @@ export function Recovery() {
   };
 
   const handleStartScan = async () => {
-    const effectiveScanType = showAdvancedImage && imagePath.trim() ? "forensic_image" : "unified";
+    const effectiveScanType = showAdvancedImage && imagePath.trim() ? "forensic_image" : "auto";
     if (effectiveScanType !== "forensic_image" && !selectedDeviceId) return;
     if (effectiveScanType === "forensic_image" && !imagePath.trim()) {
       alert("Please specify a valid path to a forensic disk image (.dd, .raw, .img, .iso).");
@@ -107,7 +107,19 @@ export function Recovery() {
         alert("Scan completed. No deleted or carved files detected on this target.");
       }
     } catch (e: any) {
-      alert(`Scan failed: ${e.response?.data?.detail || e.message}`);
+      let errorMsg = e.message || "Unknown scan error";
+      if (e.response?.data?.detail) {
+        if (typeof e.response.data.detail === "string") {
+          errorMsg = e.response.data.detail;
+        } else if (Array.isArray(e.response.data.detail)) {
+          errorMsg = e.response.data.detail
+            .map((d: any) => (typeof d === "string" ? d : d.msg || JSON.stringify(d)))
+            .join("; ");
+        } else if (typeof e.response.data.detail === "object") {
+          errorMsg = JSON.stringify(e.response.data.detail);
+        }
+      }
+      alert(`Scan failed: ${errorMsg}`);
     } finally {
       setScanning(false);
     }
