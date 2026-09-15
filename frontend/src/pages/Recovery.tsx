@@ -4,11 +4,11 @@ import {
   FileText, Image as ImageIcon, Film, Archive, Code, File, HardDrive, 
   CheckSquare, Square, Shield, RefreshCw, FolderOpen, ArrowRight,
   ShieldCheck, Smartphone, Check, Copy, Cpu, Layers, Hash, FileCheck,
-  Printer, X, KeyRound, ArrowUpDown, ChevronLeft, ChevronRight
+  Printer, X, KeyRound, ArrowUpDown, ChevronLeft, ChevronRight, ShieldAlert
 } from "lucide-react";
 import { deviceApi } from "../services/api";
 import { agentConnection } from "../services/agentConnection";
-import { recoveryApi, DeletedFileItem, RecoveredFileRecord, ForensicReportResponse, RestoredItem } from "../services/recoveryApi";
+import { recoveryApi, DeletedFileItem, RecoveredFileRecord, ForensicReportResponse, RestoredItem, RecoveryPrivileges } from "../services/recoveryApi";
 import type { UsbDeviceDetail } from "../types/device";
 import { formatBytes, formatDate } from "../utils/format";
 import { Button } from "../components/ui/button";
@@ -46,6 +46,10 @@ export function Recovery() {
   const [newlyRestoredItems, setNewlyRestoredItems] = useState<RestoredItem[]>([]);
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
 
+  // Administrator Privileges & UAC Elevation State
+  const [privileges, setPrivileges] = useState<RecoveryPrivileges | null>(null);
+  const [elevating, setElevating] = useState(false);
+
   // Full List Sorting (Default: Recent to Old) & Pagination State
   const [sortBy, setSortBy] = useState<"recent" | "oldest" | "size_desc" | "name" | "confidence">("recent");
   const [pageSize, setPageSize] = useState<number>(0); // 0 means Show All Files
@@ -54,7 +58,55 @@ export function Recovery() {
   useEffect(() => {
     loadDevices();
     loadHistory();
+    checkPrivileges();
   }, []);
+
+  const checkPrivileges = async () => {
+    try {
+      const priv = await recoveryApi.getPrivileges();
+      setPrivileges(priv);
+    } catch (e) {
+      console.warn("Could not check privilege status:", e);
+    }
+  };
+
+  const handleRequestElevation = async () => {
+    setElevating(true);
+    try {
+      const res = await recoveryApi.requestElevation();
+      if (res.status === "ALREADY_ADMIN") {
+        await checkPrivileges();
+        alert("The software is already running with full Administrator privileges.");
+        setElevating(false);
+      } else {
+        // Poll for elevation status up to 15 times (22.5 seconds)
+        let attempts = 0;
+        const interval = setInterval(async () => {
+          attempts += 1;
+          try {
+            const currentPriv = await recoveryApi.getPrivileges();
+            if (currentPriv.is_admin || currentPriv.can_read_raw_disk) {
+              setPrivileges(currentPriv);
+              clearInterval(interval);
+              setElevating(false);
+              loadDevices(true);
+              return;
+            }
+          } catch {
+            // Backend might be restarting elevated
+          }
+          if (attempts >= 15) {
+            clearInterval(interval);
+            setElevating(false);
+            checkPrivileges();
+          }
+        }, 1500);
+      }
+    } catch (e: any) {
+      alert(`Elevation request error: ${e.response?.data?.detail || e.message}`);
+      setElevating(false);
+    }
+  };
 
   const loadDevices = async (force = false) => {
     setLoadingDevices(true);
@@ -336,6 +388,60 @@ export function Recovery() {
           </Button>
         </div>
       </div>
+
+      {/* Administrator / UAC Elevation Banner */}
+      {privileges && !privileges.is_admin && (
+        <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 backdrop-blur-sm shadow-lg">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mt-0.5">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-bold text-amber-200">
+                  Standard User Mode — Raw Volume Access Blocked
+                </h4>
+                <span className="px-2 py-0.5 text-[10px] font-semibold bg-amber-500/20 text-amber-300 rounded-md border border-amber-500/30">
+                  UAC ELEVATION AVAILABLE
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                Windows kernel security blocks direct physical sector carving on drive <span className="text-amber-300 font-mono font-semibold">D:</span> when running as a standard user. Grant Administrator privileges to enable low-level NTFS MFT parsing for permanently deleted files.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleRequestElevation}
+              loading={elevating}
+              className="w-full md:w-auto bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold border-0 shadow-md shadow-amber-950/50"
+            >
+              <Shield className="w-4 h-4 mr-1.5" />
+              {elevating ? "Requesting Elevation..." : "Grant Administrator Access (UAC)"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Privileges Active Badge when is_admin is true */}
+      {privileges && privileges.is_admin && (
+        <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-3.5 px-5 flex items-center justify-between backdrop-blur-sm">
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-semibold text-emerald-300">
+              Kernel Administrator Access Active
+            </span>
+            <span className="text-[11px] text-slate-400 hidden sm:inline">
+              — Direct physical sector carving and NTFS MFT deep scanning enabled on all drives.
+            </span>
+          </div>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            ELEVATED
+          </span>
+        </div>
+      )}
 
       {/* Control Panel: Device Selector & Unified Single Scan */}
       <div className="bg-[#0f172a]/90 border border-[#1e2c40] rounded-2xl p-6 shadow-xl space-y-6 backdrop-blur-sm">

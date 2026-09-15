@@ -198,3 +198,83 @@ def get_recovery_report_endpoint(device_id: str = Query(..., description="Device
     except Exception as exc:
         logger.error("Failed to generate forensic report for device %s: %s", device_id, exc)
         raise HTTPException(status_code=500, detail=f"Failed to generate forensic report: {exc}")
+
+
+@router.get("/privileges")
+def get_recovery_privileges_endpoint():
+    """Checks whether the running process has elevated Administrator rights to perform raw physical sector reads."""
+    import platform
+    is_admin = False
+    can_read_raw = False
+
+    if platform.system() == "Windows":
+        try:
+            import ctypes
+            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+        except Exception:
+            is_admin = False
+
+        # Verify direct sector access
+        for drv in ["C:", "D:"]:
+            try:
+                with open(f"\\\\.\\{drv}", "rb") as rf:
+                    rf.read(512)
+                    can_read_raw = True
+                    break
+            except Exception:
+                pass
+    else:
+        is_admin = (os.geteuid() == 0) if hasattr(os, "geteuid") else False
+        can_read_raw = is_admin
+
+    return {
+        "is_admin": is_admin,
+        "can_read_raw_disk": can_read_raw,
+        "platform": platform.system(),
+        "elevation_required": not is_admin,
+        "advisory": (
+            "Kernel Administrator privileges active. Full raw physical sector carving enabled."
+            if is_admin
+            else "Running with standard user permissions. Windows kernel blocks raw disk sectors (\\\\.\\D:) unless Administrator access is granted."
+        ),
+    }
+
+
+@router.post("/elevate")
+def request_elevation_endpoint():
+    """Triggers native Windows UAC (runas) dialog to grant the backend/bridge Administrator privileges."""
+    import platform
+    if platform.system() != "Windows":
+        return {"status": "UNSUPPORTED", "message": "Elevation is only applicable on Windows operating systems."}
+
+    try:
+        import ctypes
+        if ctypes.windll.shell32.IsUserAnAdmin() != 0:
+            return {"status": "ALREADY_ADMIN", "message": "The system is already running with full Administrator privileges."}
+
+        import sys
+        script_dir = str(PROJECT_ROOT)
+        start_bat = os.path.join(script_dir, "START.bat")
+
+        if getattr(sys, "frozen", False):
+            # Bundled standalone executable (e.g., FORENSURE-Bridge.exe)
+            ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv[1:]), None, 1)
+        elif os.path.exists(start_bat):
+            # Standard dev/start script
+            ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", start_bat, "", script_dir, 1)
+        else:
+            # Python interpreter fallback
+            ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+
+        if int(ret) > 32:
+            return {
+                "status": "UAC_TRIGGERED",
+                "message": "Windows User Account Control prompt requested. Please click 'Yes' in the Windows confirmation dialog."
+            }
+        else:
+            raise RuntimeError(f"ShellExecute error code: {ret}")
+
+    except Exception as exc:
+        logger.error("Failed to request UAC elevation: %s", exc)
+        raise HTTPException(status_code=500, detail=f"Failed to trigger UAC elevation: {exc}")
+

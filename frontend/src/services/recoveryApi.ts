@@ -83,6 +83,19 @@ export interface RecoveredFileRecord {
   created_at: string;
 }
 
+export interface RecoveryPrivileges {
+  is_admin: boolean;
+  can_read_raw_disk: boolean;
+  platform: string;
+  elevation_required: boolean;
+  advisory: string;
+}
+
+export interface ElevationResponse {
+  status: string;
+  message: string;
+}
+
 export const recoveryApi = {
   scan: async (
     deviceId: string,
@@ -143,5 +156,28 @@ export const recoveryApi = {
       responseType: "blob",
     });
     return res.data;
+  },
+
+  getPrivileges: async (): Promise<RecoveryPrivileges> => {
+    if (agentConnection.isDemoMode()) {
+      return {
+        is_admin: true,
+        can_read_raw_disk: true,
+        platform: "Windows",
+        elevation_required: false,
+        advisory: "Demo Mode - simulated administrative privileges active.",
+      };
+    }
+    return (await api.get("/api/recovery/privileges")).data;
+  },
+
+  requestElevation: async (): Promise<ElevationResponse> => {
+    if (agentConnection.isDemoMode()) {
+      return {
+        status: "ALREADY_ADMIN",
+        message: "Demo Mode is already running with administrative privileges.",
+      };
+    }
+    return (await api.post("/api/recovery/elevate")).data;
   },
 };
