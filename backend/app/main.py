@@ -35,11 +35,9 @@ cors_kwargs = {
     "allow_credentials": True,
     "allow_methods": ["*"],
     "allow_headers": ["*"],
+    "allow_private_network": True,
+    "allow_origin_regex": r"^https?://.*",
 }
-if "*" in settings.cors_origin_list:
-    cors_kwargs["allow_origin_regex"] = r"^https?://.*"
-else:
-    cors_kwargs["allow_origins"] = settings.cors_origin_list
 
 app.add_middleware(CORSMiddleware, **cors_kwargs)
 

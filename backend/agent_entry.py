@@ -42,13 +42,54 @@ def main():
 ======================================================================
 """)
 
+    # ── Check if port 8000 is already running ───────────────────
+    import socket
+    def is_port_in_use(port: int) -> bool:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.8)
+                return s.connect_ex(("127.0.0.1", port)) == 0
+        except Exception:
+            return False
+
+    if is_port_in_use(8000):
+        print("""
+======================================================================
+  [OK] FORENSURE BRIDGE IS ALREADY RUNNING & ACTIVE!
+======================================================================
+  Port 8000 is currently active and listening for web connections.
+  The bridge is ALREADY live and ready for your web application!
+
+  Next Steps:
+   1. Open the FORENSURE web application in your browser:
+      http://localhost:5174  (or https://forensure.vercel.app)
+   2. The status bar will show GREEN:
+      [PHYSICAL HARDWARE BRIDGE CONNECTED (PORT 8000)]
+   3. If you want to restart the bridge, close the other window or stop
+      the running process on port 8000 first.
+======================================================================
+""")
+        try:
+            input("Press Enter to close this notification window...")
+        except Exception:
+            pass
+        return
+
     # ── Start server ─────────────────────────────────────────────
     try:
         import uvicorn
         from app.main import app
         uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
-    except SystemExit:
-        pass
+    except KeyboardInterrupt:
+        print("\n[+] Bridge stopped by user.")
+    except SystemExit as se:
+        if se.code not in (0, None):
+            print(f"\n[!] Bridge process exited with code {se.code}.")
+            print("[!] If port 8000 was already in use, the bridge is already running in another window.")
+            try:
+                input("\nPress Enter to close this window...")
+            except Exception:
+                pass
     except Exception as e:
         print(f"\n[!] ERROR: {e}")
         print("\n--- Details ---")
@@ -60,7 +101,10 @@ def main():
         print("    • Missing _internal folder — re-extract the zip file")
         print("    • Antivirus blocking the exe — add an exception and retry")
         print()
-        input("Press Enter to close this window...")
+        try:
+            input("Press Enter to close this window...")
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     main()
