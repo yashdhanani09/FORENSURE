@@ -49,6 +49,7 @@ export function Recovery() {
   // Administrator Privileges & UAC Elevation State
   const [privileges, setPrivileges] = useState<RecoveryPrivileges | null>(null);
   const [elevating, setElevating] = useState(false);
+  const [showElevationModal, setShowElevationModal] = useState(false);
 
   // Full List Sorting (Default: Recent to Old) & Pagination State
   const [sortBy, setSortBy] = useState<"recent" | "oldest" | "size_desc" | "name" | "confidence">("recent");
@@ -67,16 +68,23 @@ export function Recovery() {
       setPrivileges(priv);
     } catch (e) {
       console.warn("Could not check privilege status:", e);
+      setPrivileges({
+        is_admin: false,
+        can_read_raw_disk: false,
+        platform: "Windows",
+        elevation_required: true,
+        advisory: "Bridge not elevated. Grant Administrator privileges (UAC) to scan raw physical sectors on D:.",
+      });
     }
   };
 
   const handleRequestElevation = async () => {
     setElevating(true);
+    setShowElevationModal(true);
     try {
       const res = await recoveryApi.requestElevation();
       if (res.status === "ALREADY_ADMIN") {
         await checkPrivileges();
-        alert("The software is already running with full Administrator privileges.");
         setElevating(false);
       } else {
         // Poll for elevation status up to 15 times (22.5 seconds)
@@ -103,7 +111,7 @@ export function Recovery() {
         }, 1500);
       }
     } catch (e: any) {
-      alert(`Elevation request error: ${e.response?.data?.detail || e.message}`);
+      console.warn("Elevation request error:", e);
       setElevating(false);
     }
   };
@@ -378,6 +386,25 @@ export function Recovery() {
             <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
             Recovered Archive ({recoveryHistory.length})
           </Button>
+          {/* Top-Bar Administrator / UAC Trigger Button */}
+          {privileges?.is_admin ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Admin: Active</span>
+            </div>
+          ) : (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleRequestElevation}
+              loading={elevating}
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold border-0 shadow-md shadow-amber-950/40"
+            >
+              <Shield className="w-3.5 h-3.5 mr-1" />
+              {elevating ? "Requesting..." : "Run as Administrator (UAC)"}
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -390,7 +417,7 @@ export function Recovery() {
       </div>
 
       {/* Administrator / UAC Elevation Banner */}
-      {privileges && !privileges.is_admin && (
+      {!privileges?.is_admin && (
         <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 backdrop-blur-sm shadow-lg">
           <div className="flex items-start gap-3.5">
             <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mt-0.5">
@@ -406,7 +433,7 @@ export function Recovery() {
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Windows kernel security blocks direct physical sector carving on drive <span className="text-amber-300 font-mono font-semibold">D:</span> when running as a standard user. Grant Administrator privileges to enable low-level NTFS MFT parsing for permanently deleted files.
+                Windows kernel security blocks direct physical sector carving on drive <span className="text-amber-300 font-mono font-semibold">D:</span> when running as a standard user. Grant Administrator privileges to enable low-level NTFS MFT parsing for permanently deleted and emptied-recycle-bin files.
               </p>
             </div>
           </div>
@@ -1284,6 +1311,64 @@ export function Recovery() {
                 onClick={() => setShowReportModal(false)}
               >
                 Close Report
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Elevation Info Modal */}
+      {showElevationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-2xl border border-amber-500/40 bg-[#0d1424] p-6 shadow-2xl text-slate-200">
+            <button
+              onClick={() => setShowElevationModal(false)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-white transition p-1"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                <ShieldAlert className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Administrator Access (UAC)</h3>
+                <p className="text-xs text-slate-400">Low-Level Physical Drive Read Access</p>
+              </div>
+            </div>
+            <div className="space-y-3 text-xs leading-relaxed text-slate-300">
+              <p>
+                A Windows <strong>User Account Control (UAC)</strong> prompt has been requested.
+              </p>
+              <div className="p-3 bg-amber-950/30 border border-amber-500/20 rounded-xl text-amber-200">
+                👉 Please check your screen or taskbar and click <strong>"Yes"</strong> on the Windows confirmation dialog.
+              </div>
+              <p className="text-slate-400">
+                Once approved, the engine will automatically activate physical sector and NTFS Master File Table ($MFT) carving on drive D:.
+              </p>
+              <p className="text-slate-400">
+                Alternative: You can also right-click <code className="text-cyan-300 bg-black/40 px-1 rounded">START.bat</code> or <code className="text-cyan-300 bg-black/40 px-1 rounded">RUN-AS-ADMIN.bat</code> and select <em>"Run as administrator"</em>.
+              </p>
+            </div>
+            <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-[#1e2c40]">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  checkPrivileges();
+                  setShowElevationModal(false);
+                }}
+              >
+                Close
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => checkPrivileges()}
+                loading={elevating}
+                className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold"
+              >
+                Check Status Again
               </Button>
             </div>
           </div>

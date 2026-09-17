@@ -3,6 +3,15 @@ title FORENSURE Hardware Bridge
 color 0B
 cd /d "%~dp0"
 
+:: Self-elevate to Administrator
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    echo.
+    echo  [*] Requesting Administrator privileges (UAC)...
+    powershell -Command "Start-Process '%~f0' -Verb RunAs"
+    exit /b
+)
+
 echo.
 echo  ================================================================
 echo    FORENSURE  ^|  VERIFY. SANITIZE. RECOVER.

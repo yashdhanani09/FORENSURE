@@ -251,123 +251,106 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
         try:
             from app.services.ntfs_mft_parser import scan_mft_records_from_stream
             with open(raw_handle_path, "rb") as rf:
-                # 1. Read first 64MB (VBR & Primary MFT zone)
-                vbr_mft_chunk = rf.read(64 * 1024 * 1024)
-                if vbr_mft_chunk:
-                    # Carve standard binary files
-                    carved = raw_file_carver.carve_bytes(vbr_mft_chunk, base_offset=0)
-                    carved_text = raw_file_carver.carve_text_documents(vbr_mft_chunk, base_offset=0, max_files=25)
-                    # Parse deleted NTFS MFT records (Recovers exact original names & resident data of deleted files)
-                    deleted_mft = scan_mft_records_from_stream(vbr_mft_chunk, base_offset=0, max_items=100)
-                    for mft_item in deleted_mft:
-                        cid = f"mft_{uuid.uuid4().hex[:10]}"
-                        ext = Path(mft_item.filename).suffix.lstrip(".") or "txt"
-                        cat = _get_category(ext)
-                        mft_data = mft_item.data if mft_item.data else b""
-                        item = DeletedFileItem(
-                            id=cid,
-                            filename=mft_item.filename,
-                            original_path=f"{drive_prefix}\\{mft_item.filename} (MFT Record #{mft_item.record_number})",
-                            source_path=f"mft://{cid}",
-                            size_bytes=mft_item.size_bytes or len(mft_data),
-                            extension=ext,
-                            category=cat,
-                            deleted_at=mft_item.deleted_at or datetime.now(timezone.utc),
-                            confidence="HIGH",
-                            confidence_score=92,
-                            validation_details="Extracted from unallocated NTFS Master File Table ($MFT) record",
-                            offset_bytes=mft_item.offset_bytes,
-                            recovery_method="ntfs_mft_carved",
-                            recoverable=len(mft_data) > 0,
-                        )
-                        items.append(item)
-                        SCANNED_DELETED_CACHE[cid] = item
-                        if mft_data:
-                            CARVED_DATA_CACHE[cid] = mft_data
+                # 1. Read Sector 0 (VBR) to locate exact $MFT table
+                rf.seek(0)
+                vbr = rf.read(512)
+                mft_offsets_to_scan = []
 
-                    for c in (carved + carved_text)[:max_files]:
-                        item = DeletedFileItem(
-                            id=c.id,
-                            filename=c.filename,
-                            original_path=f"Physical Volume {drive_prefix} @ Sector 0x{c.offset_bytes:08X}",
-                            source_path=f"carved://{c.id}",
-                            size_bytes=c.size_bytes,
-                            extension=c.extension,
-                            category=c.category,
-                            deleted_at=c.created_at,
-                            confidence=c.confidence,
-                            confidence_score=c.confidence_score,
-                            validation_details=c.validation_details,
-                            offset_bytes=c.offset_bytes,
-                            recovery_method=f"raw_carver_{c.extension}",
-                            recoverable=True,
-                        )
-                        items.append(item)
-                        SCANNED_DELETED_CACHE[c.id] = item
-                        CARVED_DATA_CACHE[c.id] = c.data
+                if len(vbr) >= 512 and vbr[3:7] == b"NTFS":
+                    bytes_per_sec = int.from_bytes(vbr[0x0B:0x0D], "little") or 512
+                    sec_per_clus = vbr[0x0D] or 8
+                    cluster_size = bytes_per_sec * sec_per_clus
+                    mft_lcn = int.from_bytes(vbr[0x30:0x38], "little", signed=True)
+                    mftmirr_lcn = int.from_bytes(vbr[0x38:0x40], "little", signed=True)
 
-                # 2. Seek deeper into cluster areas across volume (64MB, 128MB, 256MB, 512MB, 1GB) to catch user clusters
-                seek_offsets = [128 * 1024 * 1024, 256 * 1024 * 1024, 512 * 1024 * 1024, 1024 * 1024 * 1024]
-                for offset in seek_offsets:
+                    if mft_lcn > 0:
+                        mft_offset = mft_lcn * cluster_size
+                        mft_offsets_to_scan.append(mft_offset)
+                        logger.info("NTFS $MFT detected at cluster %d (offset 0x%X) on %s", mft_lcn, mft_offset, drive_prefix)
+                    if mftmirr_lcn > 0:
+                        mft_offsets_to_scan.append(mftmirr_lcn * cluster_size)
+
+                # Add fallback volume cluster offsets
+                fallback_offsets = [
+                    0,
+                    64 * 1024 * 1024,
+                    128 * 1024 * 1024,
+                    256 * 1024 * 1024,
+                    512 * 1024 * 1024,
+                    1024 * 1024 * 1024,
+                    2048 * 1024 * 1024,
+                    3072 * 1024 * 1024,
+                ]
+                for fb in fallback_offsets:
+                    if fb not in mft_offsets_to_scan:
+                        mft_offsets_to_scan.append(fb)
+
+                # Scan MFT locations and clusters
+                for offset in mft_offsets_to_scan:
                     if len(items) >= max_files:
                         break
                     try:
                         rf.seek(offset)
-                        cluster_chunk = rf.read(16 * 1024 * 1024)
-                        if cluster_chunk:
-                            deep_carved = raw_file_carver.carve_bytes(cluster_chunk, base_offset=offset)
-                            deep_text = raw_file_carver.carve_text_documents(cluster_chunk, base_offset=offset, max_files=15)
-                            deep_mft = scan_mft_records_from_stream(cluster_chunk, base_offset=offset, max_items=20)
-                            for dm in deep_mft:
-                                cid = f"mft_{uuid.uuid4().hex[:10]}"
-                                ext = Path(dm.filename).suffix.lstrip(".") or "txt"
-                                cat = _get_category(ext)
-                                mft_data = dm.data if dm.data else b""
-                                item = DeletedFileItem(
-                                    id=cid,
-                                    filename=dm.filename,
-                                    original_path=f"{drive_prefix}\\{dm.filename} (MFT #{dm.record_number})",
-                                    source_path=f"mft://{cid}",
-                                    size_bytes=dm.size_bytes or len(mft_data),
-                                    extension=ext,
-                                    category=cat,
-                                    deleted_at=dm.deleted_at or datetime.now(timezone.utc),
-                                    confidence="HIGH",
-                                    confidence_score=90,
-                                    validation_details="Extracted from deep unallocated MFT cluster",
-                                    offset_bytes=dm.offset_bytes,
-                                    recovery_method="ntfs_mft_carved",
-                                    recoverable=len(mft_data) > 0,
-                                )
-                                items.append(item)
-                                SCANNED_DELETED_CACHE[cid] = item
-                                if mft_data:
-                                    CARVED_DATA_CACHE[cid] = mft_data
+                        chunk_size = 32 * 1024 * 1024 if offset in mft_offsets_to_scan[:2] else 16 * 1024 * 1024
+                        chunk = rf.read(chunk_size)
+                        if not chunk:
+                            continue
 
-                            for c in (deep_carved + deep_text):
-                                if len(items) >= max_files:
-                                    break
-                                item = DeletedFileItem(
-                                    id=c.id,
-                                    filename=c.filename,
-                                    original_path=f"Physical Volume {drive_prefix} @ Cluster 0x{c.offset_bytes:08X}",
-                                    source_path=f"carved://{c.id}",
-                                    size_bytes=c.size_bytes,
-                                    extension=c.extension,
-                                    category=c.category,
-                                    deleted_at=c.created_at,
-                                    confidence=c.confidence,
-                                    confidence_score=c.confidence_score,
-                                    validation_details=c.validation_details,
-                                    offset_bytes=c.offset_bytes,
-                                    recovery_method=f"raw_carver_{c.extension}",
-                                    recoverable=True,
-                                )
-                                items.append(item)
-                                SCANNED_DELETED_CACHE[c.id] = item
-                                CARVED_DATA_CACHE[c.id] = c.data
-                    except Exception:
-                        pass
+                        # Carve unallocated MFT records ($FILE_NAME & resident $DATA)
+                        deleted_mft = scan_mft_records_from_stream(chunk, base_offset=offset, max_items=250)
+                        for mft_item in deleted_mft:
+                            cid = f"mft_{uuid.uuid4().hex[:10]}"
+                            ext = Path(mft_item.filename).suffix.lstrip(".") or "txt"
+                            cat = _get_category(ext)
+                            mft_data = mft_item.data if mft_item.data else b""
+                            item = DeletedFileItem(
+                                id=cid,
+                                filename=mft_item.filename,
+                                original_path=f"{drive_prefix}\\{mft_item.filename} (MFT Record #{mft_item.record_number})",
+                                source_path=f"mft://{cid}",
+                                size_bytes=mft_item.size_bytes or len(mft_data),
+                                extension=ext,
+                                category=cat,
+                                deleted_at=mft_item.deleted_at or datetime.now(timezone.utc),
+                                confidence="HIGH",
+                                confidence_score=95,
+                                validation_details=f"Extracted from unallocated NTFS Master File Table ($MFT) record at offset 0x{mft_item.offset_bytes:08X}",
+                                offset_bytes=mft_item.offset_bytes,
+                                recovery_method="ntfs_mft_carved",
+                                recoverable=len(mft_data) > 0,
+                            )
+                            items.append(item)
+                            SCANNED_DELETED_CACHE[cid] = item
+                            if mft_data:
+                                CARVED_DATA_CACHE[cid] = mft_data
+
+                        # Carve binary signatures & plain-text documents
+                        carved = raw_file_carver.carve_bytes(chunk, base_offset=offset)
+                        carved_text = raw_file_carver.carve_text_documents(chunk, base_offset=offset, max_files=20)
+                        for c in (carved + carved_text):
+                            if len(items) >= max_files:
+                                break
+                            item = DeletedFileItem(
+                                id=c.id,
+                                filename=c.filename,
+                                original_path=f"Physical Volume {drive_prefix} @ Sector 0x{c.offset_bytes:08X}",
+                                source_path=f"carved://{c.id}",
+                                size_bytes=c.size_bytes,
+                                extension=c.extension,
+                                category=c.category,
+                                deleted_at=c.created_at,
+                                confidence=c.confidence,
+                                confidence_score=c.confidence_score,
+                                validation_details=c.validation_details,
+                                offset_bytes=c.offset_bytes,
+                                recovery_method=f"raw_carver_{c.extension}",
+                                recoverable=True,
+                            )
+                            items.append(item)
+                            SCANNED_DELETED_CACHE[c.id] = item
+                            CARVED_DATA_CACHE[c.id] = c.data
+                    except Exception as seek_err:
+                        logger.debug("Error seeking offset 0x%X on %s: %s", offset, drive_prefix, seek_err)
 
         except (PermissionError, OSError) as exc:
             logger.warning("Raw volume direct access unprivileged on %s: %s", raw_handle_path, exc)

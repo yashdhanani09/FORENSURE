@@ -4,13 +4,16 @@ import { agentConnection, type AgentStatus } from "../services/agentConnection";
 import { 
   ShieldCheck, AlertTriangle, Download, RefreshCw, 
   CheckCircle2, Sparkles, MonitorSmartphone, X, ExternalLink,
-  BookOpen
+  BookOpen, Shield, ShieldAlert
 } from "lucide-react";
+import { recoveryApi } from "../services/recoveryApi";
 
 export function AgentStatusBar() {
   const [status, setStatus] = useState<AgentStatus>(agentConnection.getStatus());
   const [showModal, setShowModal] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [elevating, setElevating] = useState(false);
 
   useEffect(() => {
     const unsub = agentConnection.subscribe((newStatus) => {
@@ -19,9 +22,67 @@ export function AgentStatusBar() {
     return unsub;
   }, []);
 
+  const checkPrivileges = async () => {
+    if (!status.connected) {
+      setIsAdmin(null);
+      return;
+    }
+    try {
+      const p = await recoveryApi.getPrivileges();
+      setIsAdmin(p.is_admin);
+    } catch {
+      setIsAdmin(false);
+    }
+  };
+
+  useEffect(() => {
+    if (status.connected) {
+      checkPrivileges();
+    } else {
+      setIsAdmin(null);
+    }
+  }, [status.connected]);
+
+  const handleElevate = async () => {
+    setElevating(true);
+    try {
+      const res = await recoveryApi.requestElevation();
+      if (res.status === "ALREADY_ADMIN") {
+        setIsAdmin(true);
+        alert("The software is already running with full Administrator privileges.");
+      } else {
+        alert("Windows User Account Control prompt requested. Please look at your screen/taskbar and click 'Yes' to grant Administrator privileges.");
+        let attempts = 0;
+        const interval = setInterval(async () => {
+          attempts += 1;
+          try {
+            const cur = await recoveryApi.getPrivileges();
+            if (cur.is_admin) {
+              setIsAdmin(true);
+              clearInterval(interval);
+              setElevating(false);
+              return;
+            }
+          } catch {
+            // Backend restarting
+          }
+          if (attempts >= 15) {
+            clearInterval(interval);
+            setElevating(false);
+            checkPrivileges();
+          }
+        }, 1500);
+      }
+    } catch (e: any) {
+      alert(`Elevation request error: ${e.response?.data?.detail || e.message}`);
+      setElevating(false);
+    }
+  };
+
   const handleRecheck = async () => {
     setChecking(true);
     await agentConnection.checkConnection();
+    await checkPrivileges();
     setChecking(false);
   };
 
@@ -78,6 +139,26 @@ export function AgentStatusBar() {
           ) : (
             /* ── PHYSICAL HARDWARE CONTROLS ── */
             <>
+              {/* UAC Administrator Elevation Status / Button */}
+              {status.connected && (
+                isAdmin ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-[11px]">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                    Admin Mode
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleElevate}
+                    disabled={elevating}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-semibold text-[11px] transition shadow-sm"
+                    title="Grant Administrator Privileges (UAC) to scan raw physical sectors on D:"
+                  >
+                    <ShieldAlert className="h-3.5 w-3.5 text-amber-400" />
+                    {elevating ? "Elevating..." : "Run as Admin (UAC)"}
+                  </button>
+                )
+              )}
+
               <button
                 onClick={() => handleToggleDemo(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-300 font-semibold text-[11px] transition shadow-sm"
@@ -131,17 +212,17 @@ export function AgentStatusBar() {
                 <MonitorSmartphone className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">SecureData Local Hardware Agent</h3>
-                <p className="text-xs text-slate-400">High-Assurance Storage Sanitization & Digital Forensics</p>
+                <h3 className="text-lg font-bold text-white">FORENSURE Hardware Bridge</h3>
+                <p className="text-xs text-slate-400">Physical Storage Probing, Raw Sector Carving & Recovery</p>
               </div>
             </div>
 
             <div className="space-y-4 text-xs leading-relaxed text-slate-300">
               <p>
-                Because web browsers operate inside a security sandbox, no website can directly read your physical USB drives or raw disk sectors.
+                Because web browsers operate inside a security sandbox, no website can directly read physical storage devices, raw disk sectors, or unallocated NTFS clusters.
               </p>
               <p>
-                The <strong className="text-cyan-400">SecureData Agent</strong> runs locally on your PC (port 8000) with elevated privileges to execute <code className="text-cyan-300 bg-black/40 px-1 py-0.5 rounded">Get-Disk</code>, raw sector carving, and cryptographic wiping.
+                The <strong className="text-cyan-400">FORENSURE Bridge</strong> runs locally on your PC (port 8000) to execute low-level hardware probing, deep physical cluster scanning, and NTFS MFT recovery.
               </p>
 
               <div className="rounded-xl border border-[#1e2c40] bg-[#090e1a] p-4 space-y-2">
@@ -149,6 +230,12 @@ export function AgentStatusBar() {
                   <span>Current Status:</span>
                   <span className={status.connected ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
                     {status.connected ? "● ACTIVE & CONNECTED" : "○ NOT RUNNING"}
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-400 font-mono">
+                  <span>Privilege Level:</span>
+                  <span className={isAdmin ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
+                    {isAdmin ? "● ADMINISTRATOR (FULL RAW ACCESS)" : "○ STANDARD USER (UAC Recommended)"}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-400 font-mono">
@@ -164,9 +251,9 @@ export function AgentStatusBar() {
               <div className="space-y-2">
                 <h4 className="font-bold text-white uppercase text-[11px] tracking-wider">Quick Setup (2 Steps)</h4>
                 <ol className="list-decimal list-inside space-y-1 text-slate-400">
-                  <li>Download the pre-compiled <code className="text-cyan-300 bg-black/40 px-1 rounded">SecureData-Agent-Windows.zip</code>.</li>
-                  <li>Extract and double-click <code className="text-cyan-300 bg-black/40 px-1 rounded">SecureData-Agent.exe</code>.</li>
-                  <li>Click Yes on Windows UAC prompt for Administrator hardware access. Done!</li>
+                  <li>Download and extract <code className="text-cyan-300 bg-black/40 px-1 rounded">FORENSURE-Bridge-Windows.zip</code>.</li>
+                  <li>Run <code className="text-cyan-300 bg-black/40 px-1 rounded">RUN-AS-ADMIN.bat</code> or right-click <code className="text-cyan-300 bg-black/40 px-1 rounded">FORENSURE-Bridge.exe</code> and choose <strong>"Run as administrator"</strong>.</li>
+                  <li>Click <strong>Yes</strong> on the Windows UAC confirmation dialog to grant raw physical drive read permissions.</li>
                 </ol>
               </div>
             </div>
