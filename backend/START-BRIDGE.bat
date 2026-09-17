@@ -21,6 +21,12 @@ if %errorLevel% == 0 (
 
 echo.
 if not exist "FORENSURE-Bridge.exe" (
+    if exist ".wvenv\Scripts\activate.bat" (
+        echo  [*] Starting via local virtual environment...
+        call .wvenv\Scripts\activate.bat
+        python agent_entry.py
+        goto :STOPPED
+    )
     echo  [ERROR] FORENSURE-Bridge.exe not found in this folder.
     echo  Make sure you extracted ALL files from the zip first.
     echo.
@@ -32,7 +38,7 @@ echo  [+] Starting FORENSURE Bridge on http://127.0.0.1:8000 ...
 echo.
 
 FORENSURE-Bridge.exe
-
+:STOPPED
 echo.
 echo  ================================================================
 echo  [!] Bridge process has stopped.

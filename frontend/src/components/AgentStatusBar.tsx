@@ -4,13 +4,18 @@ import { agentConnection, type AgentStatus } from "../services/agentConnection";
 import { 
   ShieldCheck, AlertTriangle, Download, RefreshCw, 
   CheckCircle2, Sparkles, MonitorSmartphone, X, ExternalLink,
-  BookOpen, Shield, ShieldAlert
+  BookOpen, Shield, ShieldAlert, Copy, Check
 } from "lucide-react";
 import { recoveryApi } from "../services/recoveryApi";
 
 export function AgentStatusBar() {
   const [status, setStatus] = useState<AgentStatus>(agentConnection.getStatus());
   const [showModal, setShowModal] = useState(false);
+  const [showElevationModal, setShowElevationModal] = useState(false);
+  const [manualCommand, setManualCommand] = useState<string>(
+    'powershell -Command "Start-Process cmd -ArgumentList \'/k cd /d D:\\SIH && RUN-AS-ADMIN.bat\' -Verb RunAs"'
+  );
+  const [copiedCmd, setCopiedCmd] = useState(false);
   const [checking, setChecking] = useState(false);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [elevating, setElevating] = useState(false);
@@ -43,15 +48,24 @@ export function AgentStatusBar() {
     }
   }, [status.connected]);
 
+  const copyCommand = (cmd: string) => {
+    navigator.clipboard.writeText(cmd);
+    setCopiedCmd(true);
+    setTimeout(() => setCopiedCmd(false), 2000);
+  };
+
   const handleElevate = async () => {
     setElevating(true);
+    setShowElevationModal(true);
     try {
       const res = await recoveryApi.requestElevation();
+      if (res.manual_command) {
+        setManualCommand(res.manual_command);
+      }
       if (res.status === "ALREADY_ADMIN") {
         setIsAdmin(true);
-        alert("The software is already running with full Administrator privileges.");
+        setElevating(false);
       } else {
-        alert("Windows User Account Control prompt requested. Please look at your screen/taskbar and click 'Yes' to grant Administrator privileges.");
         let attempts = 0;
         const interval = setInterval(async () => {
           attempts += 1;
@@ -64,7 +78,7 @@ export function AgentStatusBar() {
               return;
             }
           } catch {
-            // Backend restarting
+            // Backend restarting elevated
           }
           if (attempts >= 15) {
             clearInterval(interval);
@@ -74,7 +88,7 @@ export function AgentStatusBar() {
         }, 1500);
       }
     } catch (e: any) {
-      alert(`Elevation request error: ${e.response?.data?.detail || e.message}`);
+      console.warn("Elevation request error:", e);
       setElevating(false);
     }
   };
@@ -291,6 +305,79 @@ export function AgentStatusBar() {
                   <Download className="h-4 w-4" /> Download Agent (.zip)
                 </a>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Elevation Info & Guidance Modal ── */}
+      {showElevationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md rounded-2xl border border-amber-500/40 bg-[#0d1424] p-6 shadow-2xl text-slate-200">
+            <button
+              onClick={() => setShowElevationModal(false)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-white transition p-1"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                <ShieldAlert className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Administrator Privileges (UAC)</h3>
+                <p className="text-xs text-slate-400">Low-Level Physical Sector & Raw D: Carving</p>
+              </div>
+            </div>
+            <div className="space-y-3 text-xs leading-relaxed text-slate-300">
+              <p>
+                A Windows <strong>User Account Control (UAC)</strong> prompt has been requested for the FORENSURE Bridge.
+              </p>
+              <div className="p-3 bg-amber-950/40 border border-amber-500/30 rounded-xl text-amber-200 flex items-start gap-2">
+                <span className="text-base">👉</span>
+                <span>Please check your screen or taskbar and click <strong>"Yes"</strong> on the Windows confirmation dialog.</span>
+              </div>
+              <p className="text-slate-400">
+                Administrator permissions unlock direct physical sector carving and NTFS Master File Table ($MFT) parsing to recover files emptied from the Recycle Bin.
+              </p>
+              <div className="space-y-1.5 pt-1">
+                <span className="text-slate-300 font-semibold text-[11px]">Manual Alternative (PowerShell):</span>
+                <div className="p-2 bg-black/50 border border-[#1e2c40] rounded-lg font-mono text-[11px] text-cyan-300 flex items-center justify-between gap-2">
+                  <span className="truncate">{manualCommand}</span>
+                  <button
+                    onClick={() => copyCommand(manualCommand)}
+                    className="text-slate-400 hover:text-white p-1 shrink-0"
+                    title="Copy Command"
+                  >
+                    {copiedCmd ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Or right-click <code className="text-cyan-300 bg-black/40 px-1 rounded">RUN-AS-ADMIN.bat</code> in your FORENSURE folder and select <em>"Run as administrator"</em>.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-[#1e2c40]">
+              <button
+                onClick={() => {
+                  checkPrivileges();
+                  setShowElevationModal(false);
+                }}
+                className="px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+              >
+                Close
+              </button>
+              <button
+                onClick={async () => {
+                  await checkPrivileges();
+                  if (isAdmin) {
+                    setShowElevationModal(false);
+                  }
+                }}
+                className="px-4 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5"
+              >
+                <RefreshCw className={`w-3 h-3 ${elevating ? "animate-spin" : ""}`} /> Check Status
+              </button>
             </div>
           </div>
         </div>

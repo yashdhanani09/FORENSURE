@@ -50,6 +50,10 @@ export function Recovery() {
   const [privileges, setPrivileges] = useState<RecoveryPrivileges | null>(null);
   const [elevating, setElevating] = useState(false);
   const [showElevationModal, setShowElevationModal] = useState(false);
+  const [manualCommand, setManualCommand] = useState<string>(
+    'powershell -Command "Start-Process cmd -ArgumentList \'/k cd /d D:\\SIH && RUN-AS-ADMIN.bat\' -Verb RunAs"'
+  );
+  const [copiedCmd, setCopiedCmd] = useState(false);
 
   // Full List Sorting (Default: Recent to Old) & Pagination State
   const [sortBy, setSortBy] = useState<"recent" | "oldest" | "size_desc" | "name" | "confidence">("recent");
@@ -83,6 +87,9 @@ export function Recovery() {
     setShowElevationModal(true);
     try {
       const res = await recoveryApi.requestElevation();
+      if (res.manual_command) {
+        setManualCommand(res.manual_command);
+      }
       if (res.status === "ALREADY_ADMIN") {
         await checkPrivileges();
         setElevating(false);
@@ -164,7 +171,11 @@ export function Recovery() {
       setDeviceProfile(res.device_profile || null);
       setAcquisitionHash(res.acquisition_hash || "");
       if ((res.files || []).length === 0) {
-        alert("Scan completed. No deleted or carved files detected on this target.");
+        if (res.elevation_required || !privileges?.is_admin) {
+          setShowElevationModal(true);
+        } else {
+          alert("Scan completed. No deleted or carved files detected on this target.");
+        }
       }
     } catch (e: any) {
       let errorMsg = e.message || "Unknown scan error";
@@ -1029,13 +1040,32 @@ export function Recovery() {
                 <tr>
                   <td colSpan={8} className="text-center py-16 text-slate-500 font-sans">
                     {deletedFiles.length === 0 ? (
-                      <div className="space-y-3">
-                        <RotateCcw className="w-10 h-10 mx-auto text-slate-600 animate-pulse" />
-                        <p className="text-sm font-semibold text-slate-400">No deleted files scanned yet</p>
-                        <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                          Select a target drive or storage device above and click "Scan for Deleted Files" to begin forensic recovery.
-                        </p>
-                      </div>
+                      privileges && !privileges.is_admin ? (
+                        <div className="space-y-3 max-w-md mx-auto p-5 rounded-2xl bg-amber-950/20 border border-amber-500/30 text-center">
+                          <ShieldAlert className="w-10 h-10 mx-auto text-amber-400" />
+                          <p className="text-sm font-bold text-amber-300">Administrator Privileges Required for Drive D: Carving</p>
+                          <p className="text-xs text-slate-300 leading-relaxed">
+                            Windows blocks raw physical disk sectors and unallocated NTFS MFT records from standard user accounts. To recover files permanently deleted or emptied from the Recycle Bin, please grant Administrator privileges.
+                          </p>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={handleRequestElevation}
+                            loading={elevating}
+                            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-950/50"
+                          >
+                            <Shield className="w-4 h-4 mr-1.5" /> Grant Administrator Access (UAC)
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <RotateCcw className="w-10 h-10 mx-auto text-slate-600 animate-pulse" />
+                          <p className="text-sm font-semibold text-slate-400">No deleted files scanned yet</p>
+                          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                            Select a target drive or storage device above and click "Scan for Deleted Files" to begin forensic recovery.
+                          </p>
+                        </div>
+                      )
                     ) : (
                       "No deleted files matched your filter criteria."
                     )}
@@ -1346,9 +1376,26 @@ export function Recovery() {
               <p className="text-slate-400">
                 Once approved, the engine will automatically activate physical sector and NTFS Master File Table ($MFT) carving on drive D:.
               </p>
-              <p className="text-slate-400">
-                Alternative: You can also right-click <code className="text-cyan-300 bg-black/40 px-1 rounded">START.bat</code> or <code className="text-cyan-300 bg-black/40 px-1 rounded">RUN-AS-ADMIN.bat</code> and select <em>"Run as administrator"</em>.
-              </p>
+              <div className="space-y-1.5 pt-1">
+                <span className="text-slate-300 font-semibold text-[11px]">Manual Command (PowerShell):</span>
+                <div className="p-2 bg-black/50 border border-[#1e2c40] rounded-lg font-mono text-[11px] text-cyan-300 flex items-center justify-between gap-2">
+                  <span className="truncate">{manualCommand}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(manualCommand);
+                      setCopiedCmd(true);
+                      setTimeout(() => setCopiedCmd(false), 2000);
+                    }}
+                    className="text-slate-400 hover:text-white p-1 shrink-0"
+                    title="Copy Command"
+                  >
+                    {copiedCmd ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Or right-click <code className="text-cyan-300 bg-black/40 px-1 rounded">RUN-AS-ADMIN.bat</code> in your FORENSURE folder and select <em>"Run as administrator"</em>.
+                </p>
+              </div>
             </div>
             <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-[#1e2c40]">
               <Button

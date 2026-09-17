@@ -77,6 +77,24 @@ def scan_deleted_files_endpoint(req: RecoveryScanRequest):
     files = scan_device_deleted_files(target, scan_type=req.scan_type, image_path=req.image_path)
     profile, acq_hash = get_last_scan_metadata(target["id"])
 
+    # Check if process is running as Administrator
+    import ctypes
+    is_admin = False
+    try:
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+    except Exception:
+        is_admin = (os.geteuid() == 0) if hasattr(os, "geteuid") else False
+
+    elevation_required = False
+    elevation_message = None
+    if not is_admin and len(files) == 0:
+        elevation_required = True
+        elevation_message = (
+            "No files detected. Low-level physical sector access is restricted on drive D: "
+            "because FORENSURE is currently running with standard user permissions. "
+            "Windows requires Administrator privileges (UAC) to scan unallocated clusters for files emptied from the Recycle Bin."
+        )
+
     return RecoveryScanResponse(
         device_id=target["id"],
         device_name=f"{target.get('vendor', '')} {target.get('model', '')}".strip() or target.get("device_path", ""),
@@ -86,6 +104,8 @@ def scan_deleted_files_endpoint(req: RecoveryScanRequest):
         files=files,
         device_profile=profile,
         acquisition_hash=acq_hash,
+        elevation_required=elevation_required,
+        elevation_message=elevation_message,
     )
 
 
@@ -253,28 +273,86 @@ def request_elevation_endpoint():
             return {"status": "ALREADY_ADMIN", "message": "The system is already running with full Administrator privileges."}
 
         import sys
-        script_dir = str(PROJECT_ROOT)
-        start_bat = os.path.join(script_dir, "START.bat")
+        import subprocess
 
+        # Locate suitable startup batch file
+        candidates = [
+            os.path.join(str(PROJECT_ROOT), "RUN-AS-ADMIN.bat"),
+            os.path.join(str(BACKEND_ROOT), "RUN-AS-ADMIN.bat"),
+            os.path.join(str(PROJECT_ROOT), "START.bat"),
+            os.path.join(str(BACKEND_ROOT), "START-BRIDGE.bat"),
+        ]
+        target_bat = None
+        for c in candidates:
+            if os.path.exists(c):
+                target_bat = os.path.abspath(c)
+                break
+
+        script_dir = os.path.dirname(target_bat) if target_bat else str(PROJECT_ROOT)
+        manual_cmd = f'powershell -Command "Start-Process cmd -ArgumentList \'/k cd /d \\"{script_dir}\\" && RUN-AS-ADMIN.bat\' -Verb RunAs"'
+        launched = False
+
+        # Method 1: If running as bundled standalone executable (e.g. FORENSURE-Bridge.exe)
         if getattr(sys, "frozen", False):
-            # Bundled standalone executable (e.g., FORENSURE-Bridge.exe)
-            ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv[1:]), None, 1)
-        elif os.path.exists(start_bat):
-            # Standard dev/start script
-            ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", start_bat, "", script_dir, 1)
-        else:
-            # Python interpreter fallback
-            ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+            try:
+                ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv[1:]), None, 1)
+                if int(ret) > 32:
+                    launched = True
+            except Exception as exc:
+                logger.debug("Frozen ShellExecuteW failed: %s", exc)
 
-        if int(ret) > 32:
+        # Method 2: Launch via PowerShell Start-Process with -Verb RunAs
+        if not launched and target_bat:
+            try:
+                ps_args = f'/k cd /d "{script_dir}" && "{target_bat}"'
+                ps_script = f"Start-Process cmd -ArgumentList '{ps_args}' -Verb RunAs"
+                subprocess.Popen(
+                    ["powershell", "-NoProfile", "-Command", ps_script],
+                    cwd=script_dir,
+                    shell=False,
+                )
+                launched = True
+            except Exception as exc:
+                logger.debug("PowerShell RunAs failed: %s", exc)
+
+        # Method 3: ShellExecuteW on cmd.exe with runas verb
+        if not launched and target_bat:
+            try:
+                comspec = os.environ.get("COMSPEC", "C:\\Windows\\system32\\cmd.exe")
+                ret = ctypes.windll.shell32.ShellExecuteW(
+                    None,
+                    "runas",
+                    comspec,
+                    f'/k cd /d "{script_dir}" && "{target_bat}"',
+                    script_dir,
+                    1,
+                )
+                if int(ret) > 32:
+                    launched = True
+            except Exception as exc:
+                logger.debug("ShellExecuteW cmd.exe failed: %s", exc)
+
+        if launched:
             return {
                 "status": "UAC_TRIGGERED",
-                "message": "Windows User Account Control prompt requested. Please click 'Yes' in the Windows confirmation dialog."
+                "message": "Windows Administrator prompt requested. Please look at your screen or taskbar and click 'Yes'.",
+                "manual_command": manual_cmd,
             }
         else:
-            raise RuntimeError(f"ShellExecute error code: {ret}")
+            return {
+                "status": "MANUAL_ACTION_REQUIRED",
+                "message": (
+                    "Windows security requires manual administrator approval. "
+                    f"Please right-click 'RUN-AS-ADMIN.bat' in {script_dir} and select 'Run as administrator'."
+                ),
+                "manual_command": manual_cmd,
+            }
 
     except Exception as exc:
-        logger.error("Failed to request UAC elevation: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Failed to trigger UAC elevation: {exc}")
+        logger.error("Error during elevation request: %s", exc)
+        return {
+            "status": "MANUAL_ACTION_REQUIRED",
+            "message": "Please right-click 'RUN-AS-ADMIN.bat' in your FORENSURE folder and select 'Run as administrator'.",
+            "manual_command": 'powershell -Command "Start-Process cmd -ArgumentList \'/k cd /d D:\\SIH && RUN-AS-ADMIN.bat\' -Verb RunAs"',
+        }
 

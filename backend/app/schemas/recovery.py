@@ -36,6 +36,8 @@ class RecoveryScanResponse(BaseModel):
     files: List[DeletedFileItem]
     device_profile: Optional[dict] = None
     acquisition_hash: Optional[str] = None
+    elevation_required: Optional[bool] = False
+    elevation_message: Optional[str] = None
 
 
 class ForensicReportResponse(BaseModel):

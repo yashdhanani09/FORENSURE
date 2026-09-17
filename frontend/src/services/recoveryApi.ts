@@ -37,6 +37,8 @@ export interface RecoveryScanResponse {
   files: DeletedFileItem[];
   device_profile?: any;
   acquisition_hash?: string;
+  elevation_required?: boolean;
+  elevation_message?: string;
 }
 
 export interface ForensicReportResponse {
@@ -94,6 +96,7 @@ export interface RecoveryPrivileges {
 export interface ElevationResponse {
   status: string;
   message: string;
+  manual_command?: string;
 }
 
 export const recoveryApi = {

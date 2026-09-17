@@ -53,6 +53,23 @@ def main():
             return False
 
     if is_port_in_use(8000):
+        # If this instance is running as Administrator, check if the running bridge is non-elevated
+        if is_admin:
+            try:
+                import urllib.request
+                import json
+                req = urllib.request.Request("http://127.0.0.1:8000/api/recovery/privileges", headers={"User-Agent": "FORENSURE-Bridge"})
+                with urllib.request.urlopen(req, timeout=1.0) as resp:
+                    pdata = json.loads(resp.read().decode())
+                    if not pdata.get("is_admin", False):
+                        print("[*] Detected non-elevated bridge on port 8000. Terminating it to promote to Administrator mode...")
+                        os.system("for /f \"tokens=5\" %a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING') do taskkill /F /PID %a >nul 2>&1")
+                        time.sleep(1.2)
+            except Exception:
+                pass
+
+    # Re-check port 8000 after potential takeover
+    if is_port_in_use(8000):
         print("""
 ======================================================================
   [OK] FORENSURE BRIDGE IS ALREADY RUNNING & ACTIVE!
@@ -65,8 +82,8 @@ def main():
       http://localhost:5174  (or https://forensure.vercel.app)
    2. The status bar will show GREEN:
       [PHYSICAL HARDWARE BRIDGE CONNECTED (PORT 8000)]
-   3. If you want to restart the bridge, close the other window or stop
-      the running process on port 8000 first.
+   3. To restart or replace the bridge, close the other terminal window
+      or run RUN-AS-ADMIN.bat.
 ======================================================================
 """)
         try:
