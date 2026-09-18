@@ -265,12 +265,23 @@ export function Recovery() {
     return matchesSearch && matchesCategory;
   });
 
-  // Strict sorting: Default is Recent to Old (Newest deletion at top)
+  const categoryCounts = deletedFiles.reduce<Record<string, number>>((acc, f) => {
+    acc[f.category] = (acc[f.category] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Strict sorting: Default is Recent to Old (Newest deletion at top, with tier-based tie breaker)
   const sortedFiles = [...filteredFiles].sort((a, b) => {
     if (sortBy === "recent") {
       const tA = a.deleted_at ? new Date(a.deleted_at).getTime() : 0;
       const tB = b.deleted_at ? new Date(b.deleted_at).getTime() : 0;
-      return tB - tA; // Recent to Old
+      if (tB !== tA) return tB - tA; // Recent to Old
+      const prio = (method: string) => {
+        if (method?.startsWith("ntfs_") || method?.startsWith("fat_")) return 3;
+        if (!method?.endsWith("_txt")) return 2;
+        return 1;
+      };
+      return prio(b.recovery_method) - prio(a.recovery_method);
     }
     if (sortBy === "oldest") {
       const tA = a.deleted_at ? new Date(a.deleted_at).getTime() : 0;
@@ -765,19 +776,29 @@ export function Recovery() {
         {/* Filters & Batch Actions Toolbar */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex flex-wrap items-center gap-2">
-            {["All", "Document", "Image", "Media", "Archive", "Code", "Other"].map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                  categoryFilter === cat 
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow" 
-                    : "border border-[#1e2c40] bg-[#090d16] text-slate-400 hover:text-white"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+            {["All", "Document", "Image", "Media", "Archive", "Code", "Other"].map((cat) => {
+              const count = cat === "All" ? deletedFiles.length : (categoryCounts[cat] || 0);
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition ${
+                    categoryFilter === cat 
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow" 
+                      : "border border-[#1e2c40] bg-[#090d16] text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <span>{cat}</span>
+                  {deletedFiles.length > 0 && (
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      categoryFilter === cat ? "bg-cyan-500/30 text-cyan-200" : "bg-white/5 text-slate-400"
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">

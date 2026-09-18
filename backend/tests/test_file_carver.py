@@ -204,3 +204,42 @@ def test_restore_carved_file_from_cache(tmp_path):
     with open(res.output_path, "rb") as rf:
         saved_bytes = rf.read()
     assert saved_bytes == png_bytes
+
+
+def test_carve_gif_and_bmp():
+    carver = RawFileCarver()
+    # GIF89a with 10x20 dimensions + trailer + sector padding
+    gif_data = b"GIF89a" + struct.pack("<HH", 10, 20) + b"\x00\x00\x00\x00\x3B" + b"\x00" * 64
+    carved_gif = carver.carve_bytes(gif_data)
+    assert len(carved_gif) == 1
+    assert carved_gif[0].extension == "gif"
+    assert carved_gif[0].category == "Image"
+    assert "10x20" in carved_gif[0].filename
+
+    # BMP with 32x32 dimensions
+    bmp_size = 100
+    bmp_data = (
+        b"BM" + struct.pack("<I", bmp_size) + b"\x00\x00\x00\x00" +
+        struct.pack("<I", 54) + struct.pack("<I", 40) +
+        struct.pack("<ii", 32, 32) + b"\x00" * (bmp_size - 26) + b"\x00" * 64
+    )
+    carved_bmp = carver.carve_bytes(bmp_data)
+    assert len(carved_bmp) == 1
+    assert carved_bmp[0].extension == "bmp"
+    assert carved_bmp[0].category == "Image"
+
+
+def test_carve_rar_and_rtf():
+    carver = RawFileCarver()
+    rar_data = b"Rar!\x1a\x07\x01\x00" + b"\x8a\x7c\x1a\x70" + b"\x00" * 1024
+    carved_rar = carver.carve_bytes(rar_data)
+    assert len(carved_rar) == 1
+    assert carved_rar[0].extension == "rar"
+    assert carved_rar[0].category == "Archive"
+
+    rtf_data = b"{\\rtf1\\ansi\\deff0 {\\fonttbl{\\f0 Courier;}}\\viewkind4\\uc1\\pard\\f0\\fs20 Hello Forensics!}" + b"\x00" * 64
+    carved_rtf = carver.carve_bytes(rtf_data)
+    assert len(carved_rtf) == 1
+    assert carved_rtf[0].extension == "rtf"
+    assert carved_rtf[0].category == "Document"
+

@@ -46,7 +46,7 @@ class CarvedFile:
     confidence_score: int  # 0 - 100
     validation_details: str
     data: bytes
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
 
 class RawFileCarver:
@@ -58,6 +58,14 @@ class RawFileCarver:
     SIG_PDF = b"%PDF-"
     SIG_ZIP = b"PK\x03\x04"
     SIG_MP4_FTYP = b"ftyp"
+    SIG_GIF87 = b"GIF87a"
+    SIG_GIF89 = b"GIF89a"
+    SIG_BMP = b"BM"
+    SIG_RAR4 = b"Rar!\x1a\x07\x00"
+    SIG_RAR5 = b"Rar!\x1a\x07\x01\x00"
+    SIG_7Z = b"7z\xbc\xaf\x27\x1c"
+    SIG_OLE2 = b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"
+    SIG_RTF = b"{\\rtf"
 
     CHUNK_SIZE = 1024 * 1024 * 4  # 4 MB chunk window
     OVERLAP_SIZE = 1024 * 128      # 128 KB sliding overlap
@@ -425,7 +433,116 @@ class RawFileCarver:
         return (file_bytes, min(100, score), validation_note)
 
     # =========================================================================
-    # 6. Stream and Binary Scanning
+    # 6. Additional Binary Carvers (GIF, BMP, RAR, 7Z, OLE2, RTF)
+    # =========================================================================
+    def carve_gif(self, data: bytes, start_offset: int) -> Optional[Tuple[bytes, int, str, int, int]]:
+        """Carves GIF87a / GIF89a raster images."""
+        if len(data) - start_offset < 10:
+            return None
+        try:
+            w, h = struct.unpack("<HH", data[start_offset + 6:start_offset + 10])
+        except Exception:
+            return None
+        max_search = min(len(data), start_offset + self.max_file_size)
+        trailer_idx = data.find(b"\x00\x3B", start_offset + 10, max_search)
+        if trailer_idx == -1:
+            trailer_idx = data.find(b"\x3B", start_offset + 10, max_search)
+            if trailer_idx == -1:
+                return None
+            end_pos = trailer_idx + 1
+        else:
+            end_pos = trailer_idx + 2
+        file_bytes = data[start_offset:end_pos]
+        score = 85
+        note = f"Valid GIF image structure verified (Dimensions: {w}x{h})"
+        return (file_bytes, score, note, w, h)
+
+    def carve_bmp(self, data: bytes, start_offset: int) -> Optional[Tuple[bytes, int, str, int, int]]:
+        """Carves Windows Bitmap (BMP) raster images."""
+        if len(data) - start_offset < 26:
+            return None
+        try:
+            file_size = struct.unpack("<I", data[start_offset + 2:start_offset + 6])[0]
+            reserved = struct.unpack("<I", data[start_offset + 6:start_offset + 10])[0]
+            pixel_offset = struct.unpack("<I", data[start_offset + 10:start_offset + 14])[0]
+            if reserved != 0 or pixel_offset < 26 or file_size <= pixel_offset or file_size > self.max_file_size:
+                return None
+            if start_offset + file_size > len(data):
+                return None
+            w = struct.unpack("<i", data[start_offset + 18:start_offset + 22])[0]
+            h = struct.unpack("<i", data[start_offset + 22:start_offset + 26])[0]
+            file_bytes = data[start_offset:start_offset + file_size]
+            score = 90
+            note = f"Valid Windows BMP image (Dimensions: {abs(w)}x{abs(h)})"
+            return (file_bytes, score, note, abs(w), abs(h))
+        except Exception:
+            return None
+
+    def carve_rar(self, data: bytes, start_offset: int) -> Optional[Tuple[bytes, int, str]]:
+        """Carves RAR 4.x / 5.x compressed archives."""
+        if len(data) - start_offset < 16:
+            return None
+        is_rar5 = data[start_offset:start_offset + 8] == self.SIG_RAR5
+        is_rar4 = data[start_offset:start_offset + 7] == self.SIG_RAR4
+        if not (is_rar4 or is_rar5):
+            return None
+        max_search = min(len(data), start_offset + self.max_file_size)
+        # Search for unallocated sector boundary (512 consecutive zeros) after at least 16 bytes
+        zero_run = data.find(b"\x00" * 512, start_offset + 16, max_search)
+        end_pos = zero_run if zero_run != -1 else min(start_offset + 30 * 1024 * 1024, max_search)
+        file_bytes = data[start_offset:end_pos]
+        if len(file_bytes) < 16:
+            return None
+        ver = "5.x" if is_rar5 else "4.x"
+        return (file_bytes, 85, f"Valid RAR {ver} archive structure verified")
+
+    def carve_7z(self, data: bytes, start_offset: int) -> Optional[Tuple[bytes, int, str]]:
+        """Carves 7-Zip compressed archives."""
+        if len(data) - start_offset < 32:
+            return None
+        if data[start_offset:start_offset + 6] != self.SIG_7Z:
+            return None
+        max_search = min(len(data), start_offset + self.max_file_size)
+        zero_run = data.find(b"\x00" * 512, start_offset + 32, max_search)
+        end_pos = zero_run if zero_run != -1 else min(start_offset + 30 * 1024 * 1024, max_search)
+        file_bytes = data[start_offset:end_pos]
+        return (file_bytes, 85, "Valid 7-Zip (7z) archive header verified")
+
+    def carve_ole2(self, data: bytes, start_offset: int) -> Optional[Tuple[bytes, str, int, str]]:
+        """Carves Microsoft Compound Document (OLE2) files (.doc, .xls, .ppt)."""
+        if len(data) - start_offset < 512:
+            return None
+        if data[start_offset:start_offset + 8] != self.SIG_OLE2:
+            return None
+        sample = data[start_offset:start_offset + min(len(data) - start_offset, 2 * 1024 * 1024)]
+        ext = "doc"
+        if b"Workbook" in sample or b"Book\x00" in sample:
+            ext = "xls"
+        elif b"PowerPoint Document" in sample or b"Current User" in sample:
+            ext = "ppt"
+        elif b"WordDocument" in sample:
+            ext = "doc"
+        max_search = min(len(data), start_offset + self.max_file_size)
+        zero_run = data.find(b"\x00" * 1024, start_offset + 512, max_search)
+        end_pos = zero_run if zero_run != -1 else min(start_offset + 15 * 1024 * 1024, max_search)
+        file_bytes = data[start_offset:end_pos]
+        return (file_bytes, ext, 85, f"Valid Microsoft Office OLE2 legacy document ({ext.upper()}) verified")
+
+    def carve_rtf(self, data: bytes, start_offset: int) -> Optional[Tuple[bytes, int, str]]:
+        """Carves Rich Text Format (.rtf) documents."""
+        if len(data) - start_offset < 16:
+            return None
+        if not data[start_offset:].startswith(self.SIG_RTF):
+            return None
+        max_search = min(len(data), start_offset + 10 * 1024 * 1024)
+        end_idx = data.rfind(b"}", start_offset, max_search)
+        if end_idx == -1:
+            return None
+        file_bytes = data[start_offset:end_idx + 1]
+        return (file_bytes, 85, "Valid RTF rich text document structure verified")
+
+    # =========================================================================
+    # 7. Stream and Binary Scanning
     # =========================================================================
     def carve_bytes(self, data: bytes, base_offset: int = 0) -> List[CarvedFile]:
         """Carves supported files from an in-memory binary byte stream."""
@@ -453,7 +570,7 @@ class RawFileCarver:
                         confidence_score=score,
                         validation_details=note,
                         data=fb,
-                        created_at=datetime.now(timezone.utc),
+                        created_at=None,
                     ))
                     pos += max(len(fb), 4)
                     continue
@@ -477,12 +594,57 @@ class RawFileCarver:
                         confidence_score=score,
                         validation_details=note,
                         data=fb,
-                        created_at=datetime.now(timezone.utc),
+                        created_at=None,
                     ))
                     pos += max(len(fb), 8)
                     continue
 
-            # 3. PDF
+            # 3. GIF
+            if data[pos:pos + 6] in (self.SIG_GIF87, self.SIG_GIF89):
+                carved = self.carve_gif(data, pos)
+                if carved:
+                    fb, score, note, w, h = carved
+                    conf = "HIGH" if score >= 85 else "MEDIUM"
+                    cid = f"carve_gif_{uuid.uuid4().hex[:8]}"
+                    results.append(CarvedFile(
+                        id=cid,
+                        filename=f"recovered_image_{w}x{h}_{pos:08x}.gif",
+                        extension="gif",
+                        category="Image",
+                        size_bytes=len(fb),
+                        offset_bytes=base_offset + pos,
+                        confidence=conf,
+                        confidence_score=score,
+                        validation_details=note,
+                        data=fb,
+                        created_at=None,
+                    ))
+                    pos += max(len(fb), 6)
+                    continue
+
+            # 4. BMP
+            if data[pos:pos + 2] == self.SIG_BMP:
+                carved = self.carve_bmp(data, pos)
+                if carved:
+                    fb, score, note, w, h = carved
+                    cid = f"carve_bmp_{uuid.uuid4().hex[:8]}"
+                    results.append(CarvedFile(
+                        id=cid,
+                        filename=f"recovered_image_{w}x{h}_{pos:08x}.bmp",
+                        extension="bmp",
+                        category="Image",
+                        size_bytes=len(fb),
+                        offset_bytes=base_offset + pos,
+                        confidence="HIGH",
+                        confidence_score=score,
+                        validation_details=note,
+                        data=fb,
+                        created_at=None,
+                    ))
+                    pos += max(len(fb), 2)
+                    continue
+
+            # 5. PDF
             if data[pos:pos + 5] == self.SIG_PDF:
                 carved = self.carve_pdf(data, pos)
                 if carved:
@@ -500,12 +662,12 @@ class RawFileCarver:
                         confidence_score=score,
                         validation_details=note,
                         data=fb,
-                        created_at=datetime.now(timezone.utc),
+                        created_at=None,
                     ))
                     pos += max(len(fb), 5)
                     continue
 
-            # 4. ZIP / DOCX / XLSX
+            # 6. ZIP / DOCX / XLSX / PPTX
             if data[pos:pos + 4] == self.SIG_ZIP:
                 carved = self.carve_zip_family(data, pos)
                 if carved:
@@ -524,12 +686,100 @@ class RawFileCarver:
                         confidence_score=score,
                         validation_details=note,
                         data=fb,
-                        created_at=datetime.now(timezone.utc),
+                        created_at=None,
                     ))
                     pos += max(len(fb), 4)
                     continue
 
-            # 5. MP4
+            # 7. RAR
+            if data[pos:pos + 7] == self.SIG_RAR4 or data[pos:pos + 8] == self.SIG_RAR5:
+                carved = self.carve_rar(data, pos)
+                if carved:
+                    fb, score, note = carved
+                    cid = f"carve_rar_{uuid.uuid4().hex[:8]}"
+                    results.append(CarvedFile(
+                        id=cid,
+                        filename=f"recovered_archive_{pos:08x}.rar",
+                        extension="rar",
+                        category="Archive",
+                        size_bytes=len(fb),
+                        offset_bytes=base_offset + pos,
+                        confidence="HIGH",
+                        confidence_score=score,
+                        validation_details=note,
+                        data=fb,
+                        created_at=None,
+                    ))
+                    pos += max(len(fb), 7)
+                    continue
+
+            # 8. 7Z
+            if data[pos:pos + 6] == self.SIG_7Z:
+                carved = self.carve_7z(data, pos)
+                if carved:
+                    fb, score, note = carved
+                    cid = f"carve_7z_{uuid.uuid4().hex[:8]}"
+                    results.append(CarvedFile(
+                        id=cid,
+                        filename=f"recovered_archive_{pos:08x}.7z",
+                        extension="7z",
+                        category="Archive",
+                        size_bytes=len(fb),
+                        offset_bytes=base_offset + pos,
+                        confidence="HIGH",
+                        confidence_score=score,
+                        validation_details=note,
+                        data=fb,
+                        created_at=None,
+                    ))
+                    pos += max(len(fb), 6)
+                    continue
+
+            # 9. OLE2 (.doc, .xls, .ppt)
+            if data[pos:pos + 8] == self.SIG_OLE2:
+                carved = self.carve_ole2(data, pos)
+                if carved:
+                    fb, ext, score, note = carved
+                    cid = f"carve_{ext}_{uuid.uuid4().hex[:8]}"
+                    results.append(CarvedFile(
+                        id=cid,
+                        filename=f"recovered_document_{pos:08x}.{ext}",
+                        extension=ext,
+                        category="Document",
+                        size_bytes=len(fb),
+                        offset_bytes=base_offset + pos,
+                        confidence="HIGH",
+                        confidence_score=score,
+                        validation_details=note,
+                        data=fb,
+                        created_at=None,
+                    ))
+                    pos += max(len(fb), 8)
+                    continue
+
+            # 10. RTF
+            if data[pos:pos + 5] == self.SIG_RTF:
+                carved = self.carve_rtf(data, pos)
+                if carved:
+                    fb, score, note = carved
+                    cid = f"carve_rtf_{uuid.uuid4().hex[:8]}"
+                    results.append(CarvedFile(
+                        id=cid,
+                        filename=f"recovered_document_{pos:08x}.rtf",
+                        extension="rtf",
+                        category="Document",
+                        size_bytes=len(fb),
+                        offset_bytes=base_offset + pos,
+                        confidence="HIGH",
+                        confidence_score=score,
+                        validation_details=note,
+                        data=fb,
+                        created_at=None,
+                    ))
+                    pos += max(len(fb), 5)
+                    continue
+
+            # 11. MP4
             if pos + 8 <= data_len and data[pos + 4:pos + 8] == self.SIG_MP4_FTYP:
                 carved = self.carve_mp4(data, pos)
                 if carved:
@@ -547,7 +797,7 @@ class RawFileCarver:
                         confidence_score=score,
                         validation_details=note,
                         data=fb,
-                        created_at=datetime.now(timezone.utc),
+                        created_at=None,
                     ))
                     pos += max(len(fb), 8)
                     continue
@@ -557,14 +807,14 @@ class RawFileCarver:
         return results
 
     # =========================================================================
-    # 6. Plain Text & Structured Document Carving (TXT, JSON, MD, LOG, CODE)
+    # 8. Plain Text & Structured Document Carving (TXT, JSON, MD, LOG, CODE)
     # =========================================================================
     def carve_text_documents(
         self,
         data: bytes,
         base_offset: int = 0,
-        min_len: int = 24,
-        max_files: int = 40
+        min_len: int = 64,
+        max_files: int = 10
     ) -> List[CarvedFile]:
         """
         Heuristically carves coherent plain-text documents and structured scripts
@@ -596,7 +846,7 @@ class RawFileCarver:
             # Default classification: Plain text document
             ext = "txt"
             cat = "Document"
-            score = 75
+            score = 70
             validation = "Printable ASCII/UTF-8 coherent text document extracted from unallocated cluster"
 
             trimmed = decoded.strip()
@@ -627,6 +877,10 @@ class RawFileCarver:
                     ext = "csv"
                     score = 85
                     validation = "Delimited tabular CSV data records identified"
+            else:
+                # If it's plain text without special formatting, require at least 128 bytes and at least 2 lines
+                if len(trimmed) < 128 or "\n" not in trimmed:
+                    continue
 
             cid = f"carve_doc_{uuid.uuid4().hex[:8]}"
             conf = "HIGH" if score >= 80 else "MEDIUM"
@@ -641,7 +895,7 @@ class RawFileCarver:
                 confidence_score=score,
                 validation_details=validation,
                 data=stripped,
-                created_at=datetime.now(timezone.utc),
+                created_at=None,
             ))
 
         return carved

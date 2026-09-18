@@ -87,3 +87,60 @@ def test_scan_mft_records_stream():
     assert len(results) == 2
     assert results[0].filename == "doc1.txt"
     assert results[1].filename == "doc2.json"
+
+
+def test_decode_data_runs():
+    from app.services.ntfs_mft_parser import decode_data_runs
+    # Run 1: len_size=1, offset_size=3, len=10, lcn_delta=1000
+    # Run 2: len_size=2, offset_size=2, len=25, lcn_delta=50 -> lcn=1050
+    # End: 0x00
+    encoded = bytes([0x31, 0x0A, 0xE8, 0x03, 0x00, 0x22, 0x19, 0x00, 0x32, 0x00, 0x00])
+    runs = decode_data_runs(encoded)
+    assert runs == [(1000, 10), (1050, 25)]
+
+
+def test_parse_non_resident_deleted_mft_record():
+    record = bytearray(1024)
+    record[:4] = b"FILE"
+    struct.pack_into("<H", record, 20, 56)  # First attr offset
+    struct.pack_into("<H", record, 22, 0)   # Deleted
+    struct.pack_into("<I", record, 24, 300) # Bytes used
+    struct.pack_into("<I", record, 44, 999) # Record number
+
+    # $FILE_NAME (0x30)
+    attr1_offset = 56
+    name = "large_archive.zip"
+    name_utf16 = name.encode("utf-16le")
+    fn_body_len = 66 + len(name_utf16)
+    attr1_total = 24 + fn_body_len + (8 - ((24 + fn_body_len) % 8 or 8))
+    struct.pack_into("<I", record, attr1_offset, 0x30)
+    struct.pack_into("<I", record, attr1_offset + 4, attr1_total)
+    record[attr1_offset + 8] = 0
+    struct.pack_into("<I", record, attr1_offset + 16, fn_body_len)
+    struct.pack_into("<H", record, attr1_offset + 20, 24)
+
+    body_start = attr1_offset + 24
+    struct.pack_into("<Q", record, body_start + 48, 1048576) # Real size = 1MB
+    record[body_start + 64] = len(name)
+    record[body_start + 65] = 1 # Win32 namespace
+    record[body_start + 66 : body_start + 66 + len(name_utf16)] = name_utf16
+
+    # Non-resident $DATA (0x80)
+    attr2_offset = attr1_offset + attr1_total
+    # Runlist: 1 run (lcn=5000, len=256 clusters)
+    runlist = bytes([0x21, 0xFF, 0x88, 0x13, 0x00]) # len=255, lcn_delta=5000
+    attr2_total = 64 + len(runlist) + (8 - ((64 + len(runlist)) % 8 or 8))
+    struct.pack_into("<I", record, attr2_offset, 0x80)
+    struct.pack_into("<I", record, attr2_offset + 4, attr2_total)
+    record[attr2_offset + 8] = 1 # Non-resident!
+    struct.pack_into("<H", record, attr2_offset + 32, 64) # Runlist offset = 64
+    struct.pack_into("<Q", record, attr2_offset + 48, 1048576) # Real size = 1048576
+    record[attr2_offset + 64 : attr2_offset + 64 + len(runlist)] = runlist
+
+    item = parse_mft_record(bytes(record))
+    assert item is not None
+    assert item.filename == "large_archive.zip"
+    assert item.size_bytes == 1048576
+    assert item.data_runs is not None
+    assert len(item.data_runs) == 1
+    assert item.data_runs[0][0] == 5000

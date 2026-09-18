@@ -23,12 +23,52 @@ logger = logging.getLogger(__name__)
 SCANNED_DELETED_CACHE: Dict[str, DeletedFileItem] = {}
 # In-memory cache of raw carved file payloads: { file_id: bytes }
 CARVED_DATA_CACHE: Dict[str, bytes] = {}
+# In-memory cache of non-resident NTFS MFT data runs: { file_id: (drive_prefix, data_runs, cluster_size, real_size) }
+MFT_RUNS_CACHE: Dict[str, Tuple[str, List[Tuple[int, int]], int, int]] = {}
 
 # Forensic profiling & acquisition caches: { device_id: metadata }
 LAST_DEVICE_PROFILES: Dict[str, Dict[str, Any]] = {}
 LAST_ACQUISITION_HASHES: Dict[str, str] = {}
 LAST_SCANNED_FILES: Dict[str, List[DeletedFileItem]] = {}
 LAST_TARGET_DEVICES: Dict[str, Dict[str, Any]] = {}
+
+
+def _read_mft_clusters_to_file(drive_prefix: str, data_runs: List[Tuple[int, int]], cluster_size: int, real_size: int, out_path: str) -> Tuple[int, str]:
+    """Reads non-resident NTFS clusters directly from physical volume sectors and writes bit-exact file payload to out_path."""
+    hasher = hashlib.sha256()
+    bytes_written = 0
+    remaining = real_size
+
+    with open(out_path, "wb") as dst:
+        for lcn, cluster_count in data_runs:
+            if remaining <= 0:
+                break
+            run_bytes = cluster_count * cluster_size
+            bytes_to_read = min(remaining, run_bytes)
+
+            if lcn == 0:
+                # Sparse run: write zero bytes
+                sparse_chunk = b"\x00" * min(bytes_to_read, 64 * 1024)
+                sparse_rem = bytes_to_read
+                while sparse_rem > 0:
+                    wr = min(sparse_rem, len(sparse_chunk))
+                    dst.write(sparse_chunk[:wr])
+                    hasher.update(sparse_chunk[:wr])
+                    bytes_written += wr
+                    sparse_rem -= wr
+            else:
+                # Read clusters from raw disk volume
+                offset = lcn * cluster_size
+                block_chunk = _read_raw_volume_at_offset(drive_prefix, offset, bytes_to_read)
+                if block_chunk:
+                    dst.write(block_chunk)
+                    hasher.update(block_chunk)
+                    bytes_written += len(block_chunk)
+                else:
+                    break
+            remaining = real_size - bytes_written
+
+    return bytes_written, hasher.hexdigest()
 
 
 def _get_category(extension: str) -> str:
@@ -344,13 +384,44 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
                     if not chunk:
                         continue
 
-                    # Carve unallocated MFT records ($FILE_NAME & resident $DATA)
+                    # Carve unallocated MFT records ($FILE_NAME, resident $DATA, and non-resident data runs)
                     deleted_mft = scan_mft_records_from_stream(chunk, base_offset=offset, max_items=500)
                     for mft_item in deleted_mft:
                         cid = f"mft_{uuid.uuid4().hex[:10]}"
-                        ext = Path(mft_item.filename).suffix.lstrip(".") or "txt"
+                        ext = Path(mft_item.filename).suffix.lstrip(".") or "bin"
                         cat = _get_category(ext)
                         mft_data = mft_item.data if mft_item.data else b""
+                        has_runs = bool(mft_item.data_runs)
+                        is_recoverable = len(mft_data) > 0 or has_runs
+
+                        if has_runs:
+                            vol_cluster_size = cluster_size if 'cluster_size' in locals() and cluster_size else 4096
+                            MFT_RUNS_CACHE[cid] = (drive_prefix, mft_item.data_runs, vol_cluster_size, mft_item.size_bytes)
+                            # If file size is reasonable (<= 15MB), attempt pre-caching payload
+                            if 0 < mft_item.size_bytes <= 15 * 1024 * 1024:
+                                try:
+                                    pre_buf = bytearray()
+                                    for lcn, ccount in mft_item.data_runs:
+                                        if len(pre_buf) >= mft_item.size_bytes:
+                                            break
+                                        to_read = min(mft_item.size_bytes - len(pre_buf), ccount * vol_cluster_size)
+                                        if lcn == 0:
+                                            pre_buf.extend(b"\x00" * to_read)
+                                        else:
+                                            p_chunk = _read_raw_volume_at_offset(drive_prefix, lcn * vol_cluster_size, to_read)
+                                            if p_chunk:
+                                                pre_buf.extend(p_chunk)
+                                            else:
+                                                break
+                                    if len(pre_buf) == mft_item.size_bytes:
+                                        CARVED_DATA_CACHE[cid] = bytes(pre_buf)
+                                except Exception:
+                                    pass
+
+                        details = (
+                            f"Extracted from unallocated NTFS Master File Table record #{mft_item.record_number} "
+                            f"({'Resident payload' if mft_data else f'Non-resident Data Runlist, {len(mft_item.data_runs or [])} runs'})"
+                        )
                         item = DeletedFileItem(
                             id=cid,
                             filename=mft_item.filename,
@@ -359,23 +430,22 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
                             size_bytes=mft_item.size_bytes or len(mft_data),
                             extension=ext,
                             category=cat,
-                            deleted_at=mft_item.deleted_at or datetime.now(timezone.utc),
+                            deleted_at=mft_item.deleted_at,
                             confidence="HIGH",
                             confidence_score=95,
-                            validation_details=f"Extracted from unallocated NTFS Master File Table ($MFT) record at offset 0x{mft_item.offset_bytes:08X}",
+                            validation_details=details,
                             offset_bytes=mft_item.offset_bytes,
                             recovery_method="ntfs_mft_carved",
-                            recoverable=len(mft_data) > 0,
+                            recoverable=is_recoverable,
                         )
                         items.append(item)
                         SCANNED_DELETED_CACHE[cid] = item
                         if mft_data:
                             CARVED_DATA_CACHE[cid] = mft_data
 
-                    # Carve binary signatures & plain-text documents
+                    # Carve binary signatures (JPG, PNG, GIF, BMP, PDF, ZIP/DOCX/XLSX/PPTX, RAR, 7Z, OLE2, RTF, MP4)
                     carved = raw_file_carver.carve_bytes(chunk, base_offset=offset)
-                    carved_text = raw_file_carver.carve_text_documents(chunk, base_offset=offset, max_files=25)
-                    for c in (carved + carved_text):
+                    for c in carved:
                         if len(items) >= max_files:
                             break
                         item = DeletedFileItem(
@@ -489,7 +559,10 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
                                 with open(entry.path, "rb") as ef:
                                     buf = ef.read(min(file_sz, 5 * 1024 * 1024))
                                 carved_entries = raw_file_carver.carve_bytes(buf)
-                                carved_text = raw_file_carver.carve_text_documents(buf, max_files=15)
+                                # Only check for text documents if the remnant file actually had a text/code extension
+                                carved_text = []
+                                if low_name.endswith((".txt", ".md", ".json", ".py", ".js")):
+                                    carved_text = raw_file_carver.carve_text_documents(buf, max_files=2)
                                 for c in (carved_entries + carved_text):
                                     if len(items) >= max_files:
                                         break
@@ -831,7 +904,11 @@ def scan_device_deleted_files(
                     seen_keys.add(key)
                     results.append(item)
 
-    # Sort strictly from most recent to oldest (Recent -> Old)
+    # Multi-tier forensic prioritization:
+    # Tier 3: Verified filesystem metadata (Recycle Bin $I/$R, FAT32 directory tables) with original names
+    # Tier 2: NTFS MFT unallocated records with original names
+    # Tier 1: Valid binary carved files (JPG, PNG, GIF, BMP, PDF, ZIP, RAR, 7Z, MP4, RTF, etc.)
+    # Tier 0: Generic plain-text slack fragments
     def _safe_sort_timestamp(dt: Optional[datetime]) -> float:
         if dt is None:
             return 0.0
@@ -842,7 +919,18 @@ def scan_device_deleted_files(
         except Exception:
             return 0.0
 
-    results.sort(key=lambda x: _safe_sort_timestamp(x.deleted_at), reverse=True)
+    def _item_priority(item: DeletedFileItem) -> Tuple[int, float]:
+        if item.recovery_method in ("ntfs_metadata", "ntfs_remnant", "fat_deleted"):
+            tier = 3
+        elif item.recovery_method == "ntfs_mft_carved":
+            tier = 2
+        elif item.recovery_method and not item.recovery_method.endswith("_txt"):
+            tier = 1
+        else:
+            tier = 0
+        return (tier, _safe_sort_timestamp(item.deleted_at))
+
+    results.sort(key=_item_priority, reverse=True)
     logger.info("Found %d deleted / carved files across targets %s", len(results), mount_points)
     LAST_SCANNED_FILES[dev_id] = results
     return results
@@ -955,7 +1043,7 @@ def restore_files(file_ids: List[str], destination_folder: Optional[str] = None)
                     ))
                 continue
 
-            if raw_payload is None and not os.path.exists(item.source_path):
+            if raw_payload is None and fid not in MFT_RUNS_CACHE and not os.path.exists(item.source_path):
                 restored.append(RestoredItem(
                     file_id=fid,
                     filename=item.filename,
@@ -979,12 +1067,15 @@ def restore_files(file_ids: List[str], destination_folder: Optional[str] = None)
                     out_path = os.path.join(output_dir, f"{base_name}_{counter}{ext}")
                     counter += 1
 
-                # Reconstruct and copy: write from CARVED_DATA_CACHE or disk stream
+                # Reconstruct and copy: write from CARVED_DATA_CACHE, MFT volume clusters, or disk stream
                 if raw_payload is not None:
                     with open(out_path, "wb") as dst:
                         dst.write(raw_payload)
                     bytes_copied = len(raw_payload)
                     digest = hashlib.sha256(raw_payload).hexdigest()
+                elif fid in MFT_RUNS_CACHE:
+                    drv, runs, csz, rsz = MFT_RUNS_CACHE[fid]
+                    bytes_copied, digest = _read_mft_clusters_to_file(drv, runs, csz, rsz, out_path)
                 else:
                     hasher = hashlib.sha256()
                     bytes_copied = 0
