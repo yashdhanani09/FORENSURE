@@ -292,6 +292,19 @@ def request_elevation_endpoint():
         manual_cmd = f'powershell -Command "Start-Process cmd -ArgumentList \'/k cd /d \\"{script_dir}\\" && RUN-AS-ADMIN.bat\' -Verb RunAs"'
         launched = False
 
+        # Method 0: Check if silent elevated task "FORENSURE_Bridge" is registered
+        try:
+            chk = subprocess.run(["schtasks", "/query", "/tn", "FORENSURE_Bridge"], capture_output=True, text=True, timeout=2)
+            if chk.returncode == 0:
+                subprocess.Popen(["schtasks", "/run", "/tn", "FORENSURE_Bridge"], shell=False)
+                return {
+                    "status": "AUTO_ELEVATED",
+                    "message": "Silent Administrator elevation triggered automatically via registered Windows task.",
+                    "manual_command": "schtasks /run /tn \"FORENSURE_Bridge\"",
+                }
+        except Exception as exc:
+            logger.debug("Scheduled task check failed: %s", exc)
+
         # Method 1: If running as bundled standalone executable (e.g. FORENSURE-Bridge.exe)
         if getattr(sys, "frozen", False):
             try:

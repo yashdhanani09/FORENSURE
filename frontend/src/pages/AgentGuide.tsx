@@ -32,17 +32,20 @@ const STEPS = [
     id: "extract",
     number: "02",
     icon: Cpu,
-    title: "Extract & Launch the Bridge",
-    task: "Unzip the package, then double-click START-BRIDGE.bat",
+    title: "Extract & Choose Launch Mode",
+    task: "Choose between 1-click Silent Background Mode (Recommended) or Interactive Terminal",
     detail:
-      "Right-click the downloaded zip → Extract All. Open the extracted folder and double-click START-BRIDGE.bat. A terminal window will appear — keep it open the entire time you are using FORENSURE. That's it, no installation needed.",
-    badge: "Zero Install",
-    badgeColor: "cyan",
-    command: `[+] Physical Disk & MTP Probe : ACTIVE
-[+] Local API Endpoint       : http://127.0.0.1:8000
-[+] STATUS : LISTENING FOR WEB CLIENTS`,
+      "Right-click the downloaded zip → Extract All. For a completely seamless experience with no visible terminal windows and no future UAC prompts, run SETUP-AUTO-ADMIN.bat once as Administrator. Alternatively, double-click START-BRIDGE.bat if you want to inspect live terminal logs.",
+    badge: "Silent Auto-Admin Ready",
+    badgeColor: "emerald",
+    command: `[*] Mode 1 (Silent Auto-Admin - Recommended):
+    Right-click SETUP-AUTO-ADMIN.bat -> "Run as administrator"
+    -> Runs in background silently with Highest Privileges (Zero UAC Popups, Zero Terminal Windows).
+
+[*] Mode 2 (Interactive Terminal):
+    Double-click START-BRIDGE.bat or RUN-AS-ADMIN.bat`,
     actionLabel: null,
-    confirmLabel: "Agent is running — I can see the console",
+    confirmLabel: "Bridge is running (either silently in background or in terminal)",
   },
   {
     id: "connect",
@@ -397,6 +400,25 @@ export function AgentGuide() {
                     {line}
                   </p>
                 ))}
+              </div>
+            )}
+
+            {/* Silent Auto-Admin Feature Card (for extract step) */}
+            {step.id === "extract" && (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>RECOMMENDED: 100% Silent Background Operation (Never See UAC Again)</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  To hide terminal windows and bypass future UAC prompts completely, right-click <code className="text-emerald-300 bg-black/50 px-1 rounded font-mono">SETUP-AUTO-ADMIN.bat</code> and select <strong>"Run as administrator"</strong>.
+                </p>
+                <div className="p-3 bg-black/60 border border-emerald-500/20 rounded-lg text-xs font-mono text-emerald-300/90 space-y-1">
+                  <div>✓ Configures Windows Task with Highest Privileges</div>
+                  <div>✓ Launches automatically on PC startup in the background</div>
+                  <div>✓ Zero terminal windows • Zero UAC confirmation dialogs</div>
+                  <div>✓ Stop anytime with <code className="text-slate-300">STOP-BRIDGE.bat</code></div>
+                </div>
               </div>
             )}
 

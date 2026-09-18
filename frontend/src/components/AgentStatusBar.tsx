@@ -262,14 +262,21 @@ export function AgentStatusBar() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <h4 className="font-bold text-white uppercase text-[11px] tracking-wider">Quick Setup (2 Steps)</h4>
-                <ol className="list-decimal list-inside space-y-1 text-slate-400">
-                  <li>Download and extract <code className="text-cyan-300 bg-black/40 px-1 rounded">FORENSURE-Bridge-Windows.zip</code>.</li>
-                  <li>Run <code className="text-cyan-300 bg-black/40 px-1 rounded">RUN-AS-ADMIN.bat</code> or right-click <code className="text-cyan-300 bg-black/40 px-1 rounded">FORENSURE-Bridge.exe</code> and choose <strong>"Run as administrator"</strong>.</li>
-                  <li>Click <strong>Yes</strong> on the Windows UAC confirmation dialog to grant raw physical drive read permissions.</li>
-                </ol>
-              </div>
+                <h4 className="font-bold text-white uppercase text-[11px] tracking-wider">Quick Setup Options</h4>
+                <div className="space-y-2 text-slate-300">
+                  <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-[11px]">
+                    <span className="font-bold text-emerald-400">Option 1 (Recommended — Silent Auto-Admin):</span>
+                    <p className="text-slate-400 mt-0.5">
+                      Right-click <code className="text-emerald-300 bg-black/40 px-1 rounded">SETUP-AUTO-ADMIN.bat</code> → <em>"Run as administrator"</em> once. The bridge runs silently with zero terminal clutter and zero UAC prompts forever!
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-slate-900 border border-[#1e2c40] text-[11px]">
+                    <span className="font-bold text-cyan-400">Option 2 (Interactive Terminal):</span>
+                    <p className="text-slate-400 mt-0.5">
+                      Double-click <code className="text-cyan-300 bg-black/40 px-1 rounded">START-BRIDGE.bat</code> or <code className="text-cyan-300 bg-black/40 px-1 rounded">RUN-AS-ADMIN.bat</code>.
+                    </p>
+                  </div>
+                </div>
             </div>
 
             <div className="mt-6 flex items-center justify-between gap-3 pt-4 border-t border-[#1e2c40]">
