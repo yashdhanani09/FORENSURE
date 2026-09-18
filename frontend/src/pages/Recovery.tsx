@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { 
   RotateCcw, Search, Download, CheckCircle2, AlertTriangle, 
   FileText, Image as ImageIcon, Film, Archive, Code, File, HardDrive, 
   CheckSquare, Square, Shield, RefreshCw, FolderOpen, ArrowRight,
   ShieldCheck, Smartphone, Check, Copy, Cpu, Layers, Hash, FileCheck,
-  Printer, X, KeyRound, ArrowUpDown, ChevronLeft, ChevronRight, ShieldAlert
+  Printer, X, KeyRound, ArrowUpDown, ChevronLeft, ChevronRight, ShieldAlert,
+  BookOpen
 } from "lucide-react";
 import { deviceApi } from "../services/api";
 import { agentConnection } from "../services/agentConnection";
@@ -46,14 +48,8 @@ export function Recovery() {
   const [newlyRestoredItems, setNewlyRestoredItems] = useState<RestoredItem[]>([]);
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
 
-  // Administrator Privileges & UAC Elevation State
+  // Administrator Privileges State
   const [privileges, setPrivileges] = useState<RecoveryPrivileges | null>(null);
-  const [elevating, setElevating] = useState(false);
-  const [showElevationModal, setShowElevationModal] = useState(false);
-  const [manualCommand, setManualCommand] = useState<string>(
-    'powershell -Command "Start-Process cmd -ArgumentList \'/k cd /d D:\\SIH && RUN-AS-ADMIN.bat\' -Verb RunAs"'
-  );
-  const [copiedCmd, setCopiedCmd] = useState(false);
 
   // Full List Sorting (Default: Recent to Old) & Pagination State
   const [sortBy, setSortBy] = useState<"recent" | "oldest" | "size_desc" | "name" | "confidence">("recent");
@@ -79,47 +75,6 @@ export function Recovery() {
         elevation_required: true,
         advisory: "Bridge not elevated. Grant Administrator privileges (UAC) to scan raw physical sectors on D:.",
       });
-    }
-  };
-
-  const handleRequestElevation = async () => {
-    setElevating(true);
-    setShowElevationModal(true);
-    try {
-      const res = await recoveryApi.requestElevation();
-      if (res.manual_command) {
-        setManualCommand(res.manual_command);
-      }
-      if (res.status === "ALREADY_ADMIN") {
-        await checkPrivileges();
-        setElevating(false);
-      } else {
-        // Poll for elevation status up to 15 times (22.5 seconds)
-        let attempts = 0;
-        const interval = setInterval(async () => {
-          attempts += 1;
-          try {
-            const currentPriv = await recoveryApi.getPrivileges();
-            if (currentPriv.is_admin || currentPriv.can_read_raw_disk) {
-              setPrivileges(currentPriv);
-              clearInterval(interval);
-              setElevating(false);
-              loadDevices(true);
-              return;
-            }
-          } catch {
-            // Backend might be restarting elevated
-          }
-          if (attempts >= 15) {
-            clearInterval(interval);
-            setElevating(false);
-            checkPrivileges();
-          }
-        }, 1500);
-      }
-    } catch (e: any) {
-      console.warn("Elevation request error:", e);
-      setElevating(false);
     }
   };
 
@@ -172,7 +127,7 @@ export function Recovery() {
       setAcquisitionHash(res.acquisition_hash || "");
       if ((res.files || []).length === 0) {
         if (res.elevation_required || !privileges?.is_admin) {
-          setShowElevationModal(true);
+          alert("Scan completed with 0 results because Administrator privileges are mandatory to read raw volume sectors. Please open the Hardware Guide to enable Administrator mode.");
         } else {
           alert("Scan completed. No deleted or carved files detected on this target.");
         }
@@ -397,23 +352,21 @@ export function Recovery() {
             <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
             Recovered Archive ({recoveryHistory.length})
           </Button>
-          {/* Top-Bar Administrator / UAC Trigger Button */}
+          {/* Top-Bar Administrator Status Badge / Guide Link */}
           {privileges?.is_admin ? (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>Admin: Active</span>
             </div>
           ) : (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleRequestElevation}
-              loading={elevating}
-              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold border-0 shadow-md shadow-amber-950/40"
+            <Link
+              to="/agent-guide"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-semibold transition shadow-sm"
+              title="Administrator access is mandatory for raw physical disk recovery. Open Hardware Guide."
             >
-              <Shield className="w-3.5 h-3.5 mr-1" />
-              {elevating ? "Requesting..." : "Run as Administrator (UAC)"}
-            </Button>
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+              <span>Admin Required (See Guide)</span>
+            </Link>
           )}
 
           <Button
@@ -427,7 +380,7 @@ export function Recovery() {
         </div>
       </div>
 
-      {/* Administrator / UAC Elevation Banner */}
+      {/* Administrator Mandatory Notice Banner */}
       {!privileges?.is_admin && (
         <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 backdrop-blur-sm shadow-lg">
           <div className="flex items-start gap-3.5">
@@ -437,28 +390,25 @@ export function Recovery() {
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-bold text-amber-200">
-                  Standard User Mode — Raw Volume Access Blocked
+                  Administrator Privileges Required (Mandatory)
                 </h4>
                 <span className="px-2 py-0.5 text-[10px] font-semibold bg-amber-500/20 text-amber-300 rounded-md border border-amber-500/30">
-                  UAC ELEVATION AVAILABLE
+                  RAW DISK ACCESS BLOCKED
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Windows kernel security blocks direct physical sector carving on drive <span className="text-amber-300 font-mono font-semibold">D:</span> when running as a standard user. Grant Administrator privileges to enable low-level NTFS MFT parsing for permanently deleted and emptied-recycle-bin files.
+                Windows NT kernel security blocks direct physical sector carving on drive <span className="text-amber-300 font-mono font-semibold">D:</span> when running under standard user accounts. Administrator privileges are strictly mandatory to parse the Master File Table ($MFT) and recover emptied-recycle-bin files.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleRequestElevation}
-              loading={elevating}
-              className="w-full md:w-auto bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-bold border-0 shadow-md shadow-amber-950/50"
+            <Link
+              to="/agent-guide"
+              className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-950/50"
             >
-              <Shield className="w-4 h-4 mr-1.5" />
-              {elevating ? "Requesting Elevation..." : "Grant Administrator Access (UAC)"}
-            </Button>
+              <BookOpen className="w-4 h-4" />
+              Open Hardware Guide (Enable Admin)
+            </Link>
           </div>
         </div>
       )}
@@ -1045,17 +995,16 @@ export function Recovery() {
                           <ShieldAlert className="w-10 h-10 mx-auto text-amber-400" />
                           <p className="text-sm font-bold text-amber-300">Administrator Privileges Required for Drive D: Carving</p>
                           <p className="text-xs text-slate-300 leading-relaxed">
-                            Windows blocks raw physical disk sectors and unallocated NTFS MFT records from standard user accounts. To recover files permanently deleted or emptied from the Recycle Bin, please grant Administrator privileges.
+                            Windows blocks raw physical disk sectors and unallocated NTFS MFT records from standard user accounts. To recover files permanently deleted or emptied from the Recycle Bin, Administrator privileges are strictly mandatory.
                           </p>
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={handleRequestElevation}
-                            loading={elevating}
-                            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-md shadow-amber-950/50"
-                          >
-                            <Shield className="w-4 h-4 mr-1.5" /> Grant Administrator Access (UAC)
-                          </Button>
+                          <div className="pt-2">
+                            <Link
+                              to="/agent-guide"
+                              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-950/50"
+                            >
+                              <BookOpen className="w-4 h-4" /> Open Hardware Guide (Enable Mandatory Admin Mode)
+                            </Link>
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-3">
@@ -1347,80 +1296,6 @@ export function Recovery() {
         </div>
       )}
 
-      {/* Elevation Info Modal */}
-      {showElevationModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md rounded-2xl border border-amber-500/40 bg-[#0d1424] p-6 shadow-2xl text-slate-200">
-            <button
-              onClick={() => setShowElevationModal(false)}
-              className="absolute right-4 top-4 text-slate-400 hover:text-white transition p-1"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                <ShieldAlert className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white">Administrator Access (UAC)</h3>
-                <p className="text-xs text-slate-400">Low-Level Physical Drive Read Access</p>
-              </div>
-            </div>
-            <div className="space-y-3 text-xs leading-relaxed text-slate-300">
-              <p>
-                A Windows <strong>User Account Control (UAC)</strong> prompt has been requested.
-              </p>
-              <div className="p-3 bg-amber-950/30 border border-amber-500/20 rounded-xl text-amber-200">
-                👉 Please check your screen or taskbar and click <strong>"Yes"</strong> on the Windows confirmation dialog.
-              </div>
-              <p className="text-slate-400">
-                Once approved, the engine will automatically activate physical sector and NTFS Master File Table ($MFT) carving on drive D:.
-              </p>
-              <div className="space-y-1.5 pt-1">
-                <span className="text-slate-300 font-semibold text-[11px]">Manual Command (PowerShell):</span>
-                <div className="p-2 bg-black/50 border border-[#1e2c40] rounded-lg font-mono text-[11px] text-cyan-300 flex items-center justify-between gap-2">
-                  <span className="truncate">{manualCommand}</span>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(manualCommand);
-                      setCopiedCmd(true);
-                      setTimeout(() => setCopiedCmd(false), 2000);
-                    }}
-                    className="text-slate-400 hover:text-white p-1 shrink-0"
-                    title="Copy Command"
-                  >
-                    {copiedCmd ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-                <p className="text-[10px] text-slate-500">
-                  Or right-click <code className="text-cyan-300 bg-black/40 px-1 rounded">RUN-AS-ADMIN.bat</code> in your FORENSURE folder and select <em>"Run as administrator"</em>.
-                </p>
-              </div>
-            </div>
-            <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-[#1e2c40]">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  checkPrivileges();
-                  setShowElevationModal(false);
-                }}
-              >
-                Close
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => checkPrivileges()}
-                loading={elevating}
-                className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold"
-              >
-                Check Status Again
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

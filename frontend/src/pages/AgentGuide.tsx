@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { agentConnection, type AgentStatus } from "../services/agentConnection";
+import { recoveryApi, type RecoveryPrivileges } from "../services/recoveryApi";
 import {
   Download, Terminal, HardDrive, RefreshCw, CheckCircle2,
   ArrowRight, Cpu, MonitorSmartphone, Plug, ShieldCheck,
-  LayoutDashboard, Sparkles, ChevronLeft
+  LayoutDashboard, Sparkles, ChevronLeft, ShieldAlert, Shield,
+  Copy, Check
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────
@@ -31,21 +33,22 @@ const STEPS = [
   {
     id: "extract",
     number: "02",
-    icon: Cpu,
-    title: "Extract & Choose Launch Mode",
-    task: "Choose between 1-click Silent Background Mode (Recommended) or Interactive Terminal",
+    icon: ShieldCheck,
+    title: "Extract & Run as Administrator (Mandatory)",
+    task: "Administrator privileges are strictly mandatory to access physical drives and raw sectors",
     detail:
-      "Right-click the downloaded zip → Extract All. For a completely seamless experience with no visible terminal windows and no future UAC prompts, run SETUP-AUTO-ADMIN.bat once as Administrator. Alternatively, double-click START-BRIDGE.bat if you want to inspect live terminal logs.",
-    badge: "Silent Auto-Admin Ready",
-    badgeColor: "emerald",
+      "Windows NT kernel security blocks standard user accounts from reading raw drive volumes (such as \\\\.\\D:). To scan raw sectors, parse NTFS Master File Tables ($MFT), and recover permanently deleted or emptied Recycle Bin files, FORENSURE Bridge MUST run with Administrator privileges.",
+    badge: "MANDATORY REQUIREMENT",
+    badgeColor: "rose",
     command: `[*] Mode 1 (Silent Auto-Admin - Recommended):
     Right-click SETUP-AUTO-ADMIN.bat -> "Run as administrator"
-    -> Runs in background silently with Highest Privileges (Zero UAC Popups, Zero Terminal Windows).
+    -> Configures Windows Task Scheduler with Highest Privileges.
+    -> Runs silently in background forever (Zero UAC Popups, Zero Terminal Windows).
 
 [*] Mode 2 (Interactive Terminal):
-    Double-click START-BRIDGE.bat or RUN-AS-ADMIN.bat`,
+    Right-click RUN-AS-ADMIN.bat -> "Run as administrator"`,
     actionLabel: null,
-    confirmLabel: "Bridge is running (either silently in background or in terminal)",
+    confirmLabel: "Bridge is running as Administrator",
   },
   {
     id: "connect",
@@ -66,15 +69,15 @@ const STEPS = [
     id: "verify",
     number: "04",
     icon: RefreshCw,
-    title: "Verify Bridge Connection",
-    task: "Confirm the web app can reach your local agent",
+    title: "Verify Bridge & Mandatory Administrator Mode",
+    task: "Confirm bridge connection and verify kernel-level Administrator privileges",
     detail:
-      "Click the button below to ping the local bridge. Chrome and Edge authorize the Private Network Access (PNA) handshake automatically — no browser extension needed. When the status turns green you are live.",
-    badge: "PNA Auto-Handshake",
+      "Click the button below to test the connection and verify that the bridge is elevated with Highest Administrator Privileges. Both connection and Administrator privileges must be active before proceeding to forensic scanning.",
+    badge: "Verification Required",
     badgeColor: "cyan",
     command: null,
-    actionLabel: "Test Connection Now",
-    confirmLabel: "Connection verified — status is green",
+    actionLabel: "Verify Bridge & Privileges",
+    confirmLabel: "System verified — all checks passed",
     isVerify: true,
   },
   {
@@ -82,10 +85,10 @@ const STEPS = [
     number: "05",
     icon: ShieldCheck,
     title: "All Systems Ready",
-    task: "Physical hardware inspection is fully operational",
+    task: "Physical hardware inspection and raw carving are fully operational",
     detail:
-      "Your local bridge is online, your device is connected, and FORENSURE is ready for real-time sector-level forensics. Head to the dashboard to start investigating.",
-    badge: "LIVE",
+      "Your local bridge is online with verified Administrator privileges. You are now equipped to scan raw physical sectors, parse NTFS $MFT, and perform complete forensic recovery.",
+    badge: "LIVE & ELEVATED",
     badgeColor: "emerald",
     command: null,
     isFinal: true,
@@ -99,6 +102,7 @@ const BADGE_COLORS: Record<string, string> = {
   cyan: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
   amber: "bg-amber-500/15 text-amber-300 border-amber-500/30",
   emerald: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  rose: "bg-rose-500/15 text-rose-300 border-rose-500/30",
 };
 
 const NODE_COLORS: Record<string, string> = {
@@ -106,6 +110,7 @@ const NODE_COLORS: Record<string, string> = {
   amber: "border-amber-500 bg-amber-500/20 text-amber-300 shadow-[0_0_16px_rgba(245,158,11,0.4)]",
   emerald:
     "border-emerald-500 bg-emerald-500/20 text-emerald-300 shadow-[0_0_16px_rgba(16,185,129,0.4)]",
+  rose: "border-rose-500 bg-rose-500/20 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.4)]",
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -209,6 +214,15 @@ export function AgentGuide() {
   const [panelKey, setPanelKey] = useState(0); // force re-mount for animation
   const navigate = useNavigate();
 
+  // Administrator Privileges & Elevation State (ONLY in Hardware Guide)
+  const [privileges, setPrivileges] = useState<RecoveryPrivileges | null>(null);
+  const [elevating, setElevating] = useState(false);
+  const [elevationStatus, setElevationStatus] = useState<string | null>(null);
+  const [manualCommand, setManualCommand] = useState<string>(
+    'powershell -Command "Start-Process cmd -ArgumentList \'/k cd /d D:\\SIH && RUN-AS-ADMIN.bat\' -Verb RunAs"'
+  );
+  const [copiedCmd, setCopiedCmd] = useState(false);
+
   const prefersReduced =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -218,14 +232,93 @@ export function AgentGuide() {
     return unsub;
   }, []);
 
-  // Auto-advance verify step when connection becomes live
+  const checkPrivileges = async () => {
+    if (!agentStatus.connected) {
+      setPrivileges(null);
+      return null;
+    }
+    try {
+      const p = await recoveryApi.getPrivileges();
+      setPrivileges(p);
+      return p;
+    } catch {
+      setPrivileges(null);
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (agentStatus.connected) {
+      checkPrivileges();
+    } else {
+      setPrivileges(null);
+    }
+  }, [agentStatus.connected]);
+
+  const copyCommand = (cmd: string) => {
+    navigator.clipboard.writeText(cmd);
+    setCopiedCmd(true);
+    setTimeout(() => setCopiedCmd(false), 2000);
+  };
+
+  const handleElevate = async () => {
+    setElevating(true);
+    setElevationStatus("Requesting Administrator Privileges (UAC)...");
+    try {
+      const res = await recoveryApi.requestElevation();
+      if (res.manual_command) {
+        setManualCommand(res.manual_command);
+      }
+      if (res.status === "ALREADY_ADMIN") {
+        setElevationStatus("Already running with Administrator privileges!");
+        await checkPrivileges();
+        setElevating(false);
+      } else if (res.status === "AUTO_ELEVATED") {
+        setElevationStatus("Silent Administrator elevation task triggered! Monitoring status...");
+        pollForPrivileges();
+      } else {
+        setElevationStatus("UAC prompt launched! Please click 'Yes' on the Windows confirmation dialog.");
+        pollForPrivileges();
+      }
+    } catch (e: any) {
+      console.warn("Elevation failed:", e);
+      setElevationStatus("Elevation request failed or canceled. Please right-click SETUP-AUTO-ADMIN.bat and select 'Run as administrator'.");
+      setElevating(false);
+    }
+  };
+
+  const pollForPrivileges = () => {
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts += 1;
+      try {
+        const p = await recoveryApi.getPrivileges();
+        if (p.is_admin) {
+          setPrivileges(p);
+          setElevationStatus("✓ Administrator privileges granted successfully! Kernel raw sector access is active.");
+          clearInterval(interval);
+          setElevating(false);
+          return;
+        }
+      } catch {
+        // Bridge restarting elevated
+      }
+      if (attempts >= 15) {
+        clearInterval(interval);
+        setElevating(false);
+        checkPrivileges();
+      }
+    }, 1500);
+  };
+
+  // Auto-advance verify step when BOTH connection and Administrator mode are verified
   useEffect(() => {
     const verifyIdx = STEPS.findIndex((s) => s.isVerify);
-    if (agentStatus.connected && activeIdx === verifyIdx && !completed[verifyIdx]) {
+    if (agentStatus.connected && privileges?.is_admin && activeIdx === verifyIdx && !completed[verifyIdx]) {
       const t = setTimeout(() => markComplete(verifyIdx), 800);
       return () => clearTimeout(t);
     }
-  }, [agentStatus.connected, activeIdx]);
+  }, [agentStatus.connected, privileges?.is_admin, activeIdx]);
 
   function goTo(idx: number) {
     if (idx === activeIdx) return;
@@ -251,6 +344,7 @@ export function AgentGuide() {
   async function handleVerify() {
     setChecking(true);
     await agentConnection.checkConnection();
+    await checkPrivileges();
     setChecking(false);
   }
 
@@ -403,21 +497,123 @@ export function AgentGuide() {
               </div>
             )}
 
-            {/* Silent Auto-Admin Feature Card (for extract step) */}
+            {/* Step 2: Extract & Run as Administrator (Mandatory Interactive Section) */}
             {step.id === "extract" && (
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
-                <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>RECOMMENDED: 100% Silent Background Operation (Never See UAC Again)</span>
+              <div className="space-y-4">
+                {/* Mandatory Requirement Banner */}
+                <div className="rounded-xl border border-rose-500/40 bg-rose-950/20 p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-rose-400 font-bold text-xs">
+                    <ShieldAlert className="w-4 h-4" />
+                    <span>MANDATORY REQUIREMENT: Administrator Privileges</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Windows NT kernel security restricts direct physical disk access and NTFS Master File Table ($MFT) carving on drive <span className="text-rose-300 font-mono font-semibold">D:</span> to elevated Administrator accounts. Running without Administrator rights prevents detecting permanently deleted and emptied Recycle Bin files.
+                  </p>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  To hide terminal windows and bypass future UAC prompts completely, right-click <code className="text-emerald-300 bg-black/50 px-1 rounded font-mono">SETUP-AUTO-ADMIN.bat</code> and select <strong>"Run as administrator"</strong>.
-                </p>
-                <div className="p-3 bg-black/60 border border-emerald-500/20 rounded-lg text-xs font-mono text-emerald-300/90 space-y-1">
-                  <div>✓ Configures Windows Task with Highest Privileges</div>
-                  <div>✓ Launches automatically on PC startup in the background</div>
-                  <div>✓ Zero terminal windows • Zero UAC confirmation dialogs</div>
-                  <div>✓ Stop anytime with <code className="text-slate-300">STOP-BRIDGE.bat</code></div>
+
+                {/* Live Status & The ONLY Interactive "Run as Administrator" Button */}
+                <div className="rounded-xl border border-[#1e2c40] bg-[#090e1a] p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className={`h-3 w-3 rounded-full ${
+                          privileges?.is_admin
+                            ? "bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.6)]"
+                            : agentStatus.connected
+                            ? "bg-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.6)]"
+                            : "bg-slate-600"
+                        }`}
+                      />
+                      <span className="text-xs font-bold text-white">
+                        {privileges?.is_admin
+                          ? "Administrator Mode: Active & Verified"
+                          : agentStatus.connected
+                          ? "Bridge Running as Standard User — Elevation Required"
+                          : "Bridge Not Running"}
+                      </span>
+                    </div>
+                    {privileges?.is_admin && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
+                        ELEVATED
+                      </span>
+                    )}
+                  </div>
+
+                  {privileges?.is_admin ? (
+                    <div className="p-3 bg-emerald-950/30 border border-emerald-500/30 rounded-lg text-xs text-emerald-300 flex items-start gap-2">
+                      <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+                      <span>Kernel-level physical sector access is active. Raw drive reading and NTFS MFT deep carving are fully unlocked.</span>
+                    </div>
+                  ) : agentStatus.connected ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-slate-300">
+                        The bridge is currently running with standard user rights. Click the button below to grant Administrator privileges via Windows UAC:
+                      </p>
+                      <button
+                        onClick={handleElevate}
+                        disabled={elevating}
+                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs transition shadow-lg flex items-center gap-2"
+                      >
+                        <Shield className="w-4 h-4" />
+                        {elevating ? "Requesting Elevation..." : "Run as Administrator (UAC)"}
+                      </button>
+                      {elevationStatus && (
+                        <p className="text-xs text-amber-300/90 font-mono bg-amber-950/40 p-2 rounded border border-amber-500/30">
+                          {elevationStatus}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400">
+                      The bridge is not detected yet on http://127.0.0.1:8000. Follow one of the launch options below to start with Administrator rights.
+                    </p>
+                  )}
+                </div>
+
+                {/* Option 1: Silent Auto-Admin Card */}
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>OPTION 1 (Recommended): 100% Silent Background Operation</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Right-click <code className="text-emerald-300 bg-black/50 px-1.5 py-0.5 rounded font-mono font-bold">SETUP-AUTO-ADMIN.bat</code> and select <strong>"Run as administrator"</strong>.
+                  </p>
+                  <div className="p-3 bg-black/60 border border-emerald-500/20 rounded-lg text-xs font-mono text-emerald-300/90 space-y-1">
+                    <div>✓ Registers Windows Scheduled Task with Highest Privileges</div>
+                    <div>✓ Zero terminal clutter — runs hidden in the background</div>
+                    <div>✓ Zero future UAC prompts — permanently elevated</div>
+                    <div>✓ Stop anytime with <code className="text-slate-300">STOP-BRIDGE.bat</code></div>
+                  </div>
+                </div>
+
+                {/* Option 2: Interactive Terminal Card */}
+                <div className="rounded-xl border border-[#1e2c40] bg-[#090e1a] p-4 space-y-2">
+                  <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
+                    <Terminal className="w-4 h-4" />
+                    <span>OPTION 2: Interactive Console Window</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Right-click <code className="text-cyan-300 bg-black/50 px-1.5 py-0.5 rounded font-mono">RUN-AS-ADMIN.bat</code> and select <strong>"Run as administrator"</strong>.
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    A visible command prompt window will remain open displaying live low-level I/O logs.
+                  </p>
+                </div>
+
+                {/* Manual Alternative */}
+                <div className="space-y-1.5">
+                  <span className="text-slate-400 text-xs font-semibold">Manual Alternative (PowerShell):</span>
+                  <div className="p-2.5 bg-black/60 border border-[#1e2c40] rounded-lg font-mono text-xs text-cyan-300 flex items-center justify-between gap-2">
+                    <span className="truncate">{manualCommand}</span>
+                    <button
+                      onClick={() => copyCommand(manualCommand)}
+                      className="text-slate-400 hover:text-white p-1 shrink-0"
+                      title="Copy Command"
+                    >
+                      {copiedCmd ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -436,38 +632,72 @@ export function AgentGuide() {
               </div>
             )}
 
-            {/* Connection status card (verify step) */}
+            {/* Step 4: Verification card */}
             {step.isVerify && (
-              <div
-                className={`rounded-xl border p-4 flex items-center gap-4 transition-all duration-500 ${
-                  agentStatus.connected
-                    ? "border-emerald-500/40 bg-emerald-500/5"
-                    : "border-slate-700 bg-slate-800/30"
-                }`}
-              >
+              <div className="space-y-4">
                 <div
-                  className={`h-3 w-3 rounded-full flex-shrink-0 transition-colors duration-500 ${
-                    agentStatus.connected ? "bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.6)]" : "bg-slate-600"
+                  className={`rounded-xl border p-4 flex items-center gap-4 transition-all duration-500 ${
+                    agentStatus.connected
+                      ? privileges?.is_admin
+                        ? "border-emerald-500/40 bg-emerald-500/5"
+                        : "border-amber-500/40 bg-amber-500/5"
+                      : "border-slate-700 bg-slate-800/30"
                   }`}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white">
-                    {agentStatus.connected ? "Bridge Connected" : "Bridge Not Detected"}
-                  </p>
-                  <p className="text-xs text-slate-500 font-mono truncate">
-                    {agentStatus.connected
-                      ? "http://127.0.0.1:8000 — responding"
-                      : "http://127.0.0.1:8000 — no response"}
-                  </p>
-                </div>
-                <button
-                  onClick={handleVerify}
-                  disabled={checking}
-                  className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-60 text-slate-950 font-bold text-xs transition"
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
-                  {checking ? "Checking…" : "Test Ping"}
-                </button>
+                  <div
+                    className={`h-3.5 w-3.5 rounded-full flex-shrink-0 transition-colors duration-500 ${
+                      agentStatus.connected
+                        ? privileges?.is_admin
+                          ? "bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.6)]"
+                          : "bg-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.6)]"
+                        : "bg-slate-600"
+                    }`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-white">
+                      {agentStatus.connected
+                        ? privileges?.is_admin
+                          ? "Bridge Connected & Administrator Mode Active"
+                          : "Bridge Connected — Standard User Mode (Elevation Required)"
+                        : "Bridge Not Detected"}
+                    </p>
+                    <p className="text-xs text-slate-400 font-mono truncate">
+                      {agentStatus.connected
+                        ? privileges?.is_admin
+                          ? "http://127.0.0.1:8000 — Kernel raw sector access confirmed"
+                          : "http://127.0.0.1:8000 — Administrator elevation is mandatory for raw disk carving"
+                        : "http://127.0.0.1:8000 — no response"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleVerify}
+                    disabled={checking}
+                    className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-60 text-slate-950 font-bold text-xs transition"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
+                    {checking ? "Checking…" : "Verify Now"}
+                  </button>
+                </div>
+
+                {agentStatus.connected && !privileges?.is_admin && (
+                  <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+                      <ShieldAlert className="w-4 h-4" />
+                      <span>Action Required: Grant Administrator Privileges</span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Although the bridge is communicating with the browser, it is running as a standard user. Windows restricts scanning physical drive <code className="text-amber-300 font-mono">D:</code> to Administrator accounts.
+                    </p>
+                    <button
+                      onClick={handleElevate}
+                      disabled={elevating}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs transition shadow-lg flex items-center gap-2"
+                    >
+                      <Shield className="w-4 h-4" />
+                      {elevating ? "Requesting Elevation..." : "Run as Administrator (UAC)"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -480,15 +710,15 @@ export function AgentGuide() {
                 <div>
                   <p className="text-xl font-extrabold text-white">You're all set!</p>
                   <p className="text-sm text-slate-400 mt-1">
-                    FORENSURE Bridge is live. Physical storage devices are now accessible for forensic inspection.
+                    FORENSURE Bridge is live with Administrator privileges. Physical storage devices and raw volume sectors are fully accessible for forensic carving.
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
                   <button
-                    onClick={() => navigate("/devices")}
+                    onClick={() => navigate("/recovery")}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-sm transition"
                   >
-                    <HardDrive className="h-4 w-4" /> Storage Inventory
+                    <HardDrive className="h-4 w-4" /> Data Recovery
                   </button>
                   <button
                     onClick={() => navigate("/dashboard")}
@@ -524,7 +754,13 @@ export function AgentGuide() {
                 </button>
 
                 <button
-                  onClick={() => markComplete(activeIdx)}
+                  onClick={() => {
+                    if (step.id === "extract" && agentStatus.connected && !privileges?.is_admin) {
+                      handleElevate();
+                      return;
+                    }
+                    markComplete(activeIdx);
+                  }}
                   disabled={completed[activeIdx]}
                   className={`flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-sm transition ${
                     completed[activeIdx]
