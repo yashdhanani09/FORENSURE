@@ -352,34 +352,23 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
 
                 if mft_lcn > 0:
                     mft_offset = mft_lcn * cluster_size
-                    # Scan multiple consecutive MFT windows (up to 128 MB of MFT records)
-                    for win_idx in range(4):
-                        mft_offsets_to_scan.append(mft_offset + (win_idx * 32 * 1024 * 1024))
+                    # Focused MFT windows (16 MB covers up to 16,384 MFT records)
+                    mft_offsets_to_scan.append(mft_offset)
+                    mft_offsets_to_scan.append(mft_offset + (16 * 1024 * 1024))
                     logger.info("NTFS $MFT detected at cluster %d (base offset 0x%X) on %s", mft_lcn, mft_offset, drive_prefix)
                 if mftmirr_lcn > 0:
                     mft_offsets_to_scan.append(mftmirr_lcn * cluster_size)
 
-            # Fallback volume cluster offsets
-            fallback_offsets = [
-                0,
-                32 * 1024 * 1024,
-                64 * 1024 * 1024,
-                128 * 1024 * 1024,
-                256 * 1024 * 1024,
-                512 * 1024 * 1024,
-                1024 * 1024 * 1024,
-                2048 * 1024 * 1024,
-            ]
-            for fb in fallback_offsets:
-                if fb not in mft_offsets_to_scan:
-                    mft_offsets_to_scan.append(fb)
+            # Fallback volume cluster offsets only if MFT was not directly located
+            if not mft_offsets_to_scan:
+                mft_offsets_to_scan = [0, 32 * 1024 * 1024]
 
             # Scan MFT locations and clusters
             for offset in mft_offsets_to_scan:
                 if len(items) >= max_files:
                     break
                 try:
-                    chunk_size = 32 * 1024 * 1024 if offset in mft_offsets_to_scan[:4] else 16 * 1024 * 1024
+                    chunk_size = 16 * 1024 * 1024
                     chunk = _read_raw_volume_at_offset(drive_prefix, offset, chunk_size)
                     if not chunk:
                         continue
@@ -397,26 +386,6 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
                         if has_runs:
                             vol_cluster_size = cluster_size if 'cluster_size' in locals() and cluster_size else 4096
                             MFT_RUNS_CACHE[cid] = (drive_prefix, mft_item.data_runs, vol_cluster_size, mft_item.size_bytes)
-                            # If file size is reasonable (<= 15MB), attempt pre-caching payload
-                            if 0 < mft_item.size_bytes <= 15 * 1024 * 1024:
-                                try:
-                                    pre_buf = bytearray()
-                                    for lcn, ccount in mft_item.data_runs:
-                                        if len(pre_buf) >= mft_item.size_bytes:
-                                            break
-                                        to_read = min(mft_item.size_bytes - len(pre_buf), ccount * vol_cluster_size)
-                                        if lcn == 0:
-                                            pre_buf.extend(b"\x00" * to_read)
-                                        else:
-                                            p_chunk = _read_raw_volume_at_offset(drive_prefix, lcn * vol_cluster_size, to_read)
-                                            if p_chunk:
-                                                pre_buf.extend(p_chunk)
-                                            else:
-                                                break
-                                    if len(pre_buf) == mft_item.size_bytes:
-                                        CARVED_DATA_CACHE[cid] = bytes(pre_buf)
-                                except Exception:
-                                    pass
 
                         details = (
                             f"Extracted from unallocated NTFS Master File Table record #{mft_item.record_number} "
@@ -522,16 +491,21 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
             SCANNED_DELETED_CACHE[c.id] = item
             CARVED_DATA_CACHE[c.id] = c.data
 
-    # Strategy C: Deep scanning of unallocated slack, orphaned caches, and temporary clusters
+    # Strategy C: Deep scanning of unallocated slack, orphaned caches, and temporary clusters on the target volume
     unallocated_dirs = [
-        os.environ.get("LOCALAPPDATA", "") + r"\Temp" if os.environ.get("LOCALAPPDATA") else None,
-        os.environ.get("TEMP"),
-        os.path.join(os.path.expanduser("~"), "AppData", "Local", "Microsoft", "Office", "UnsavedFiles"),
         os.path.join(mount_root, "Temp"),
+        os.path.join(mount_root, "tmp"),
         os.path.join(mount_root, "evidence"),
         os.path.join(mount_root, ".Trash-1000"),
     ]
-    if drive_prefix:
+    # Only check user AppData/Temp if specifically scanning the system C: drive
+    if mount_root.upper().startswith("C:"):
+        unallocated_dirs.extend([
+            os.environ.get("LOCALAPPDATA", "") + r"\Temp" if os.environ.get("LOCALAPPDATA") else None,
+            os.environ.get("TEMP"),
+            os.path.join(os.path.expanduser("~"), "AppData", "Local", "Microsoft", "Office", "UnsavedFiles"),
+        ])
+    if drive_prefix and drive_prefix != mount_root[:2]:
         unallocated_dirs.extend([
             f"{drive_prefix}\\Temp",
             f"{drive_prefix}\\tmp",
@@ -544,7 +518,7 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
             try:
                 scanned_in_dir = 0
                 for entry in os.scandir(u_dir):
-                    if len(items) >= max_files or scanned_in_dir >= 40:
+                    if len(items) >= max_files or scanned_in_dir >= 15:
                         break
                     if entry.is_file(follow_symlinks=False):
                         low_name = entry.name.lower()
@@ -553,11 +527,11 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
                             continue
                         try:
                             file_sz = entry.stat().st_size
-                            # Carve files between 24 bytes and 20 MB
-                            if 24 <= file_sz <= 20 * 1024 * 1024:
+                            # Carve files between 24 bytes and 10 MB
+                            if 24 <= file_sz <= 10 * 1024 * 1024:
                                 scanned_in_dir += 1
                                 with open(entry.path, "rb") as ef:
-                                    buf = ef.read(min(file_sz, 5 * 1024 * 1024))
+                                    buf = ef.read(min(file_sz, 2 * 1024 * 1024))
                                 carved_entries = raw_file_carver.carve_bytes(buf)
                                 # Only check for text documents if the remnant file actually had a text/code extension
                                 carved_text = []
@@ -852,8 +826,8 @@ def scan_device_deleted_files(
         norm_dp = dev_path if dev_path.endswith("\\") else dev_path + "\\"
         mount_points.append(norm_dp)
 
-    # Internal system disk or full machine scan: include all local machine drives (C:\, D:\, E:\, etc.)
-    if device.get("is_system_disk") or device.get("device_type") == "INTERNAL_STORAGE" or dev_id in ("all", "all_drives", "default_drive") or not mount_points:
+    # Full machine scan requested explicitly or fallback when no mount points found:
+    if dev_id in ("all", "all_drives", "machine", "default_drive") or not mount_points:
         import platform
         import string
         if platform.system() == "Windows":

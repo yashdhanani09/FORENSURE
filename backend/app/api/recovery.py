@@ -62,16 +62,30 @@ def scan_deleted_files_endpoint(req: RecoveryScanRequest):
             "mount_point": "C:\\",
         }
     else:
-        devices = StorageScannerService.scan_devices()
-        target = next((d for d in devices if d["id"] == req.device_id), None)
-        if not target and devices:
-            target = next((d for d in devices if d.get("device_path") == req.device_id), None)
-        if not target and devices:
-            target = next((d for d in devices if req.device_id in d.get("device_path", "") or req.device_id in d.get("kernel_name", "") or req.device_id in d.get("model", "")), None)
-        if not target and devices:
-            target = devices[0]
+        # Fast path for drive letter targets (e.g. "vol_D", "D:", "D:\", "Volume-D")
+        target = None
+        clean_id = (req.device_id or "").strip()
+        if len(clean_id) == 1 and clean_id.isalpha():
+            dl = clean_id.upper()
+            target = {"id": f"vol_{dl}", "device_path": f"{dl}:\\", "mount_point": f"{dl}:\\", "model": f"Volume ({dl}:)", "vendor": "Local Storage"}
+        elif clean_id.upper().startswith("VOL_") and len(clean_id) >= 5 and clean_id[4].isalpha():
+            dl = clean_id[4].upper()
+            target = {"id": clean_id, "device_path": f"{dl}:\\", "mount_point": f"{dl}:\\", "model": f"Volume ({dl}:)", "vendor": "Local Storage"}
+        elif len(clean_id) >= 2 and clean_id[1] == ":":
+            dl = clean_id[0].upper()
+            target = {"id": clean_id, "device_path": f"{dl}:\\", "mount_point": f"{dl}:\\", "model": f"Volume ({dl}:)", "vendor": "Local Storage"}
+
         if not target:
-            target = {"id": "default_drive", "device_path": "C:\\", "mount_point": "C:\\", "is_system_disk": True}
+            devices = StorageScannerService.scan_devices()
+            target = next((d for d in devices if d["id"] == req.device_id), None)
+            if not target and devices:
+                target = next((d for d in devices if d.get("device_path") == req.device_id), None)
+            if not target and devices:
+                target = next((d for d in devices if req.device_id in d.get("device_path", "") or req.device_id in d.get("kernel_name", "") or req.device_id in d.get("model", "")), None)
+            if not target and devices:
+                target = devices[0]
+            if not target:
+                target = {"id": "default_drive", "device_path": "C:\\", "mount_point": "C:\\", "is_system_disk": True}
 
     logger.info("Starting deleted files scan on device %s (%s)", target.get("model", target.get("device_path")), req.scan_type)
     files = scan_device_deleted_files(target, scan_type=req.scan_type, image_path=req.image_path)

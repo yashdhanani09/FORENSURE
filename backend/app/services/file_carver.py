@@ -548,261 +548,363 @@ class RawFileCarver:
         """Carves supported files from an in-memory binary byte stream."""
         results: List[CarvedFile] = []
         data_len = len(data)
-        pos = 0
+        if data_len < 16:
+            return results
 
-        while pos < data_len - 16:
-            # 1. JPEG
-            if data[pos:pos + 3] == self.SIG_JPEG:
-                carved = self.carve_jpeg(data, pos)
-                if carved:
-                    fb, score, note, w, h = carved
-                    conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
-                    cid = f"carve_jpg_{uuid.uuid4().hex[:8]}"
-                    dim_str = f"_{w}x{h}" if w and h else ""
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_image{dim_str}_{pos:08x}.jpg",
-                        extension="jpg",
-                        category="Image",
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence=conf,
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 4)
-                    continue
+        # ── Fast C-Accelerated Magic Byte Indexing ───────────────────
+        # Use compiled C memchr/Boyer-Moore via bytes.find() to collect candidate offsets
+        candidate_map = {}
 
-            # 2. PNG
-            if data[pos:pos + 8] == self.SIG_PNG:
-                carved = self.carve_png(data, pos)
-                if carved:
-                    fb, score, note, w, h = carved
-                    conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
-                    cid = f"carve_png_{uuid.uuid4().hex[:8]}"
-                    dim_str = f"_{w}x{h}" if w and h else ""
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_image{dim_str}_{pos:08x}.png",
-                        extension="png",
-                        category="Image",
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence=conf,
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 8)
-                    continue
+        # 1. JPEG (\xFF\xD8\xFF)
+        idx = 0
+        while idx < data_len:
+            idx = data.find(self.SIG_JPEG, idx)
+            if idx == -1: break
+            candidate_map.setdefault(idx, []).append("jpeg")
+            idx += 4
 
-            # 3. GIF
-            if data[pos:pos + 6] in (self.SIG_GIF87, self.SIG_GIF89):
-                carved = self.carve_gif(data, pos)
-                if carved:
-                    fb, score, note, w, h = carved
-                    conf = "HIGH" if score >= 85 else "MEDIUM"
-                    cid = f"carve_gif_{uuid.uuid4().hex[:8]}"
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_image_{w}x{h}_{pos:08x}.gif",
-                        extension="gif",
-                        category="Image",
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence=conf,
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 6)
-                    continue
+        # 2. PNG (\x89PNG\r\n\x1a\n)
+        idx = 0
+        while idx < data_len:
+            idx = data.find(self.SIG_PNG, idx)
+            if idx == -1: break
+            candidate_map.setdefault(idx, []).append("png")
+            idx += 8
 
-            # 4. BMP
-            if data[pos:pos + 2] == self.SIG_BMP:
-                carved = self.carve_bmp(data, pos)
-                if carved:
-                    fb, score, note, w, h = carved
-                    cid = f"carve_bmp_{uuid.uuid4().hex[:8]}"
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_image_{w}x{h}_{pos:08x}.bmp",
-                        extension="bmp",
-                        category="Image",
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence="HIGH",
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 2)
-                    continue
+        # 3. GIF (GIF87a / GIF89a)
+        for g_sig in (self.SIG_GIF87, self.SIG_GIF89):
+            idx = 0
+            while idx < data_len:
+                idx = data.find(g_sig, idx)
+                if idx == -1: break
+                candidate_map.setdefault(idx, []).append("gif")
+                idx += 6
 
-            # 5. PDF
-            if data[pos:pos + 5] == self.SIG_PDF:
-                carved = self.carve_pdf(data, pos)
-                if carved:
-                    fb, score, note = carved
-                    conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
-                    cid = f"carve_pdf_{uuid.uuid4().hex[:8]}"
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_document_{pos:08x}.pdf",
-                        extension="pdf",
-                        category="Document",
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence=conf,
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 5)
-                    continue
+        # 4. BMP (BM followed by 4 reserved zero bytes at offset +6)
+        idx = 0
+        while idx < data_len:
+            idx = data.find(self.SIG_BMP, idx)
+            if idx == -1: break
+            if idx + 10 <= data_len and data[idx + 6:idx + 10] == b"\x00\x00\x00\x00":
+                candidate_map.setdefault(idx, []).append("bmp")
+            idx += 2
 
-            # 6. ZIP / DOCX / XLSX / PPTX
-            if data[pos:pos + 4] == self.SIG_ZIP:
-                carved = self.carve_zip_family(data, pos)
-                if carved:
-                    fb, ext, score, note = carved
-                    conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
-                    cid = f"carve_{ext}_{uuid.uuid4().hex[:8]}"
-                    cat = "Document" if ext in ("docx", "xlsx", "pptx") else "Archive"
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_{cat.lower()}_{pos:08x}.{ext}",
-                        extension=ext,
-                        category=cat,
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence=conf,
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 4)
-                    continue
+        # 5. PDF (%PDF-)
+        idx = 0
+        while idx < data_len:
+            idx = data.find(self.SIG_PDF, idx)
+            if idx == -1: break
+            candidate_map.setdefault(idx, []).append("pdf")
+            idx += 5
 
-            # 7. RAR
-            if data[pos:pos + 7] == self.SIG_RAR4 or data[pos:pos + 8] == self.SIG_RAR5:
-                carved = self.carve_rar(data, pos)
-                if carved:
-                    fb, score, note = carved
-                    cid = f"carve_rar_{uuid.uuid4().hex[:8]}"
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_archive_{pos:08x}.rar",
-                        extension="rar",
-                        category="Archive",
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence="HIGH",
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 7)
-                    continue
+        # 6. ZIP / DOCX / XLSX / PPTX (PK\x03\x04)
+        idx = 0
+        while idx < data_len:
+            idx = data.find(self.SIG_ZIP, idx)
+            if idx == -1: break
+            candidate_map.setdefault(idx, []).append("zip")
+            idx += 4
 
-            # 8. 7Z
-            if data[pos:pos + 6] == self.SIG_7Z:
-                carved = self.carve_7z(data, pos)
-                if carved:
-                    fb, score, note = carved
-                    cid = f"carve_7z_{uuid.uuid4().hex[:8]}"
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_archive_{pos:08x}.7z",
-                        extension="7z",
-                        category="Archive",
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence="HIGH",
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 6)
-                    continue
+        # 7. RAR (Rar!\x1a\x07\x00 / Rar!\x1a\x07\x01\x00)
+        for r_sig in (self.SIG_RAR4, self.SIG_RAR5):
+            idx = 0
+            while idx < data_len:
+                idx = data.find(r_sig, idx)
+                if idx == -1: break
+                candidate_map.setdefault(idx, []).append("rar")
+                idx += len(r_sig)
 
-            # 9. OLE2 (.doc, .xls, .ppt)
-            if data[pos:pos + 8] == self.SIG_OLE2:
-                carved = self.carve_ole2(data, pos)
-                if carved:
-                    fb, ext, score, note = carved
-                    cid = f"carve_{ext}_{uuid.uuid4().hex[:8]}"
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_document_{pos:08x}.{ext}",
-                        extension=ext,
-                        category="Document",
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence="HIGH",
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 8)
-                    continue
+        # 8. 7Z (7z\xbc\xaf\x27\x1c)
+        idx = 0
+        while idx < data_len:
+            idx = data.find(self.SIG_7Z, idx)
+            if idx == -1: break
+            candidate_map.setdefault(idx, []).append("7z")
+            idx += 6
 
-            # 10. RTF
-            if data[pos:pos + 5] == self.SIG_RTF:
-                carved = self.carve_rtf(data, pos)
-                if carved:
-                    fb, score, note = carved
-                    cid = f"carve_rtf_{uuid.uuid4().hex[:8]}"
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_document_{pos:08x}.rtf",
-                        extension="rtf",
-                        category="Document",
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence="HIGH",
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 5)
-                    continue
+        # 9. OLE2 (\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1)
+        idx = 0
+        while idx < data_len:
+            idx = data.find(self.SIG_OLE2, idx)
+            if idx == -1: break
+            candidate_map.setdefault(idx, []).append("ole2")
+            idx += 8
 
-            # 11. MP4
-            if pos + 8 <= data_len and data[pos + 4:pos + 8] == self.SIG_MP4_FTYP:
-                carved = self.carve_mp4(data, pos)
-                if carved:
-                    fb, score, note = carved
-                    conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
-                    cid = f"carve_mp4_{uuid.uuid4().hex[:8]}"
-                    results.append(CarvedFile(
-                        id=cid,
-                        filename=f"recovered_video_{pos:08x}.mp4",
-                        extension="mp4",
-                        category="Media",
-                        size_bytes=len(fb),
-                        offset_bytes=base_offset + pos,
-                        confidence=conf,
-                        confidence_score=score,
-                        validation_details=note,
-                        data=fb,
-                        created_at=None,
-                    ))
-                    pos += max(len(fb), 8)
-                    continue
+        # 10. RTF ({\rtf)
+        idx = 0
+        while idx < data_len:
+            idx = data.find(self.SIG_RTF, idx)
+            if idx == -1: break
+            candidate_map.setdefault(idx, []).append("rtf")
+            idx += 5
 
-            pos += 1
+        # 11. MP4 (ftyp preceded by 4-byte box size)
+        idx = 0
+        while idx < data_len:
+            idx = data.find(self.SIG_MP4_FTYP, idx)
+            if idx == -1: break
+            if idx >= 4:
+                candidate_map.setdefault(idx - 4, []).append("mp4")
+            idx += 4
+
+        # ── Sequential Candidate Evaluation ─────────────────────────
+        last_carved_end = -1
+        for pos in sorted(candidate_map.keys()):
+            if pos < last_carved_end:
+                continue
+
+            handlers = candidate_map[pos]
+            for h in handlers:
+                # 1. JPEG
+                if h == "jpeg":
+                    carved = self.carve_jpeg(data, pos)
+                    if carved:
+                        fb, score, note, w, h_dim = carved
+                        conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
+                        cid = f"carve_jpg_{uuid.uuid4().hex[:8]}"
+                        dim_str = f"_{w}x{h_dim}" if w and h_dim else ""
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_image{dim_str}_{pos:08x}.jpg",
+                            extension="jpg",
+                            category="Image",
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence=conf,
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 4)
+                        break
+
+                # 2. PNG
+                elif h == "png":
+                    carved = self.carve_png(data, pos)
+                    if carved:
+                        fb, score, note, w, h_dim = carved
+                        conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
+                        cid = f"carve_png_{uuid.uuid4().hex[:8]}"
+                        dim_str = f"_{w}x{h_dim}" if w and h_dim else ""
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_image{dim_str}_{pos:08x}.png",
+                            extension="png",
+                            category="Image",
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence=conf,
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 8)
+                        break
+
+                # 3. GIF
+                elif h == "gif":
+                    carved = self.carve_gif(data, pos)
+                    if carved:
+                        fb, score, note, w, h_dim = carved
+                        conf = "HIGH" if score >= 85 else "MEDIUM"
+                        cid = f"carve_gif_{uuid.uuid4().hex[:8]}"
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_image_{w}x{h_dim}_{pos:08x}.gif",
+                            extension="gif",
+                            category="Image",
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence=conf,
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 6)
+                        break
+
+                # 4. BMP
+                elif h == "bmp":
+                    carved = self.carve_bmp(data, pos)
+                    if carved:
+                        fb, score, note, w, h_dim = carved
+                        cid = f"carve_bmp_{uuid.uuid4().hex[:8]}"
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_image_{w}x{h_dim}_{pos:08x}.bmp",
+                            extension="bmp",
+                            category="Image",
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence="HIGH",
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 2)
+                        break
+
+                # 5. PDF
+                elif h == "pdf":
+                    carved = self.carve_pdf(data, pos)
+                    if carved:
+                        fb, score, note = carved
+                        conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
+                        cid = f"carve_pdf_{uuid.uuid4().hex[:8]}"
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_document_{pos:08x}.pdf",
+                            extension="pdf",
+                            category="Document",
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence=conf,
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 5)
+                        break
+
+                # 6. ZIP / DOCX / XLSX / PPTX
+                elif h == "zip":
+                    carved = self.carve_zip_family(data, pos)
+                    if carved:
+                        fb, ext, score, note = carved
+                        conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
+                        cid = f"carve_{ext}_{uuid.uuid4().hex[:8]}"
+                        cat = "Document" if ext in ("docx", "xlsx", "pptx") else "Archive"
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_{cat.lower()}_{pos:08x}.{ext}",
+                            extension=ext,
+                            category=cat,
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence=conf,
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 4)
+                        break
+
+                # 7. RAR
+                elif h == "rar":
+                    carved = self.carve_rar(data, pos)
+                    if carved:
+                        fb, score, note = carved
+                        cid = f"carve_rar_{uuid.uuid4().hex[:8]}"
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_archive_{pos:08x}.rar",
+                            extension="rar",
+                            category="Archive",
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence="HIGH",
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 7)
+                        break
+
+                # 8. 7Z
+                elif h == "7z":
+                    carved = self.carve_7z(data, pos)
+                    if carved:
+                        fb, score, note = carved
+                        cid = f"carve_7z_{uuid.uuid4().hex[:8]}"
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_archive_{pos:08x}.7z",
+                            extension="7z",
+                            category="Archive",
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence="HIGH",
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 6)
+                        break
+
+                # 9. OLE2
+                elif h == "ole2":
+                    carved = self.carve_ole2(data, pos)
+                    if carved:
+                        fb, ext, score, note = carved
+                        cid = f"carve_{ext}_{uuid.uuid4().hex[:8]}"
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_document_{pos:08x}.{ext}",
+                            extension=ext,
+                            category="Document",
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence="HIGH",
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 8)
+                        break
+
+                # 10. RTF
+                elif h == "rtf":
+                    carved = self.carve_rtf(data, pos)
+                    if carved:
+                        fb, score, note = carved
+                        cid = f"carve_rtf_{uuid.uuid4().hex[:8]}"
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_document_{pos:08x}.rtf",
+                            extension="rtf",
+                            category="Document",
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence="HIGH",
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 5)
+                        break
+
+                # 11. MP4
+                elif h == "mp4":
+                    carved = self.carve_mp4(data, pos)
+                    if carved:
+                        fb, score, note = carved
+                        conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
+                        cid = f"carve_mp4_{uuid.uuid4().hex[:8]}"
+                        results.append(CarvedFile(
+                            id=cid,
+                            filename=f"recovered_video_{pos:08x}.mp4",
+                            extension="mp4",
+                            category="Media",
+                            size_bytes=len(fb),
+                            offset_bytes=base_offset + pos,
+                            confidence=conf,
+                            confidence_score=score,
+                            validation_details=note,
+                            data=fb,
+                            created_at=None,
+                        ))
+                        last_carved_end = pos + max(len(fb), 8)
+                        break
 
         return results
 
