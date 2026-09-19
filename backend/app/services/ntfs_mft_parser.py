@@ -232,13 +232,51 @@ def parse_mft_record(record_bytes: bytes, offset_bytes: int = 0) -> Optional[Del
     except Exception as exc:
         logger.debug("Error parsing MFT record at offset 0x%X: %s", offset_bytes, exc)
 
-    return None
+def parse_record0_mft_runs(record0_bytes: bytes) -> Tuple[int, List[Tuple[int, int]]]:
+    """
+    Parses Record 0 ($MFT itself) to extract the real total allocated size and all cluster data runs of the $MFT.
+    Returns (real_size, list_of_runs).
+    """
+    if len(record0_bytes) < MFT_RECORD_SIZE or record0_bytes[:4] != b"FILE":
+        return 0, []
+
+    try:
+        first_attr_offset = struct.unpack("<H", record0_bytes[20:22])[0]
+        bytes_used = struct.unpack("<I", record0_bytes[24:28])[0]
+        curr_offset = first_attr_offset
+
+        while curr_offset + 8 <= min(bytes_used, MFT_RECORD_SIZE):
+            attr_type = struct.unpack("<I", record0_bytes[curr_offset:curr_offset + 4])[0]
+            if attr_type == ATTR_END:
+                break
+            attr_len = struct.unpack("<I", record0_bytes[curr_offset + 4:curr_offset + 8])[0]
+            if attr_len <= 0 or curr_offset + attr_len > MFT_RECORD_SIZE:
+                break
+
+            non_resident = record0_bytes[curr_offset + 8] if curr_offset + 8 < MFT_RECORD_SIZE else 0
+
+            # $DATA attribute (0x80) of $MFT
+            if attr_type == ATTR_DATA and non_resident == 1:
+                runlist_rel = struct.unpack("<H", record0_bytes[curr_offset + 32:curr_offset + 34])[0]
+                real_sz = struct.unpack("<Q", record0_bytes[curr_offset + 48:curr_offset + 56])[0]
+                runlist_start = curr_offset + runlist_rel
+                if runlist_start < curr_offset + attr_len:
+                    run_bytes = record0_bytes[runlist_start:curr_offset + attr_len]
+                    runs = decode_data_runs(run_bytes)
+                    if runs:
+                        return real_sz, runs
+
+            curr_offset += attr_len
+    except Exception as exc:
+        logger.debug("Error parsing record 0 MFT data runs: %s", exc)
+
+    return 0, []
 
 
-def scan_mft_records_from_stream(data: bytes, base_offset: int = 0, max_items: int = 200) -> List[DeletedMftItem]:
+def scan_mft_records_from_stream(data: bytes, base_offset: int = 0, max_items: int = 5000) -> List[DeletedMftItem]:
     """
     Scans a raw sector buffer for 1024-byte aligned and unaligned 'FILE' MFT records.
-    Extracts all valid deleted file records found.
+    Extracts all valid deleted file records found with fast in-memory active-record filtering.
     """
     found_items: List[DeletedMftItem] = []
     seen_names = set()
@@ -250,17 +288,21 @@ def scan_mft_records_from_stream(data: bytes, base_offset: int = 0, max_items: i
 
     while pos + MFT_RECORD_SIZE <= data_len:
         if data[pos:pos + 4] == b"FILE":
-            item = parse_mft_record(data[pos:pos + MFT_RECORD_SIZE], offset_bytes=base_offset + pos)
-            if item and item.filename:
-                # Filter noise and deduplicate by filename + size
-                clean_name = item.filename.strip()
-                if clean_name and len(clean_name) > 1:
-                    key = (clean_name.lower(), item.size_bytes)
-                    if key not in seen_names:
-                        seen_names.add(key)
-                        found_items.append(item)
-                        if len(found_items) >= max_items:
-                            break
+            # Fast in-memory filter: flags are at offset 22-23 (uint16)
+            # Bit 0 (0x0001) = in_use. If set, file is active -> skip attribute decoding immediately
+            flags = data[pos + 22] | (data[pos + 23] << 8)
+            if (flags & 0x0001) == 0:
+                item = parse_mft_record(data[pos:pos + MFT_RECORD_SIZE], offset_bytes=base_offset + pos)
+                if item and item.filename:
+                    # Filter noise and deduplicate by filename + size
+                    clean_name = item.filename.strip()
+                    if clean_name and len(clean_name) > 1 and not clean_name.startswith("$"):
+                        key = (clean_name.lower(), item.size_bytes)
+                        if key not in seen_names:
+                            seen_names.add(key)
+                            found_items.append(item)
+                            if len(found_items) >= max_items:
+                                break
             pos += MFT_RECORD_SIZE
         else:
             pos += step

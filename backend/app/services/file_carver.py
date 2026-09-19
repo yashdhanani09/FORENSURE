@@ -107,12 +107,14 @@ class RawFileCarver:
             # End of Image (EOI)
             if marker == 0xD9:
                 file_bytes = data[start_offset:pos]
-                if len(file_bytes) > self.max_file_size:
+                # Reject invalid fragments: must have valid SOF and non-zero dimensions
+                if len(file_bytes) < 32 or len(file_bytes) > self.max_file_size:
+                    return None
+                if not has_sof or width <= 0 or height <= 0:
                     return None
 
                 score += 35  # Found valid EOI footer
-                if has_sof:
-                    score += 25  # Valid SOF marker and dimensions
+                score += 25  # Valid SOF marker and dimensions
 
                 # Deep raster verification with Pillow if available
                 validation_note = f"Valid JPEG structure with EOI (Dimensions: {width}x{height})"
@@ -123,8 +125,7 @@ class RawFileCarver:
                         score = min(100, score + 10)
                         validation_note += " [Verified raster data]"
                     except Exception:
-                        score = max(50, score - 20)
-                        validation_note += " [Minor raster artifact]"
+                        return None
 
                 return (file_bytes, score, validation_note, width, height)
 
@@ -208,8 +209,12 @@ class RawFileCarver:
                 idat_count += 1
 
             elif chunk_type == b"IEND":
-                score += 35
                 file_bytes = data[start_offset:chunk_end]
+                # Reject corrupt fragments: must be at least 33 bytes, have IHDR, at least 1 IDAT, and dimensions > 0
+                if len(file_bytes) < 33 or not has_ihdr or idat_count == 0 or width <= 0 or height <= 0:
+                    return None
+
+                score += 35
                 validation_note = f"Valid PNG with IHDR & IEND (Dimensions: {width}x{height}, IDAT chunks: {idat_count})"
 
                 if PIL_AVAILABLE:
@@ -219,7 +224,7 @@ class RawFileCarver:
                         score = min(100, score + 10)
                         validation_note += " [Verified raster data]"
                     except Exception:
-                        score = max(60, score - 15)
+                        return None
 
                 return (file_bytes, score, validation_note, width, height)
 
@@ -261,12 +266,18 @@ class RawFileCarver:
             end_pos += 1
 
         file_bytes = data[start_offset:end_pos]
+        if len(file_bytes) < 300:
+            return None
+
         score = 40
 
         # Validate PDF structure elements
         has_xref = b"xref" in file_bytes or b"/XRef" in file_bytes
         has_trailer = b"trailer" in file_bytes or b"/Root" in file_bytes
         has_catalog = b"/Catalog" in file_bytes or b"/Pages" in file_bytes
+
+        if not (has_xref or has_trailer or has_catalog):
+            return None
 
         if has_xref:
             score += 20
@@ -275,7 +286,22 @@ class RawFileCarver:
         if has_catalog:
             score += 20
 
-        validation_note = f"Valid PDF stream: %%EOF trailer located. xref={has_xref}, catalog={has_catalog}"
+        doc_title = None
+        import re
+        tm = re.search(rb"/Title\s*(?:\(([^)]{2,60})\)|<([0-9a-fA-F]{4,120})>)", file_bytes)
+        if tm:
+            raw_t = tm.group(1)
+            if raw_t:
+                try:
+                    cand_t = raw_t.decode("latin1", errors="ignore").strip()
+                    clean_t = re.sub(r'[\\/*?:"<>|\x00-\x1f]', "_", cand_t)
+                    if len(clean_t) >= 2:
+                        doc_title = clean_t[:45]
+                except Exception:
+                    pass
+
+        title_suffix = f" [Title: {doc_title}]" if doc_title else ""
+        validation_note = f"Valid PDF stream: %%EOF trailer located. xref={has_xref}, catalog={has_catalog}{title_suffix}"
         return (file_bytes, min(100, score), validation_note)
 
     # =========================================================================
@@ -334,36 +360,53 @@ class RawFileCarver:
         # Validate with Python zipfile and detect DOCX / XLSX OOXML signatures
         try:
             with zipfile.ZipFile(io.BytesIO(file_bytes), "r") as zf:
-                # Test CRC for all members
+                # Test CRC for all members - reject corrupt archives immediately
                 corrupt_file = zf.testzip()
-                score += 30 if corrupt_file is None else 10
+                if corrupt_file is not None:
+                    return None
 
                 namelist = zf.namelist()
+                doc_title = None
+
+                # Extract document title from OOXML docProps/core.xml if present
+                if "docProps/core.xml" in namelist:
+                    try:
+                        import re
+                        core_data = zf.read("docProps/core.xml").decode("utf-8", errors="ignore")
+                        tm = re.search(r"<dc:title[^>]*>(.*?)</dc:title>", core_data)
+                        if tm and tm.group(1).strip():
+                            clean_t = re.sub(r'[\\/*?:"<>|\x00-\x1f]', "_", tm.group(1).strip())
+                            if len(clean_t) >= 2:
+                                doc_title = clean_t[:45]
+                    except Exception:
+                        pass
+
+                title_suffix = f" [Title: {doc_title}]" if doc_title else ""
+
                 if "[Content_Types].xml" in namelist:
                     if any("word/document.xml" in name for name in namelist):
                         ext = "docx"
-                        score = min(100, score + 20)
-                        validation_note = "Valid Microsoft Word document (OOXML word/document.xml verified)"
+                        score = 100
+                        validation_note = f"Valid Microsoft Word document (OOXML word/document.xml verified){title_suffix}"
                     elif any("xl/workbook.xml" in name for name in namelist):
                         ext = "xlsx"
-                        score = min(100, score + 20)
-                        validation_note = "Valid Microsoft Excel spreadsheet (OOXML xl/workbook.xml verified)"
+                        score = 100
+                        validation_note = f"Valid Microsoft Excel spreadsheet (OOXML xl/workbook.xml verified){title_suffix}"
                     elif any("ppt/presentation.xml" in name for name in namelist):
                         ext = "pptx"
-                        score = min(100, score + 20)
-                        validation_note = "Valid Microsoft PowerPoint presentation (OOXML ppt/presentation.xml verified)"
+                        score = 100
+                        validation_note = f"Valid Microsoft PowerPoint presentation (OOXML ppt/presentation.xml verified){title_suffix}"
                     else:
-                        score = min(100, score + 15)
-                        validation_note = "Valid Open Packaging Convention (OPC) archive"
+                        score = 95
+                        validation_note = f"Valid Open Packaging Convention (OPC) archive{title_suffix}"
                 else:
-                    validation_note = f"Valid standard ZIP archive ({len(namelist)} entries)"
-                    score = min(95, score + 15)
+                    validation_note = f"Valid standard ZIP archive ({len(namelist)} entries){title_suffix}"
+                    score = 90
 
             return (file_bytes, ext, score, validation_note)
 
         except Exception:
-            # Fallback if corrupted near trailer
-            return (file_bytes, "zip", 55, "ZIP container with partially intact Central Directory")
+            return None
 
     # =========================================================================
     # 5. MP4 Video Carving & Analysis
@@ -443,6 +486,9 @@ class RawFileCarver:
             w, h = struct.unpack("<HH", data[start_offset + 6:start_offset + 10])
         except Exception:
             return None
+        if w <= 0 or h <= 0:
+            return None
+
         max_search = min(len(data), start_offset + self.max_file_size)
         trailer_idx = data.find(b"\x00\x3B", start_offset + 10, max_search)
         if trailer_idx == -1:
@@ -453,8 +499,20 @@ class RawFileCarver:
         else:
             end_pos = trailer_idx + 2
         file_bytes = data[start_offset:end_pos]
+        if len(file_bytes) < 10:
+            return None
+
         score = 85
         note = f"Valid GIF image structure verified (Dimensions: {w}x{h})"
+        if PIL_AVAILABLE and len(file_bytes) >= 64:
+            try:
+                with PILImage.open(io.BytesIO(file_bytes)) as img:
+                    img.verify()
+                score = min(100, score + 10)
+                note += " [Verified raster data]"
+            except Exception:
+                pass
+
         return (file_bytes, score, note, w, h)
 
     def carve_bmp(self, data: bytes, start_offset: int) -> Optional[Tuple[bytes, int, str, int, int]]:
@@ -471,9 +529,21 @@ class RawFileCarver:
                 return None
             w = struct.unpack("<i", data[start_offset + 18:start_offset + 22])[0]
             h = struct.unpack("<i", data[start_offset + 22:start_offset + 26])[0]
+            if abs(w) <= 0 or abs(h) <= 0 or file_size < 26:
+                return None
+
             file_bytes = data[start_offset:start_offset + file_size]
             score = 90
             note = f"Valid Windows BMP image (Dimensions: {abs(w)}x{abs(h)})"
+            if PIL_AVAILABLE and file_size >= 64:
+                try:
+                    with PILImage.open(io.BytesIO(file_bytes)) as img:
+                        img.verify()
+                    score = min(100, score + 10)
+                    note += " [Verified raster data]"
+                except Exception:
+                    pass
+
             return (file_bytes, score, note, abs(w), abs(h))
         except Exception:
             return None
@@ -755,9 +825,17 @@ class RawFileCarver:
                         fb, score, note = carved
                         conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
                         cid = f"carve_pdf_{uuid.uuid4().hex[:8]}"
+                        fname = f"recovered_document_{pos:08x}.pdf"
+                        if "[Title: " in note:
+                            try:
+                                t = note.split("[Title: ")[1].split("]")[0].strip()
+                                if t:
+                                    fname = f"{t}.pdf"
+                            except Exception:
+                                pass
                         results.append(CarvedFile(
                             id=cid,
-                            filename=f"recovered_document_{pos:08x}.pdf",
+                            filename=fname,
                             extension="pdf",
                             category="Document",
                             size_bytes=len(fb),
@@ -779,9 +857,17 @@ class RawFileCarver:
                         conf = "HIGH" if score >= 85 else ("MEDIUM" if score >= 60 else "LOW")
                         cid = f"carve_{ext}_{uuid.uuid4().hex[:8]}"
                         cat = "Document" if ext in ("docx", "xlsx", "pptx") else "Archive"
+                        fname = f"recovered_{cat.lower()}_{pos:08x}.{ext}"
+                        if "[Title: " in note:
+                            try:
+                                t = note.split("[Title: ")[1].split("]")[0].strip()
+                                if t:
+                                    fname = f"{t}.{ext}"
+                            except Exception:
+                                pass
                         results.append(CarvedFile(
                             id=cid,
-                            filename=f"recovered_{cat.lower()}_{pos:08x}.{ext}",
+                            filename=fname,
                             extension=ext,
                             category=cat,
                             size_bytes=len(fb),

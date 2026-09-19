@@ -144,3 +144,29 @@ def test_parse_non_resident_deleted_mft_record():
     assert item.data_runs is not None
     assert len(item.data_runs) == 1
     assert item.data_runs[0][0] == 5000
+
+
+def test_parse_record0_mft_runs():
+    from app.services.ntfs_mft_parser import parse_record0_mft_runs
+    record0 = bytearray(1024)
+    record0[:4] = b"FILE"
+    struct.pack_into("<H", record0, 20, 56)
+    struct.pack_into("<H", record0, 22, 1)  # Record 0 is in use
+    struct.pack_into("<I", record0, 24, 250)
+
+    attr_offset = 56
+    runlist = bytes([0x21, 0x10, 0x00, 0x04, 0x00])  # len=16 clusters, lcn=1024
+    attr_total = 64 + len(runlist) + 8
+    struct.pack_into("<I", record0, attr_offset, 0x80)  # $DATA
+    struct.pack_into("<I", record0, attr_offset + 4, attr_total)
+    record0[attr_offset + 8] = 1  # Non-resident
+    struct.pack_into("<H", record0, attr_offset + 32, 64)  # Runlist offset
+    struct.pack_into("<Q", record0, attr_offset + 48, 65536)  # Real size
+    record0[attr_offset + 64 : attr_offset + 64 + len(runlist)] = runlist
+
+    real_sz, runs = parse_record0_mft_runs(bytes(record0))
+    assert real_sz == 65536
+    assert len(runs) >= 1
+    assert runs[0][0] == 1024
+    assert runs[0][1] == 16
+

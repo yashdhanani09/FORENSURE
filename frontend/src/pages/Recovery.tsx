@@ -334,88 +334,92 @@ export function Recovery() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#1e2c40] pb-6">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-extrabold tracking-[0.2em] text-cyan-400 uppercase mb-1">
-            <RotateCcw className="h-3.5 w-3.5" /> FORENSIC RECOVERY ENGINE
+          <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.2em] text-cyan-400 uppercase mb-1">
+            <RotateCcw className="h-4 w-4" /> FORENSIC RECOVERY ENGINE
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            Deleted File Recovery & Carver
+          <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+            <RotateCcw className="w-8 h-8 text-cyan-400 animate-in spin-in-12 duration-300" />
+            Forensic Data Recovery Engine
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            NTFS `$RECYCLE.BIN` parser, Android Scoped Storage carver, and cryptographic SHA-256 verified restoration.
+          <p className="text-sm text-slate-400 mt-1">
+            NTFS Master File Table ($MFT) extraction, hardware write-blocking, and cryptographic SHA-256 bitstream restoration.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
-            size="sm"
+            size="default"
             onClick={handleOpenReport}
             loading={loadingReport}
+            className="h-10 px-4 text-xs font-bold rounded-xl"
           >
-            <FileText className="w-3.5 h-3.5 text-cyan-400" />
+            <FileText className="w-4 h-4 text-cyan-400 mr-1.5" />
             Forensic Report
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            size="default"
             onClick={() => setShowHistory(!showHistory)}
+            className="h-10 px-4 text-xs font-bold rounded-xl"
           >
-            <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
+            <FolderOpen className="w-4 h-4 text-cyan-400 mr-1.5" />
             Recovered Archive ({recoveryHistory.length})
           </Button>
           {/* Top-Bar Administrator Status Badge / Guide Link */}
           {privileges?.is_admin ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>Admin: Active</span>
             </div>
           ) : (
             <Link
               to="/agent-guide"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-semibold transition shadow-sm"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold transition shadow-sm"
               title="Administrator access is mandatory for raw physical disk recovery. Open Hardware Guide."
             >
-              <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+              <ShieldAlert className="w-4 h-4 text-amber-400" />
               <span>Admin Required (See Guide)</span>
             </Link>
           )}
 
           <Button
             variant="outline"
-            size="sm"
+            size="default"
             onClick={() => loadDevices(true)}
             loading={loadingDevices}
+            className="h-10 px-4 text-xs font-bold rounded-xl"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+            <RefreshCw className="w-4 h-4 mr-1.5" /> Refresh
           </Button>
         </div>
       </div>
 
       {/* Administrator Mandatory Notice Banner */}
       {!privileges?.is_admin && (
-        <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 backdrop-blur-sm shadow-lg">
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mt-0.5">
-              <ShieldAlert className="w-5 h-5" />
+        <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 backdrop-blur-sm shadow-xl">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+              <ShieldAlert className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-bold text-amber-200">
+              <div className="flex items-center gap-2.5">
+                <h4 className="text-base font-bold text-amber-200">
                   Administrator Privileges Required (Mandatory)
                 </h4>
-                <span className="px-2 py-0.5 text-[10px] font-semibold bg-amber-500/20 text-amber-300 rounded-md border border-amber-500/30">
+                <span className="px-2.5 py-0.5 text-xs font-bold bg-amber-500/20 text-amber-300 rounded-md border border-amber-500/30 font-mono">
                   RAW DISK ACCESS BLOCKED
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                Windows NT kernel security blocks direct physical sector carving on drive <span className="text-amber-300 font-mono font-semibold">D:</span> when running under standard user accounts. Administrator privileges are strictly mandatory to parse the Master File Table ($MFT) and recover emptied-recycle-bin files.
+              <p className="text-sm text-slate-300 mt-1.5 max-w-3xl leading-relaxed">
+                Windows NT kernel security blocks direct physical sector carving on drive <span className="text-amber-300 font-mono font-bold">D:</span> when running under standard user accounts. Administrator privileges are strictly mandatory to parse the Master File Table ($MFT) and recover unallocated files.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
             <Link
               to="/agent-guide"
-              className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs transition shadow-md shadow-amber-950/50"
+              className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs transition shadow-md shadow-amber-950/50"
             >
               <BookOpen className="w-4 h-4" />
               Open Hardware Guide (Enable Admin)
@@ -426,18 +430,20 @@ export function Recovery() {
 
       {/* Privileges Active Badge when is_admin is true */}
       {privileges && privileges.is_admin && (
-        <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-3.5 px-5 flex items-center justify-between backdrop-blur-sm">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs font-semibold text-emerald-300">
-              Kernel Administrator Access Active
-            </span>
-            <span className="text-[11px] text-slate-400 hidden sm:inline">
-              — Direct physical sector carving and NTFS MFT deep scanning enabled on all drives.
-            </span>
+        <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 px-6 flex items-center justify-between backdrop-blur-sm shadow-md">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+            <div>
+              <span className="text-sm font-bold text-emerald-300">
+                Kernel Administrator Access Active
+              </span>
+              <span className="text-xs text-slate-300 ml-2 hidden sm:inline">
+                — Direct physical sector carving and NTFS MFT deep scanning enabled on all drives.
+              </span>
+            </div>
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            ELEVATED
+          <span className="text-xs font-mono font-bold px-3 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+            ELEVATED KERNEL ACCESS
           </span>
         </div>
       )}
@@ -446,8 +452,8 @@ export function Recovery() {
       <div className="bg-[#0f172a]/90 border border-[#1e2c40] rounded-2xl p-6 shadow-xl space-y-6 backdrop-blur-sm">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
           {/* Target Drive Selector */}
-          <div className="lg:col-span-5 space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+          <div className="lg:col-span-6 space-y-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
               <HardDrive className="w-4 h-4 text-cyan-400" /> Target Storage Source
             </label>
             {showAdvancedImage ? (
@@ -456,53 +462,47 @@ export function Recovery() {
                 value={imagePath}
                 onChange={(e) => setImagePath(e.target.value)}
                 placeholder="e.g. C:\cases\disk.raw or D:\image.dd"
-                className="w-full bg-[#090d16] border border-[#1e2c40] rounded-xl px-4 py-2.5 text-slate-100 text-xs focus:border-cyan-500 outline-none font-mono placeholder:text-slate-600"
+                className="w-full bg-[#090d16] border border-[#22334a] rounded-xl px-4 py-3 text-slate-100 text-sm focus:border-cyan-500 outline-none font-mono placeholder:text-slate-600"
               />
             ) : (
               <select
                 value={selectedDeviceId}
                 onChange={(e) => setSelectedDeviceId(e.target.value)}
-                className="w-full bg-[#090d16] border border-[#1e2c40] rounded-xl px-4 py-2.5 text-slate-100 text-xs focus:border-cyan-500 outline-none font-mono"
+                className="w-full bg-[#090d16] border border-[#22334a] rounded-xl px-4 py-3 text-slate-100 text-sm focus:border-cyan-500 outline-none font-sans font-medium"
               >
                 <option value="all">
                   💻 Entire Machine &amp; All Volumes (C:\, D:\, All Recycle Bins)
                 </option>
                 {devices.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.device_type === "MOBILE_DEVICE" ? "📱 " : ""}{d.vendor || "Storage"} {d.model || d.device_path} ({formatBytes(d.capacity_bytes || d.size_bytes || 0)}) {d.system_disk ? "— [SYSTEM OS]" : ""}{d.device_type === "MOBILE_DEVICE" ? " — [MTP PHONE]" : ""}
+                    {d.device_type === "MOBILE_DEVICE" ? "📱 " : "💾 "}{d.vendor || "Storage"} {d.model || d.device_path} ({formatBytes(d.capacity_bytes || d.size_bytes || 0)}) {d.system_disk ? "— [SYSTEM OS]" : ""}{d.device_type === "MOBILE_DEVICE" ? " — [MTP PHONE]" : ""}
                   </option>
                 ))}
               </select>
             )}
           </div>
 
-          {/* Integrated Scanning Subsystems Status */}
-          <div className="lg:col-span-4 space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+          {/* Scanning Mode Switcher & Integrated Subsystems */}
+          <div className="lg:col-span-3 space-y-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-cyan-400" /> Unified All-in-One Engine
+                <Cpu className="w-4 h-4 text-cyan-400" /> Engine Architecture
               </span>
               <button
                 type="button"
                 onClick={() => setShowAdvancedImage(!showAdvancedImage)}
-                className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-mono"
+                className="text-xs text-cyan-400 hover:text-cyan-300 underline font-mono"
               >
-                {showAdvancedImage ? "← Drive Mode" : "Disk Image Mode (.raw)"}
+                {showAdvancedImage ? "← Drive Mode" : "Disk Image (.dd)"}
               </button>
             </label>
-            <div className="bg-[#090d16] border border-[#1e2c40] rounded-xl p-2.5 grid grid-cols-2 gap-1.5 text-[10.5px]">
-              <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> NTFS &amp; FAT Metadata
+            <div className="bg-[#090d16] border border-[#22334a] rounded-xl p-3 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                <CheckCircle2 className="w-4 h-4 shrink-0" /> NTFS MFT Engine
               </div>
-              <div className="flex items-center gap-1.5 text-cyan-400 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Raw Sector Carver
-              </div>
-              <div className="flex items-center gap-1.5 text-amber-400 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Text &amp; Docs (.txt, .json)
-              </div>
-              <div className="flex items-center gap-1.5 text-purple-400 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Slack &amp; Temp Buffers
-              </div>
+              <span className="text-xs font-mono text-cyan-300 font-bold px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30">
+                ACTIVE
+              </span>
             </div>
           </div>
 
@@ -513,34 +513,34 @@ export function Recovery() {
               disabled={scanning || (!showAdvancedImage && !selectedDeviceId)}
               loading={scanning}
               variant="primary"
-              className="w-full h-11 text-xs font-bold tracking-wide shadow-glow"
+              className="w-full h-12 text-sm font-bold tracking-wide shadow-lg shadow-cyan-950/50 rounded-xl"
             >
-              <Search className="w-4 h-4" /> {scanning ? "Analyzing Sectors..." : isMobileTarget ? "Scan Phone Storage" : "Run Unified Forensic Scan"}
+              <Search className="w-4 h-4 mr-2" /> {scanning ? "Analyzing Sectors..." : isMobileTarget ? "Scan Phone Storage" : "Run Forensic Scan"}
             </Button>
           </div>
         </div>
 
         {/* Supported Formats Banner */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#1e2c40]/80 text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#1e2c40]/80 text-xs">
           <div className="flex flex-wrap items-center gap-2 text-slate-400">
-            <span className="font-semibold text-slate-300">Supported Formats:</span>
-            {["TXT", "JSON", "MD", "JPG", "PNG", "PDF", "DOCX", "XLSX", "ZIP", "MP4"].map((fmt) => (
-              <span key={fmt} className="px-2 py-0.5 rounded bg-cyan-950/40 text-cyan-300 border border-cyan-800/40 font-mono text-[10px] font-bold">
+            <span className="font-bold text-slate-200">Supported Formats:</span>
+            {["TXT", "JSON", "MD", "JPG", "PNG", "GIF", "BMP", "PDF", "DOCX", "XLSX", "PPTX", "ZIP", "MP4"].map((fmt) => (
+              <span key={fmt} className="px-2.5 py-1 rounded-lg bg-cyan-950/40 text-cyan-300 border border-cyan-800/40 font-mono text-xs font-bold">
                 {fmt}
               </span>
             ))}
           </div>
-          <span className="text-slate-400 font-sans">
-            Filesystem Records • Raw Sector Carving • Text Heuristics • Structural Verification
+          <span className="text-slate-400 font-sans text-xs">
+            NTFS Master File Table • Resident Payloads • Non-Resident Runs • Bit-Exact Restoration
           </span>
         </div>
 
         {selectedDevice && scanType !== "forensic_image" && (
-          <div className="pt-3 border-t border-[#1e2c40]/40 flex flex-wrap items-center gap-6 text-xs text-slate-400 font-mono">
-            <div><span className="text-slate-500">Path:</span> <span className="text-slate-200">{selectedDevice.device_path}</span></div>
-            <div><span className="text-slate-500">Type:</span> <span className="text-cyan-400 font-semibold">{selectedDevice.device_type || "STORAGE"}</span></div>
-            <div><span className="text-slate-500">Mount:</span> <span className="text-slate-200">{selectedDevice.mount_point || "Unmounted"}</span></div>
-            <div><span className="text-slate-500">Status:</span> <span className="text-emerald-400 font-semibold">Active & Scannable</span></div>
+          <div className="pt-3 border-t border-[#1e2c40]/40 flex flex-wrap items-center gap-6 text-xs text-slate-300 font-mono">
+            <div><span className="text-slate-500 font-sans">Path:</span> <span className="text-slate-200 font-bold">{selectedDevice.device_path}</span></div>
+            <div><span className="text-slate-500 font-sans">Type:</span> <span className="text-cyan-400 font-bold">{selectedDevice.device_type || "STORAGE"}</span></div>
+            <div><span className="text-slate-500 font-sans">Mount:</span> <span className="text-slate-200 font-bold">{selectedDevice.mount_point || "Unmounted"}</span></div>
+            <div><span className="text-slate-500 font-sans">Status:</span> <span className="text-emerald-400 font-bold">Active &amp; Scannable</span></div>
           </div>
         )}
 
@@ -548,39 +548,39 @@ export function Recovery() {
         {isMobileTarget && (
           <div className="bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-purple-950/20 border border-cyan-500/40 rounded-xl p-4 text-xs space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-cyan-300 font-bold tracking-wide uppercase text-[11px]">
+              <div className="flex items-center gap-2 text-cyan-300 font-bold tracking-wide uppercase text-xs">
                 <Smartphone className="w-4 h-4 text-cyan-400" />
                 <span>Connected Mobile Device Detected (MTP / Portable Device)</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-mono text-[10px] font-semibold">
+              <span className="px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-semibold">
                 Android Scoped Recovery Mode
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300 text-[11px] leading-relaxed pt-1">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300 text-xs leading-relaxed pt-1">
               <div className="bg-black/30 p-3 rounded-lg border border-white/5 space-y-1">
                 <div className="font-semibold text-white flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> USB & Screen Requirements
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> USB & Screen Requirements
                 </div>
-                <p className="text-slate-400 text-[10px]">
+                <p className="text-slate-400 text-xs">
                   Keep the phone screen <strong className="text-slate-200">unlocked</strong> during scanning, and verify USB mode is set to <strong className="text-slate-200">"File Transfer / MTP"</strong> (not "Charging only").
                 </p>
               </div>
 
               <div className="bg-black/30 p-3 rounded-lg border border-white/5 space-y-1">
                 <div className="font-semibold text-white flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" /> Active Recovery Scope
+                  <ShieldCheck className="w-4 h-4 text-cyan-400" /> Active Recovery Scope
                 </div>
-                <p className="text-slate-400 text-[10px]">
+                <p className="text-slate-400 text-xs">
                   Scans Android Scoped Storage Trash (<code className="text-cyan-300">.trashed</code> 30-day retention), Gallery / Google Photos (<code className="text-cyan-300">.tmfs</code>), and high-resolution thumbnail media caches.
                 </p>
               </div>
 
               <div className="bg-black/30 p-3 rounded-lg border border-white/5 space-y-1">
                 <div className="font-semibold text-white flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Deep Erasure & MicroSD Carving
+                  <AlertTriangle className="w-4 h-4 text-amber-400" /> Deep Erasure & MicroSD Carving
                 </div>
-                <p className="text-slate-400 text-[10px]">
+                <p className="text-slate-400 text-xs">
                   Android internal storage enforces File-Based Encryption (FBE). If files were lost on an external <strong className="text-slate-200">MicroSD Card</strong>, plug the SD card directly into a PC card reader for 100% raw sector bitstream carving.
                 </p>
               </div>
@@ -589,84 +589,107 @@ export function Recovery() {
         )}
       </div>
 
-      {/* Universal Forensic Pipeline Visualizer (ISO/IEC 27037 Architecture) */}
+      {/* Universal Forensic Pipeline (ISO/IEC 27037 Standard Architecture) */}
       <div className="bg-[#0b101e]/90 border border-cyan-500/30 rounded-2xl p-5 shadow-xl space-y-4 backdrop-blur-sm">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-              <Layers className="w-4 h-4" />
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+              <Layers className="w-5 h-5" />
             </span>
             <div>
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                Universal Forensic Data Pipeline (ISO/IEC 27037)
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                Universal Forensic Data Pipeline (ISO/IEC 27037 Standard)
               </h3>
-              <p className="text-[11px] text-slate-400">
-                Non-destructive write-blocking, SHA-256 bitstream hashing, and dual-track signature carving
+              <p className="text-xs text-slate-400">
+                Non-destructive write-blocking, Master File Table sector parsing, and dual-track cryptographic recovery
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 text-[10px] font-mono">
-            <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-bold">
-              <ShieldCheck className="w-3 h-3" /> READ-ONLY / WRITE-BLOCKED
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <span className="px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 font-bold">
+              <ShieldCheck className="w-4 h-4" /> READ-ONLY WRITE-BLOCKED
             </span>
             {deviceProfile?.category && (
-              <span className="px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-bold">
+              <span className="px-3 py-1.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-bold">
                 {deviceProfile.category}
               </span>
             )}
           </div>
         </div>
 
-        {/* 11-Step Architectural Pipeline Flow */}
-        <div className="overflow-x-auto pb-2">
-          <div className="flex items-center min-w-[900px] gap-1.5 text-[10px] font-mono">
-            {[
-              { id: "1", label: "Select Media", active: true },
-              { id: "2", label: "Device Detection", active: true },
-              { id: "3", label: deviceProfile?.category || (isMobileTarget ? "Mobile Device" : "HDD / USB / SD"), active: true, highlight: true },
-              { id: "4", label: "Read-Only Acquisition", active: true },
-              { id: "5", label: "SHA-256 Hash", active: !!acquisitionHash, highlight: !!acquisitionHash },
-              { id: "6", label: "Dual-Track Engine", active: scanning || deletedFiles.length > 0 },
-              { id: "7", label: "File Carving", active: scanning || deletedFiles.length > 0 },
-              { id: "8", label: "Reconstruction", active: deletedFiles.length > 0 },
-              { id: "9", label: "Validation", active: deletedFiles.length > 0 },
-              { id: "10", label: "Scoring", active: deletedFiles.length > 0 },
-              { id: "11", label: "Forensic Report", active: deletedFiles.length > 0 },
-            ].map((step, idx, arr) => (
-              <React.Fragment key={step.id}>
-                <div className={`px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5 whitespace-nowrap transition-all ${
-                  step.highlight
-                    ? "bg-cyan-500/20 border-cyan-400 text-cyan-200 font-bold shadow-glow"
-                    : step.active
-                    ? "bg-[#0e1726] border-[#1e2c40] text-slate-200"
-                    : "bg-black/30 border-white/5 text-slate-600"
-                }`}>
-                  <span className={`w-3.5 h-3.5 rounded-full text-[9px] flex items-center justify-center font-bold ${
-                    step.active ? "bg-cyan-500/30 text-cyan-300" : "bg-slate-800 text-slate-500"
-                  }`}>
-                    {step.id}
+        {/* 4 Responsive Architectural Stages */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            {
+              id: "01",
+              name: "Media Acquisition",
+              desc: "Hardware write-block & device profiling",
+              active: true,
+              icon: HardDrive,
+              tag: "READ-ONLY",
+            },
+            {
+              id: "02",
+              name: "MFT & Sector Ingestion",
+              desc: "Record 0 extents & SHA-256 bitstream",
+              active: !!acquisitionHash || scanning || deletedFiles.length > 0,
+              icon: Cpu,
+              tag: acquisitionHash ? "VERIFIED" : "STANDBY",
+            },
+            {
+              id: "03",
+              name: "Signature & Heuristics",
+              desc: "NTFS unallocated runs & binary carving",
+              active: scanning || deletedFiles.length > 0,
+              icon: FileCheck,
+              tag: deletedFiles.length > 0 ? `${deletedFiles.length} DISCOVERED` : "READY",
+            },
+            {
+              id: "04",
+              name: "Forensic Restoral",
+              desc: "Bit-exact clusters & chain-of-custody",
+              active: deletedFiles.length > 0,
+              icon: ShieldCheck,
+              tag: "ISO 27037",
+            },
+          ].map((stage) => {
+            const Icon = stage.icon;
+            return (
+              <div
+                key={stage.id}
+                className={`p-3.5 rounded-xl border transition-all ${
+                  stage.active
+                    ? "bg-[#0f172a] border-cyan-500/40 shadow-sm shadow-cyan-950/30"
+                    : "bg-[#090d16]/70 border-[#1e2c40] opacity-60"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-cyan-400">{stage.id}</span>
+                    <Icon className="w-4 h-4 text-cyan-400" />
+                  </div>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-bold">
+                    {stage.tag}
                   </span>
-                  <span>{step.label}</span>
                 </div>
-                {idx < arr.length - 1 && (
-                  <ArrowRight className={`w-3 h-3 flex-shrink-0 ${step.active ? "text-cyan-500/70" : "text-slate-700"}`} />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
+                <div className="text-sm font-bold text-white">{stage.name}</div>
+                <div className="text-xs text-slate-400 mt-0.5">{stage.desc}</div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Acquisition Bitstream Hash Live Card */}
         {acquisitionHash && (
-          <div className="bg-[#080d19] border border-cyan-500/30 rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <KeyRound className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+          <div className="bg-[#080d19] border border-cyan-500/30 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3 min-w-0">
+              <KeyRound className="w-5 h-5 text-cyan-400 flex-shrink-0" />
               <div className="min-w-0">
-                <div className="text-[10px] text-slate-400 font-mono uppercase tracking-wider">
+                <div className="text-xs text-slate-400 font-mono uppercase tracking-wider font-semibold">
                   Forensic Acquisition SHA-256 Bitstream Hash:
                 </div>
-                <div className="text-cyan-300 font-mono font-bold truncate text-[11px]" title={acquisitionHash}>
+                <div className="text-cyan-300 font-mono font-bold truncate text-xs mt-0.5" title={acquisitionHash}>
                   {acquisitionHash}
                 </div>
               </div>
@@ -676,18 +699,18 @@ export function Recovery() {
                 variant="ghost"
                 size="sm"
                 onClick={() => copyHash(acquisitionHash)}
-                className="h-7 text-[11px] border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+                className="h-8 text-xs border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 px-3 font-semibold"
               >
-                {copiedHash ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copiedHash ? <Check className="w-3.5 h-3.5 text-emerald-400 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
                 {copiedHash ? "Copied" : "Copy Hash"}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleOpenReport}
-                className="h-7 text-[11px]"
+                className="h-8 text-xs px-3 font-semibold"
               >
-                <FileText className="w-3 h-3 text-cyan-400" /> View Formal Report
+                <FileText className="w-3.5 h-3.5 text-cyan-400 mr-1" /> View Formal Report
               </Button>
             </div>
           </div>
@@ -731,33 +754,33 @@ export function Recovery() {
           ) : (
             <div className="overflow-x-auto rounded-xl border border-[#1e2c40]">
               <table className="w-full text-left text-xs font-mono">
-                <thead className="bg-[#0b0f19] border-b border-[#1e2c40] text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <thead className="bg-[#080d19] border-b border-[#1e2c40] text-xs font-bold text-slate-300 uppercase tracking-wider">
                   <tr>
-                    <th className="px-4 py-3">Recovery ID</th>
-                    <th className="px-4 py-3">File Name</th>
-                    <th className="px-4 py-3">Size</th>
-                    <th className="px-4 py-3">SHA-256 Hash</th>
-                    <th className="px-4 py-3">Recovered Timestamp</th>
-                    <th className="px-4 py-3 text-right">Download</th>
+                    <th className="px-4 py-3.5">Recovery ID</th>
+                    <th className="px-4 py-3.5">File Name</th>
+                    <th className="px-4 py-3.5">Size</th>
+                    <th className="px-4 py-3.5">SHA-256 Hash</th>
+                    <th className="px-4 py-3.5">Recovered Timestamp</th>
+                    <th className="px-4 py-3.5 text-right">Download</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#1e2c40]/60">
                   {recoveryHistory.map((rec) => (
                     <tr key={rec.recovery_id} className="hover:bg-white/[.02] transition">
-                      <td className="px-4 py-3 text-cyan-400 font-bold">{rec.recovery_id}</td>
-                      <td className="px-4 py-3 font-sans font-medium text-white">{rec.filename}</td>
-                      <td className="px-4 py-3 font-sans text-slate-300">{formatBytes(rec.size_bytes)}</td>
-                      <td className="px-4 py-3 text-slate-400 truncate max-w-xs" title={rec.sha256 || ""}>
+                      <td className="px-4 py-3.5 text-cyan-400 font-bold text-xs">{rec.recovery_id}</td>
+                      <td className="px-4 py-3.5 font-sans font-semibold text-sm text-white">{rec.filename}</td>
+                      <td className="px-4 py-3.5 font-sans text-xs text-slate-300">{formatBytes(rec.size_bytes)}</td>
+                      <td className="px-4 py-3.5 text-xs text-slate-400 truncate max-w-xs font-mono" title={rec.sha256 || ""}>
                         {rec.sha256 ? `${rec.sha256.slice(0, 20)}...` : "—"}
                       </td>
-                      <td className="px-4 py-3 text-slate-400 font-sans">
+                      <td className="px-4 py-3.5 text-xs text-slate-300 font-sans">
                         {formatDate(rec.created_at)}
                       </td>
-                      <td className="px-4 py-3 text-right font-sans">
+                      <td className="px-4 py-3.5 text-right font-sans">
                         <button
                           onClick={() => downloadFile(rec.filename)}
                           disabled={downloadingFile === rec.filename}
-                          className="px-3 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 rounded-lg border border-cyan-500/30 text-xs font-semibold inline-flex items-center gap-1.5 transition disabled:opacity-50"
+                          className="px-3.5 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 rounded-lg border border-cyan-500/30 text-xs font-semibold inline-flex items-center gap-1.5 transition disabled:opacity-50"
                         >
                           <Download className="w-3.5 h-3.5" /> {downloadingFile === rec.filename ? "Downloading..." : "Download"}
                         </button>
@@ -782,15 +805,15 @@ export function Recovery() {
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 transition ${
+                  className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold inline-flex items-center gap-2 transition shadow-sm ${
                     categoryFilter === cat 
-                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow" 
-                      : "border border-[#1e2c40] bg-[#090d16] text-slate-400 hover:text-white"
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-glow" 
+                      : "border border-[#1e2c40] bg-[#090d16] text-slate-400 hover:text-white hover:border-[#2a3c54]"
                   }`}
                 >
                   <span>{cat}</span>
                   {deletedFiles.length > 0 && (
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold ${
                       categoryFilter === cat ? "bg-cyan-500/30 text-cyan-200" : "bg-white/5 text-slate-400"
                     }`}>
                       {count}
@@ -802,14 +825,14 @@ export function Recovery() {
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500 pointer-events-none" />
+            <div className="relative flex-1 md:w-72">
+              <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-500 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter by filename..."
-                className="w-full bg-[#090d16] border border-[#1e2c40] rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500"
+                placeholder="Search file name or extension..."
+                className="w-full bg-[#090d16] border border-[#1e2c40] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500 transition"
               />
             </div>
 
@@ -818,23 +841,24 @@ export function Recovery() {
               disabled={selectedFileIds.size === 0 || recovering}
               loading={recovering}
               variant="success"
-              size="sm"
+              size="default"
+              className="h-11 px-5 text-sm font-bold shadow-md whitespace-nowrap rounded-xl"
             >
-              <Download className="w-3.5 h-3.5" /> Restore Selected ({selectedFileIds.size})
+              <Download className="w-4 h-4 mr-1.5" /> Restore Selected ({selectedFileIds.size})
             </Button>
           </div>
         </div>
 
         {/* Results Info & Sequence Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2 border-t border-[#1e2c40]/60 text-xs">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <ArrowUpDown className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="font-medium">Sequence:</span>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-3 border-t border-[#1e2c40]/60 text-sm">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2 text-slate-300">
+              <ArrowUpDown className="w-4 h-4 text-cyan-400" />
+              <span className="font-semibold text-xs uppercase tracking-wider text-slate-400">Sort By:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-[#090d16] border border-[#1e2c40] rounded-xl px-2.5 py-1 text-xs text-cyan-300 outline-none focus:border-cyan-500 font-sans cursor-pointer"
+                className="bg-[#090d16] border border-[#1e2c40] rounded-xl px-3 py-1.5 text-xs sm:text-sm text-cyan-300 font-medium outline-none focus:border-cyan-500 font-sans cursor-pointer"
               >
                 <option value="recent">⚡ Recent to Old (Newest Deletion First)</option>
                 <option value="oldest">⏳ Oldest to Recent (Oldest First)</option>
@@ -844,15 +868,15 @@ export function Recovery() {
               </select>
             </div>
 
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <span className="font-medium">Display:</span>
+            <div className="flex items-center gap-2 text-slate-300">
+              <span className="font-semibold text-xs uppercase tracking-wider text-slate-400">Page Size:</span>
               <select
                 value={pageSize}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-[#090d16] border border-[#1e2c40] rounded-xl px-2.5 py-1 text-xs text-white outline-none focus:border-cyan-500 font-sans cursor-pointer"
+                className="bg-[#090d16] border border-[#1e2c40] rounded-xl px-3 py-1.5 text-xs sm:text-sm text-white font-medium outline-none focus:border-cyan-500 font-sans cursor-pointer"
               >
                 <option value={0}>♾️ All Files (Full Comprehensive List)</option>
                 <option value={50}>50 per page</option>
@@ -862,23 +886,23 @@ export function Recovery() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-slate-400">
+          <div className="flex items-center gap-2 text-slate-400 text-xs sm:text-sm">
             <span>
-              Showing <strong className="text-white">{displayFiles.length}</strong> of <strong className="text-white">{filteredFiles.length}</strong> matching ({deletedFiles.length} total)
+              Showing <strong className="text-white font-bold">{displayFiles.length}</strong> of <strong className="text-white font-bold">{filteredFiles.length}</strong> matching ({deletedFiles.length} total)
             </span>
             {selectedFileIds.size > 0 && (
-              <span className="text-cyan-400 font-semibold">• {selectedFileIds.size} selected</span>
+              <span className="text-cyan-400 font-bold">• {selectedFileIds.size} selected</span>
             )}
           </div>
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-xl border border-[#1e2c40]">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#0b0f19] border-b border-[#1e2c40] text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+        <div className="overflow-x-auto rounded-xl border border-[#1e2c40] bg-[#0b0f19]">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-[#080d19] border-b border-[#1e2c40] text-xs font-bold text-slate-300 uppercase tracking-wider">
               <tr>
-                <th className="px-4 py-3 w-10">
-                  <button onClick={toggleSelectAll} className="text-slate-400 hover:text-white flex items-center">
+                <th className="px-4 py-3.5 w-12 text-center">
+                  <button onClick={toggleSelectAll} className="text-slate-400 hover:text-white inline-flex items-center justify-center">
                     {selectedFileIds.size === displayFiles.length && displayFiles.length > 0 ? (
                       <CheckSquare className="w-4 h-4 text-cyan-400" />
                     ) : (
@@ -887,7 +911,7 @@ export function Recovery() {
                   </button>
                 </th>
                 <th 
-                  className="px-4 py-3 cursor-pointer hover:text-white transition select-none"
+                  className="px-4 py-3.5 cursor-pointer hover:text-cyan-300 transition select-none"
                   onClick={() => setSortBy(sortBy === "name" ? "recent" : "name")}
                   title="Click to sort by filename"
                 >
@@ -896,10 +920,10 @@ export function Recovery() {
                     {sortBy === "name" && <span className="text-cyan-400 font-bold">↑</span>}
                   </div>
                 </th>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3">Storage Location / Path</th>
+                <th className="px-4 py-3.5">Category</th>
+                <th className="px-4 py-3.5">Storage Location / Path</th>
                 <th 
-                  className="px-4 py-3 cursor-pointer hover:text-white transition select-none"
+                  className="px-4 py-3.5 cursor-pointer hover:text-cyan-300 transition select-none"
                   onClick={() => setSortBy(sortBy === "size_desc" ? "recent" : "size_desc")}
                   title="Click to sort by file size"
                 >
@@ -909,7 +933,7 @@ export function Recovery() {
                   </div>
                 </th>
                 <th 
-                  className="px-4 py-3 cursor-pointer hover:text-cyan-300 transition select-none"
+                  className="px-4 py-3.5 cursor-pointer hover:text-cyan-300 transition select-none"
                   onClick={() => setSortBy(sortBy === "recent" ? "oldest" : "recent")}
                   title="Click to toggle Newest / Oldest sequence"
                 >
@@ -917,32 +941,32 @@ export function Recovery() {
                     <span>Timestamp</span>
                     {sortBy === "recent" && <span className="text-cyan-400 font-bold">↓ (Recent)</span>}
                     {sortBy === "oldest" && <span className="text-cyan-400 font-bold">↑ (Oldest)</span>}
-                    {sortBy !== "recent" && sortBy !== "oldest" && <ArrowUpDown className="w-3 h-3 text-slate-600" />}
+                    {sortBy !== "recent" && sortBy !== "oldest" && <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />}
                   </div>
                 </th>
                 <th 
-                  className="px-4 py-3 cursor-pointer hover:text-white transition select-none"
+                  className="px-4 py-3.5 cursor-pointer hover:text-cyan-300 transition select-none"
                   onClick={() => setSortBy(sortBy === "confidence" ? "recent" : "confidence")}
                   title="Click to sort by evidence quality"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>Evidence Quality</span>
+                    <span>Integrity / Confidence</span>
                     {sortBy === "confidence" && <span className="text-cyan-400 font-bold">↓</span>}
                   </div>
                 </th>
-                <th className="px-4 py-3 text-right">Action</th>
+                <th className="px-4 py-3.5 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1e2c40]/60 font-mono">
+            <tbody className="divide-y divide-[#1e2c40]/60">
               {displayFiles.map((file) => {
                 const isSelected = selectedFileIds.has(file.id);
                 return (
                   <tr 
                     key={file.id} 
-                    className={`transition-colors ${isSelected ? "bg-cyan-500/[0.06]" : "hover:bg-white/[0.02]"}`}
+                    className={`transition-colors group ${isSelected ? "bg-cyan-500/[0.08]" : "hover:bg-white/[0.03]"}`}
                   >
-                    <td className="px-4 py-3">
-                      <button onClick={() => toggleSelectFile(file.id)} className="text-slate-400 hover:text-white flex items-center">
+                    <td className="px-4 py-3.5 text-center">
+                      <button onClick={() => toggleSelectFile(file.id)} className="text-slate-400 hover:text-white inline-flex items-center justify-center">
                         {isSelected ? (
                           <CheckSquare className="w-4 h-4 text-cyan-400" />
                         ) : (
@@ -950,57 +974,66 @@ export function Recovery() {
                         )}
                       </button>
                     </td>
-                    <td className="px-4 py-3 font-sans">
-                      <div className="flex items-center gap-2.5">
-                        {getCategoryIcon(file.category)}
+                    <td className="px-4 py-3.5 font-sans">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-[#090d16] border border-[#1e2c40] group-hover:border-cyan-500/40 transition">
+                          {getCategoryIcon(file.category)}
+                        </div>
                         <div className="min-w-0">
-                          <div className="font-medium text-white truncate max-w-xs" title={file.filename}>
+                          <div className="font-semibold text-sm text-white group-hover:text-cyan-300 transition truncate max-w-xs sm:max-w-md" title={file.filename}>
                             {file.filename}
                           </div>
-                          <div className="text-[10px] font-mono text-cyan-400/80 uppercase">
+                          <div className="text-xs font-mono text-cyan-400/90 uppercase font-medium">
                             {file.recovery_method.startsWith("raw_carver")
                               ? `Raw Carver (${file.extension.toUpperCase()})`
                               : file.recovery_method.startsWith("android_")
                               ? file.recovery_method.replace("android_", "Android ").replace(/_/g, " ")
-                              : "NTFS Metadata"}
+                              : "NTFS Metadata ($MFT)"}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-slate-400 uppercase text-[11px]">{file.category}</td>
-                    <td className="px-4 py-3 text-slate-400 truncate max-w-sm font-mono text-[11px]" title={file.original_path}>
+                    <td className="px-4 py-3.5">
+                      <span className="text-xs font-bold text-slate-300 uppercase px-2.5 py-1 rounded-md bg-[#090d16] border border-[#1e2c40]">
+                        {file.category}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-xs text-slate-300 truncate max-w-sm font-mono" title={file.original_path}>
                       {file.original_path}
                     </td>
-                    <td className="px-4 py-3 text-slate-200 font-sans">{formatBytes(file.size_bytes)}</td>
-                    <td className="px-4 py-3 text-slate-400 font-sans text-[11px]">
+                    <td className="px-4 py-3.5 text-sm font-semibold text-slate-200 font-sans">
+                      {formatBytes(file.size_bytes)}
+                    </td>
+                    <td className="px-4 py-3.5 text-xs font-mono text-slate-300 font-sans">
                       {file.deleted_at ? formatDate(file.deleted_at) : "Unknown"}
                     </td>
-                    <td className="px-4 py-3 font-sans">
+                    <td className="px-4 py-3.5 font-sans">
                       <div className="space-y-1">
                         <div className="flex items-center gap-1.5">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
-                            file.confidence === "HIGH" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" :
-                            file.confidence === "MEDIUM" ? "bg-amber-500/10 text-amber-400 border border-amber-500/30" :
-                            "bg-rose-500/10 text-rose-400 border border-rose-500/30"
+                          <span className={`px-2.5 py-1 rounded text-xs font-bold font-mono ${
+                            file.confidence === "HIGH" ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40" :
+                            file.confidence === "MEDIUM" ? "bg-amber-500/15 text-amber-300 border border-amber-500/40" :
+                            "bg-rose-500/15 text-rose-300 border border-rose-500/40"
                           }`}>
                             {file.confidence_score !== undefined ? `${file.confidence_score}% ` : ""}{file.confidence}
                           </span>
                         </div>
                         {file.validation_details && (
-                          <div className="text-[10px] text-slate-400 truncate max-w-xs" title={file.validation_details}>
+                          <div className="text-xs text-slate-400 truncate max-w-xs" title={file.validation_details}>
                             {file.validation_details}
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right font-sans">
+                    <td className="px-4 py-3.5 text-right font-sans">
                       <Button
                         size="sm"
                         variant="signal"
                         onClick={() => handleRecoverFiles([file.id])}
                         disabled={recovering}
+                        className="h-9 px-3.5 text-xs font-bold shadow-sm rounded-xl"
                       >
-                        <Download className="w-3 h-3" /> Recover
+                        <Download className="w-3.5 h-3.5 mr-1" /> Recover
                       </Button>
                     </td>
                   </tr>
@@ -1088,10 +1121,10 @@ export function Recovery() {
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2 text-[10px] font-extrabold tracking-[0.2em] text-emerald-400 uppercase">
+                  <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.2em] text-emerald-400 uppercase">
                     FORENSIC RESTORATION SUCCESSFUL
                   </div>
-                  <h2 className="text-lg font-bold text-white">
+                  <h2 className="text-xl font-extrabold text-white">
                     Recovered File(s) Ready to Download
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
@@ -1114,32 +1147,32 @@ export function Recovery() {
                   key={idx}
                   className="bg-[#080d19] border border-[#1e2c40] hover:border-emerald-500/40 transition rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                      <span className="font-semibold text-sm text-white truncate max-w-xs md:max-w-md" title={item.filename}>
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-2.5">
+                      <FileText className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                      <span className="font-semibold text-sm sm:text-base text-white truncate max-w-xs md:max-w-md" title={item.filename}>
                         {item.filename}
                       </span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono ${
+                      <span className={`text-xs px-2.5 py-1 rounded-md font-bold font-mono ${
                         item.status === "RECOVERED"
-                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                          : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                          : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                       }`}>
                         {item.status}
                       </span>
                     </div>
 
-                    <div className="text-[11px] text-slate-400 font-mono flex flex-wrap items-center gap-3">
-                      <span>Size: <strong className="text-slate-200">{formatBytes(item.size_bytes)}</strong></span>
+                    <div className="text-xs text-slate-300 font-mono flex flex-wrap items-center gap-3">
+                      <span>Size: <strong className="text-white font-bold">{formatBytes(item.size_bytes)}</strong></span>
                       {item.sha256 && (
-                        <span className="flex items-center gap-1 truncate max-w-xs" title={item.sha256}>
+                        <span className="flex items-center gap-1.5 truncate max-w-xs" title={item.sha256}>
                           SHA-256: <strong className="text-cyan-300 font-mono">{item.sha256.slice(0, 16)}...</strong>
                           <button
                             onClick={() => copyHash(item.sha256)}
                             className="text-slate-400 hover:text-white ml-1 p-0.5"
                             title="Copy full SHA-256 hash"
                           >
-                            <Copy className="w-3 h-3" />
+                            <Copy className="w-3.5 h-3.5" />
                           </button>
                         </span>
                       )}
@@ -1152,10 +1185,10 @@ export function Recovery() {
                       disabled={downloadingFile === item.filename}
                       loading={downloadingFile === item.filename}
                       variant="primary"
-                      size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex-shrink-0 shadow-lg shadow-emerald-950/50"
+                      size="default"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex-shrink-0 shadow-lg shadow-emerald-950/50 rounded-xl h-10 px-4 text-xs"
                     >
-                      <Download className="w-3.5 h-3.5 mr-1.5" /> {downloadingFile === item.filename ? "Downloading..." : "Download to Machine"}
+                      <Download className="w-4 h-4 mr-1.5" /> {downloadingFile === item.filename ? "Downloading..." : "Download to Machine"}
                     </Button>
                   )}
                 </div>
@@ -1164,7 +1197,7 @@ export function Recovery() {
 
             {/* Modal Footer */}
             <div className="p-4 border-t border-[#1e2c40] bg-[#080d19] flex items-center justify-between">
-              <div className="text-xs text-slate-400">
+              <div className="text-xs sm:text-sm text-slate-400 font-medium">
                 {newlyRestoredItems.filter(i => i.status === "RECOVERED").length} file(s) restored with integrity verification
               </div>
               <div className="flex items-center gap-3">
@@ -1173,15 +1206,16 @@ export function Recovery() {
                     variant="outline"
                     size="sm"
                     onClick={downloadAllRestored}
-                    className="border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
+                    className="border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 h-9 px-3.5 text-xs font-bold rounded-xl"
                   >
-                    <Download className="w-3.5 h-3.5 mr-1.5" /> Download All ({newlyRestoredItems.filter(i => i.status === "RECOVERED").length})
+                    <Download className="w-4 h-4 mr-1.5" /> Download All ({newlyRestoredItems.filter(i => i.status === "RECOVERED").length})
                   </Button>
                 )}
                 <Button
                   variant="primary"
                   size="sm"
                   onClick={() => setShowRestoredModal(false)}
+                  className="h-9 px-4 text-xs font-bold rounded-xl"
                 >
                   Done
                 </Button>
@@ -1198,13 +1232,13 @@ export function Recovery() {
             {/* Modal Header */}
             <div className="p-5 border-b border-[#1e2c40] flex items-center justify-between bg-[#080d19]">
               <div>
-                <div className="flex items-center gap-2 text-[10px] font-extrabold tracking-[0.2em] text-cyan-400 uppercase mb-1">
-                  <FileText className="w-3.5 h-3.5" /> ISO/IEC 27037 FORENSIC EXAMINATION REPORT
+                <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.2em] text-cyan-400 uppercase mb-1">
+                  <FileText className="w-4 h-4" /> ISO/IEC 27037 FORENSIC EXAMINATION REPORT
                 </div>
-                <h2 className="text-lg font-bold text-white">
+                <h2 className="text-xl font-extrabold text-white">
                   {reportData.case_name || "Digital Forensic Recovery Examination"}
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                <p className="text-xs text-slate-400 mt-1 font-mono">
                   Report ID: <span className="text-cyan-300">{reportData.report_id}</span> • Case ID: <span className="text-slate-300">{reportData.case_id}</span> • Generated {formatDate(reportData.generated_at)}
                 </p>
               </div>
@@ -1217,27 +1251,27 @@ export function Recovery() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6 text-xs text-slate-300 leading-relaxed font-sans">
+            <div className="p-6 overflow-y-auto space-y-6 text-sm text-slate-300 leading-relaxed font-sans">
               {/* Target Hardware Architecture Profile */}
               <div className="bg-[#080d19] border border-[#1e2c40] rounded-xl p-4 space-y-3">
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-cyan-400" /> Target Storage Profile & Hardware Architecture
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-[11px]">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-xs">
                   <div>
-                    <span className="text-slate-500 block text-[10px]">DEVICE CLASSIFICATION:</span>
+                    <span className="text-slate-500 block text-xs uppercase font-semibold">DEVICE CLASSIFICATION:</span>
                     <span className="text-cyan-300 font-bold">{reportData.device_profile?.category || "Standard Storage"}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[10px]">INTERFACE BUS:</span>
+                    <span className="text-slate-500 block text-xs uppercase font-semibold">INTERFACE BUS:</span>
                     <span className="text-slate-200">{reportData.device_profile?.bus_type || "Universal"}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[10px]">FILE SYSTEM:</span>
+                    <span className="text-slate-500 block text-xs uppercase font-semibold">FILE SYSTEM:</span>
                     <span className="text-slate-200">{reportData.device_profile?.filesystem || "FAT32/exFAT/NTFS"}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[10px]">TRIM / WEAR-LEVELING:</span>
+                    <span className="text-slate-500 block text-xs uppercase font-semibold">TRIM / WEAR-LEVELING:</span>
                     <span className="text-slate-200">{reportData.device_profile?.trim_status || "Standard"}</span>
                   </div>
                 </div>
@@ -1249,18 +1283,18 @@ export function Recovery() {
                   <span className="text-xs font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-2">
                     <KeyRound className="w-4 h-4 text-cyan-400" /> Bitstream Acquisition Integrity (SHA-256)
                   </span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono text-[10px] font-bold">
+                  <span className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono text-xs font-bold">
                     VERIFIED MATCH
                   </span>
                 </div>
-                <div className="font-mono text-cyan-200 text-xs break-all bg-black/40 p-2.5 rounded-lg border border-cyan-500/20 flex items-center justify-between gap-2">
+                <div className="font-mono text-cyan-200 text-xs sm:text-sm break-all bg-black/40 p-3 rounded-lg border border-cyan-500/20 flex items-center justify-between gap-2">
                   <span>{reportData.acquisition_hash}</span>
                   <button
                     onClick={() => copyHash(reportData.acquisition_hash)}
                     className="text-slate-400 hover:text-white p-1"
                     title="Copy Hash"
                   >
-                    {copiedHash ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedHash ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
@@ -1270,28 +1304,28 @@ export function Recovery() {
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                   <FileCheck className="w-4 h-4 text-cyan-400" /> Forensic Analysis Narrative
                 </h3>
-                <div className="bg-[#080d19] border border-[#1e2c40] rounded-xl p-4 text-slate-300 font-sans text-xs whitespace-pre-wrap leading-relaxed">
+                <div className="bg-[#080d19] border border-[#1e2c40] rounded-xl p-4 text-slate-300 font-sans text-sm whitespace-pre-wrap leading-relaxed">
                   {reportData.executive_summary}
                 </div>
               </div>
 
               {/* Statistics Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-[#080d19] border border-[#1e2c40] p-3 rounded-xl text-center">
-                  <div className="text-slate-400 text-[10px] uppercase font-bold">Total Discovered</div>
-                  <div className="text-xl font-bold text-cyan-400 font-mono mt-1">{reportData.total_discovered}</div>
+                <div className="bg-[#080d19] border border-[#1e2c40] p-4 rounded-xl text-center">
+                  <div className="text-slate-400 text-xs uppercase font-bold">Total Discovered</div>
+                  <div className="text-2xl font-bold text-cyan-400 font-mono mt-1">{reportData.total_discovered}</div>
                 </div>
-                <div className="bg-[#080d19] border border-[#1e2c40] p-3 rounded-xl text-center">
-                  <div className="text-slate-400 text-[10px] uppercase font-bold">Successfully Restored</div>
-                  <div className="text-xl font-bold text-emerald-400 font-mono mt-1">{reportData.total_recovered}</div>
+                <div className="bg-[#080d19] border border-[#1e2c40] p-4 rounded-xl text-center">
+                  <div className="text-slate-400 text-xs uppercase font-bold">Successfully Restored</div>
+                  <div className="text-2xl font-bold text-emerald-400 font-mono mt-1">{reportData.total_recovered}</div>
                 </div>
-                <div className="bg-[#080d19] border border-[#1e2c40] p-3 rounded-xl text-center">
-                  <div className="text-slate-400 text-[10px] uppercase font-bold">Chain of Custody Events</div>
-                  <div className="text-xl font-bold text-purple-400 font-mono mt-1">{(reportData.chain_of_custody || []).length}</div>
+                <div className="bg-[#080d19] border border-[#1e2c40] p-4 rounded-xl text-center">
+                  <div className="text-slate-400 text-xs uppercase font-bold">Chain of Custody Events</div>
+                  <div className="text-2xl font-bold text-purple-400 font-mono mt-1">{(reportData.chain_of_custody || []).length}</div>
                 </div>
-                <div className="bg-[#080d19] border border-[#1e2c40] p-3 rounded-xl text-center">
-                  <div className="text-slate-400 text-[10px] uppercase font-bold">Legal Admissibility</div>
-                  <div className="text-xs font-bold text-emerald-300 font-mono mt-2">ISO 27037 VALID</div>
+                <div className="bg-[#080d19] border border-[#1e2c40] p-4 rounded-xl text-center">
+                  <div className="text-slate-400 text-xs uppercase font-bold">Legal Admissibility</div>
+                  <div className="text-xs font-bold text-emerald-300 font-mono mt-3">ISO 27037 VALID</div>
                 </div>
               </div>
             </div>
