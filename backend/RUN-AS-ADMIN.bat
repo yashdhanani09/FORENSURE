@@ -26,6 +26,7 @@ if %errorLevel% neq 0 (
 
 echo [+] Administrator privileges verified.
 echo [*] Freeing port 8000 if occupied by non-elevated bridge...
+powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | Where-Object { $_ -gt 4 } | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }" >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING') do (
     taskkill /F /PID %%a >nul 2>&1
 )

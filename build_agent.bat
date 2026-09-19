@@ -1,9 +1,9 @@
 @echo off
-title Build SecureData Local Hardware Agent
+title Build FORENSURE Hardware Bridge
 color 0B
 
 echo ============================================================
-echo   Building SecureData-Agent.exe with PyInstaller
+echo   Building FORENSURE-Bridge.exe with PyInstaller
 echo ============================================================
 echo.
 
@@ -18,8 +18,8 @@ if not exist ".wvenv\Scripts\activate.bat" (
 
 call .wvenv\Scripts\activate.bat
 
-echo [*] Compiling Python backend into standalone binary...
-pyinstaller --name "SecureData-Agent" --onedir --clean --noconfirm --collect-all app --hidden-import uvicorn --hidden-import uvicorn.logging --hidden-import uvicorn.loops --hidden-import uvicorn.loops.auto --hidden-import uvicorn.protocols --hidden-import uvicorn.protocols.http --hidden-import uvicorn.protocols.http.auto --hidden-import uvicorn.protocols.websockets --hidden-import uvicorn.protocols.websockets.auto --hidden-import reportlab --hidden-import PIL --hidden-import sqlalchemy.sql.default_comparator agent_entry.py
+echo [*] Compiling Python backend into standalone FORENSURE-Bridge binary...
+pyinstaller --clean --noconfirm FORENSURE-Bridge.spec
 
 if errorlevel 1 (
     echo [ERROR] Build failed!
@@ -28,14 +28,25 @@ if errorlevel 1 (
 )
 
 echo.
-echo [*] Packaging into SecureData-Agent-Windows.zip...
-powershell -Command "Compress-Archive -Path 'dist\SecureData-Agent\*' -DestinationPath '..\SecureData-Agent-Windows.zip' -Force"
-powershell -Command "Copy-Item '..\SecureData-Agent-Windows.zip' '..\frontend\public\SecureData-Agent-Windows.zip' -Force"
+echo [*] Copying helper scripts into dist\FORENSURE-Bridge...
+copy /Y RUN-AS-ADMIN.bat dist\FORENSURE-Bridge\
+copy /Y START-BRIDGE.bat dist\FORENSURE-Bridge\
+copy /Y STOP-BRIDGE.bat dist\FORENSURE-Bridge\
+copy /Y SETUP-AUTO-ADMIN.bat dist\FORENSURE-Bridge\
+
+echo.
+echo [*] Packaging into FORENSURE-Bridge-Windows.zip...
+powershell -Command "Compress-Archive -Path 'dist\FORENSURE-Bridge\*' -DestinationPath '..\FORENSURE-Bridge-Windows.zip' -Force"
+powershell -Command "Copy-Item '..\FORENSURE-Bridge-Windows.zip' 'FORENSURE-Bridge-Windows.zip' -Force"
+powershell -Command "Copy-Item '..\FORENSURE-Bridge-Windows.zip' '..\frontend\public\FORENSURE-Bridge-Windows.zip' -Force"
+if exist "..\frontend\dist" (
+    powershell -Command "Copy-Item '..\FORENSURE-Bridge-Windows.zip' '..\frontend\dist\FORENSURE-Bridge-Windows.zip' -Force"
+)
 
 echo.
 echo ============================================================
 echo   BUILD SUCCESSFUL!
-echo   Zip file ready at: SecureData-Agent-Windows.zip
+echo   Zip file ready at: FORENSURE-Bridge-Windows.zip
 echo ============================================================
 echo.
-pause
+

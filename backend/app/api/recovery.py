@@ -308,11 +308,38 @@ def request_elevation_endpoint():
         # Method 1: If running as bundled standalone executable (e.g. FORENSURE-Bridge.exe)
         if getattr(sys, "frozen", False):
             try:
-                ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv[1:]), None, 1)
+                exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+                ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv[1:]), exe_dir, 1)
                 if int(ret) > 32:
                     launched = True
             except Exception as exc:
                 logger.debug("Frozen ShellExecuteW failed: %s", exc)
+
+        # Method 1b: If FORENSURE-Bridge.exe exists in current or project directory
+        if not launched:
+            for exe_candidate in [
+                os.path.join(os.getcwd(), "FORENSURE-Bridge.exe"),
+                os.path.join(str(PROJECT_ROOT), "FORENSURE-Bridge.exe"),
+                os.path.join(str(BACKEND_ROOT), "dist", "FORENSURE-Bridge", "FORENSURE-Bridge.exe"),
+            ]:
+                if os.path.isfile(exe_candidate):
+                    try:
+                        exe_d = os.path.dirname(os.path.abspath(exe_candidate))
+                        ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", os.path.abspath(exe_candidate), "", exe_d, 1)
+                        if int(ret) > 32:
+                            launched = True
+                            break
+                    except Exception as exc:
+                        logger.debug("Bridge exe ShellExecuteW failed: %s", exc)
+
+        # Method 1c: ShellExecuteW directly on target_bat with "runas"
+        if not launched and target_bat:
+            try:
+                ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", target_bat, "", script_dir, 1)
+                if int(ret) > 32:
+                    launched = True
+            except Exception as exc:
+                logger.debug("target_bat ShellExecuteW failed: %s", exc)
 
         # Method 2: Launch via PowerShell Start-Process with -Verb RunAs
         if not launched and target_bat:
@@ -346,6 +373,16 @@ def request_elevation_endpoint():
                 logger.debug("ShellExecuteW cmd.exe failed: %s", exc)
 
         if launched:
+            # Cleanly release port 8000 by terminating the non-elevated instance
+            # after a 1.2s delay to allow the HTTP response to reach the browser.
+            import threading
+            import time
+            def _delayed_exit():
+                time.sleep(1.2)
+                logger.info("Non-elevated bridge process exiting to yield port 8000 to elevated Administrator bridge.")
+                os._exit(0)
+            threading.Thread(target=_delayed_exit, daemon=True).start()
+
             return {
                 "status": "UAC_TRIGGERED",
                 "message": "Windows Administrator prompt requested. Please look at your screen or taskbar and click 'Yes'.",

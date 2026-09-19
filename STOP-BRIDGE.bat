@@ -7,12 +7,14 @@ echo.
 echo ============================================================
 echo   FORENSURE  |  Stop Hardware Bridge
 echo ============================================================
-echo.
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    powershell -NoProfile -Command "Start-Process cmd -ArgumentList '/c \"\"%~f0\"\"' -Verb RunAs"
+    exit /b
+)
 
 echo [*] Stopping background process on port 8000...
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING') do (
-    taskkill /F /PID %%a >nul 2>&1
-)
+powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | Where-Object { $_ -gt 4 } | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }" >nul 2>&1
 taskkill /F /IM FORENSURE-Bridge.exe >nul 2>&1
 
 echo [+] FORENSURE Bridge has been stopped.

@@ -303,7 +303,7 @@ export function AgentGuide() {
       } catch {
         // Bridge restarting elevated
       }
-      if (attempts >= 15) {
+      if (attempts >= 30) {
         clearInterval(interval);
         setElevating(false);
         checkPrivileges();
