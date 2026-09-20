@@ -4,7 +4,7 @@ import { Header } from "../components/Header";
 import { DeviceTable } from "../components/DeviceTable";
 import { EmptyState } from "../components/EmptyState";
 import { useDevices } from "../hooks/useDevices";
-import { deviceName, formatBytes } from "../utils/format";
+import { deviceName, formatBytes, formatMountPoint } from "../utils/format";
 import { 
   Search, HardDrive, Smartphone, Usb, Filter, ShieldCheck, 
   LayoutGrid, List, ChevronRight, Shield, RotateCcw 
@@ -191,7 +191,7 @@ export function Devices() {
                 return (
                   <div
                     key={device.id}
-                    className="group relative rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between"
+                    className="group relative rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between overflow-hidden"
                   >
                     <div>
                       {/* Card Header: Icon + Title + Status Badge */}
@@ -226,8 +226,8 @@ export function Devices() {
                       </div>
 
                       {/* Capacity Big Metric Box */}
-                      <div className="p-4 rounded-2xl bg-[#080d19] border border-[#182035] mb-5 flex items-center justify-between">
-                        <div>
+                      <div className="p-4 rounded-2xl bg-[#080d19] border border-[#182035] mb-5 flex items-center justify-between gap-3 overflow-hidden">
+                        <div className="shrink-0">
                           <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold block">
                             STORAGE CAPACITY
                           </span>
@@ -235,12 +235,15 @@ export function Devices() {
                             {formatBytes(device.capacity_bytes || (device as any).size_bytes || 0)}
                           </span>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right min-w-0 flex-1 overflow-hidden">
                           <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold block">
                             MOUNT POINT
                           </span>
-                          <span className="text-sm font-mono font-bold text-white">
-                            {device.mount_point || <span className="text-slate-500 italic">Unmounted</span>}
+                          <span
+                            className="text-sm font-mono font-bold text-white truncate block max-w-full"
+                            title={device.mount_point || "Unmounted"}
+                          >
+                            {formatMountPoint(device.mount_point)}
                           </span>
                         </div>
                       </div>

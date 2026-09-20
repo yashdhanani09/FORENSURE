@@ -4,7 +4,7 @@ import { agentConnection, type AgentStatus } from "../services/agentConnection";
 import { recoveryApi, type RecoveryPrivileges } from "../services/recoveryApi";
 import { deviceApi } from "../services/api";
 import type { UsbDeviceDetail } from "../types/device";
-import { formatBytes } from "../utils/format";
+import { formatBytes, formatMountPoint } from "../utils/format";
 import {
   Download, Terminal, HardDrive, RefreshCw, CheckCircle2,
   ArrowRight, Cpu, MonitorSmartphone, Plug, ShieldCheck,
@@ -989,8 +989,8 @@ export function AgentGuide() {
                         <div className="font-bold text-white truncate text-xs">
                           {d.vendor || "Storage"} {d.model || d.device_path}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-mono">
-                          {formatBytes(d.capacity_bytes || d.size_bytes || 0)} • {d.mount_point || d.device_path}
+                        <div className="text-[11px] text-slate-400 font-mono truncate" title={d.mount_point || d.device_path}>
+                          {formatBytes(d.capacity_bytes || d.size_bytes || 0)} • {formatMountPoint(d.mount_point) || d.device_path}
                         </div>
                       </div>
                     </div>

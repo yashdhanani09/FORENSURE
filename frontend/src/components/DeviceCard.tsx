@@ -1,7 +1,7 @@
 import { ArrowRight, HardDrive, MapPin, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { UsbDevice } from "../types/device";
-import { deviceName, formatBytes } from "../utils/format";
+import { deviceName, formatBytes, formatMountPoint } from "../utils/format";
 import { StatusBadge } from "./StatusBadge";
 
 export function DeviceCard({ device }: { device: UsbDevice }) {
@@ -20,7 +20,7 @@ export function DeviceCard({ device }: { device: UsbDevice }) {
       <div className="my-5 grid grid-cols-2 gap-3 border-y border-line/70 py-4 text-sm">
         <div><p className="text-[10px] font-bold tracking-[.12em] text-slate-500">CAPACITY</p><p className="mt-1 font-medium text-slate-100">{formatBytes(device.capacity_bytes)}</p></div>
         <div><p className="text-[10px] font-bold tracking-[.12em] text-slate-500">FILESYSTEM</p><p className="mt-1 font-medium uppercase text-slate-100">{device.filesystem ?? "Unformatted"}</p></div>
-        <div className="col-span-2"><p className="text-[10px] font-bold tracking-[.12em] text-slate-500">MOUNT POINT</p><p className="mt-1 flex items-center gap-1.5 truncate font-mono text-xs text-slate-300"><MapPin className="h-3.5 w-3.5 text-slate-500" />{device.mount_point ?? "Not mounted"}</p></div>
+        <div className="col-span-2"><p className="text-[10px] font-bold tracking-[.12em] text-slate-500">MOUNT POINT</p><p className="mt-1 flex items-center gap-1.5 truncate font-mono text-xs text-slate-300" title={device.mount_point ?? "Not mounted"}><MapPin className="h-3.5 w-3.5 text-slate-500 shrink-0" />{device.mount_point ? formatMountPoint(device.mount_point) : "Not mounted"}</p></div>
       </div>
       <div className="flex items-center justify-between">
         <span className="inline-flex items-center gap-1.5 text-xs text-slate-400"><ShieldCheck className="h-3.5 w-3.5 text-signal" /> Removable USB verified</span>

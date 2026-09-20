@@ -1,7 +1,7 @@
 import { ChevronRight, HardDrive, Smartphone, Shield, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { UsbDevice } from "../types/device";
-import { deviceName, formatBytes } from "../utils/format";
+import { deviceName, formatBytes, formatMountPoint } from "../utils/format";
 
 export function DeviceTable({ devices }: { devices: UsbDevice[] }) {
   return (
@@ -56,8 +56,8 @@ export function DeviceTable({ devices }: { devices: UsbDevice[] }) {
                   {formatBytes(device.capacity_bytes)}
                 </td>
 
-                <td className="px-6 py-4.5 font-mono text-slate-300 text-sm">
-                  {device.mount_point ?? <span className="text-slate-500 italic">Not mounted</span>}
+                <td className="px-6 py-4.5 font-mono text-slate-300 text-sm max-w-[140px] truncate" title={device.mount_point ?? "Not mounted"}>
+                  {device.mount_point ? formatMountPoint(device.mount_point) : <span className="text-slate-500 italic">Not mounted</span>}
                 </td>
 
                 <td className="px-6 py-4.5">

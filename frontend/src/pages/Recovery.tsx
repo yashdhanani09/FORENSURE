@@ -12,7 +12,7 @@ import { deviceApi } from "../services/api";
 import { agentConnection } from "../services/agentConnection";
 import { recoveryApi, DeletedFileItem, RecoveredFileRecord, ForensicReportResponse, RestoredItem, RecoveryPrivileges } from "../services/recoveryApi";
 import type { UsbDeviceDetail } from "../types/device";
-import { formatBytes, formatDate } from "../utils/format";
+import { formatBytes, formatDate, formatMountPoint } from "../utils/format";
 import { Button } from "../components/ui/button";
 
 export function Recovery() {
@@ -566,8 +566,8 @@ export function Recovery() {
                         <div className="text-sm font-black text-white truncate" title={d.vendor || d.model || d.device_path}>
                           {d.vendor || "Storage"} {d.model || d.device_path}
                         </div>
-                        <div className="text-xs font-mono text-slate-400 mt-0.5">
-                          {formatBytes(d.capacity_bytes || d.size_bytes || 0)} • {d.mount_point || d.device_path}
+                        <div className="text-xs font-mono text-slate-400 mt-0.5 truncate" title={d.mount_point || d.device_path}>
+                          {formatBytes(d.capacity_bytes || d.size_bytes || 0)} • {formatMountPoint(d.mount_point) || d.device_path}
                         </div>
                       </div>
                       <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono">
@@ -586,17 +586,17 @@ export function Recovery() {
             {/* Target Storage Properties Bar */}
             {selectedDevice && scanType !== "forensic_image" && (
               <div className="p-4 rounded-2xl bg-[#070b14]/90 border border-[#1e2c40] flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-mono text-slate-300">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500 font-sans">Path:</span>
-                  <span className="text-slate-100 font-bold">{selectedDevice.device_path}</span>
+                <div className="flex items-center gap-1.5 min-w-0 max-w-xs truncate" title={selectedDevice.device_path}>
+                  <span className="text-slate-500 font-sans shrink-0">Path:</span>
+                  <span className="text-slate-100 font-bold truncate">{selectedDevice.device_path}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-slate-500 font-sans">Type:</span>
                   <span className="text-cyan-400 font-bold">{selectedDevice.device_type || "STORAGE"}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-500 font-sans">Mount:</span>
-                  <span className="text-slate-100 font-bold">{selectedDevice.mount_point || "Physical"}</span>
+                <div className="flex items-center gap-1.5 min-w-0 max-w-[200px] truncate" title={selectedDevice.mount_point || "Physical"}>
+                  <span className="text-slate-500 font-sans shrink-0">Mount:</span>
+                  <span className="text-slate-100 font-bold truncate">{formatMountPoint(selectedDevice.mount_point) || "Physical"}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-slate-500 font-sans">Status:</span>
