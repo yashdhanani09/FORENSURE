@@ -191,10 +191,20 @@
     box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04) !important;
   }
 
-  body {
+  html, body {
     background-color: var(--color-canvas);
     color: var(--color-text-primary);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overflow-x: hidden;
+  }
+
+  /* Hide scrollbars on elements with no-scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
   }
 
   /* Custom scrollbar matching core palette */

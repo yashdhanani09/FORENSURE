@@ -91,12 +91,12 @@ export function TopNav() {
   return (
     <>
       {/* ── Main Top Navigation Bar ── */}
-      <header className="sticky top-0 z-40 w-full select-none">
+      <header className="sticky top-0 z-40 w-full select-none shadow-[0_4px_24px_rgba(0,0,0,0.25)] overflow-x-hidden">
         {/* Top accent line with animated gradient (Cyber blue brand) */}
         <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#2F81F7] to-transparent animate-glow-line" />
 
         {/* ── ROW 1: PRIMARY NAVIGATION BAR ── */}
-        <div className="bg-canvas/95 backdrop-blur-xl border-b border-border-subtle">
+        <div className="bg-canvas/95 backdrop-blur-xl border-b border-border-subtle overflow-hidden">
           <div className="flex h-16 lg:h-17 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
 
             {/* ── Logo ── */}
@@ -122,10 +122,10 @@ export function TopNav() {
             {/* ── Divider ── */}
             <div className="hidden lg:block h-7 w-px bg-border-subtle shrink-0" />
 
-            {/* ── Desktop Nav Links (Full Room, Never Overlapping) ── */}
+            {/* ── Desktop Nav Links (Zero Scroll, Perfectly Fitted) ── */}
             <nav
               ref={navRef}
-              className="relative hidden lg:flex items-center gap-1.5 xl:gap-2 flex-1 max-w-5xl justify-start overflow-x-auto no-scrollbar"
+              className="relative hidden lg:flex items-center gap-1 xl:gap-1.5 2xl:gap-2 flex-1 min-w-0"
               aria-label="Main navigation"
             >
               {/* Animated sliding indicator */}
@@ -144,7 +144,7 @@ export function TopNav() {
                     if (isActive && node) activeNavRef.current = node;
                   }}
                   className={({ isActive }) =>
-                    `relative group flex items-center gap-2 px-3 py-2 xl:px-4 xl:py-2.5 rounded-xl text-xs xl:text-sm font-semibold transition-all duration-200 whitespace-nowrap shrink-0 ${
+                    `relative group flex items-center gap-1.5 xl:gap-2 px-2.5 py-1.5 xl:px-3.5 xl:py-2 rounded-xl text-xs xl:text-sm font-semibold transition-all duration-200 whitespace-nowrap shrink-0 ${
                       isActive
                         ? "bg-gradient-to-r from-brand/25 via-brand/15 to-transparent text-text-primary border border-brand/50 shadow-glow font-bold"
                         : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated/60 border border-transparent"
@@ -155,7 +155,7 @@ export function TopNav() {
                     <>
                       <Icon className={`h-4 w-4 shrink-0 transition-colors ${isActive ? "text-brand" : "text-text-secondary group-hover:text-text-primary"}`} />
                       <span>{label}</span>
-                      <span className={`text-[9px] font-extrabold font-mono px-2 py-0.5 rounded transition-colors ${
+                      <span className={`hidden xl:inline-block text-[9px] font-extrabold font-mono px-1.5 py-0.5 rounded transition-colors ${
                         isActive
                           ? "bg-brand/20 text-brand border border-brand/40"
                           : "bg-surface-elevated text-text-secondary group-hover:text-text-primary"
@@ -226,7 +226,7 @@ export function TopNav() {
         </div>
 
         {/* ── ROW 2: PERMANENT SYSTEM STATUS & BRIDGE CONTROL BAR ── */}
-        <div className="bg-surface/90 backdrop-blur-xl border-b border-border-subtle px-4 sm:px-6 lg:px-8 py-2 min-h-[44px] flex flex-wrap items-center justify-between gap-3 shadow-sm">
+        <div className="bg-surface/90 backdrop-blur-xl border-b border-border-subtle px-4 sm:px-6 lg:px-8 py-2 min-h-[44px] flex flex-wrap items-center justify-between gap-3 shadow-sm overflow-hidden">
           {/* Left: Engine Telemetry Info */}
           <div className="flex items-center gap-3 text-xs font-mono text-text-secondary min-w-0 flex-1">
             <div className="flex items-center gap-2 shrink-0">
