@@ -19,20 +19,31 @@ export function CaseDetail() {
   const [fileSearch, setFileSearch] = useState("");
   const [acquireModalOpen, setAcquireModalOpen] = useState(false);
   const [acquiring, setAcquiring] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const fetchCase = async () => {
     if (!id) return;
+    setLoading(true);
+    setError(null);
     try {
       const res = await forensicApi.getCase(id);
       setData(res);
       if (res.case.status === "ANALYZED" || res.case.status === "COMPLETED") {
-        const filesRes = await forensicApi.listFiles(id);
-        setFiles(filesRes || []);
+        try {
+          const filesRes = await forensicApi.listFiles(id);
+          setFiles(filesRes || []);
+        } catch (fileErr) {
+          console.warn("Failed to load artifacts list:", fileErr);
+        }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setError(e?.message || "Failed to load forensic case records.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -104,14 +115,36 @@ export function CaseDetail() {
     }
   };
 
-  if (!data) {
+  if (loading && !data) {
     return (
       <div className="p-12 max-w-6xl mx-auto flex flex-col justify-center items-center h-96 select-none">
-        <div className="h-10 w-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-xs text-slate-400 font-mono">Loading forensic case records...</p>
+        <div className="h-10 w-10 border-2 border-brand border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-xs text-text-secondary font-mono">Loading forensic case records...</p>
       </div>
     );
   }
+
+  if (error && !data) {
+    return (
+      <div className="p-12 max-w-2xl mx-auto flex flex-col justify-center items-center min-h-[400px] select-none text-center">
+        <div className="p-4 rounded-2xl bg-danger/10 border border-danger/30 text-danger mb-4">
+          <AlertTriangle className="h-10 w-10" />
+        </div>
+        <h2 className="text-xl font-bold text-text-primary mb-2">Unable to Load Forensic Case</h2>
+        <p className="text-sm text-text-secondary mb-6 font-mono max-w-md">{error}</p>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => navigate("/forensics")}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Forensics Hub
+          </Button>
+          <Button variant="primary" onClick={fetchCase}>
+            <RefreshCw className="h-4 w-4 mr-2" /> Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
 
   const { case: c, evidence, events } = data;
   const ev = evidence[0];

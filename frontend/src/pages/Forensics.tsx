@@ -32,16 +32,28 @@ export function Forensics() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [casesRes, devicesRes] = await Promise.all([
+      const [casesResult, devicesResult] = await Promise.allSettled([
         forensicApi.listCases(),
         deviceApi.list()
       ]);
-      setCases(casesRes || []);
-      setDevices(devicesRes.devices || []);
+
+      if (casesResult.status === "fulfilled") {
+        setCases(casesResult.value || []);
+      } else {
+        console.warn("Could not fetch cases from backend, using local storage:", casesResult.reason);
+        setCases(forensicApi.getLocalCases());
+      }
+
+      if (devicesResult.status === "fulfilled") {
+        setDevices(devicesResult.value?.devices || []);
+      } else {
+        console.warn("Could not fetch devices:", devicesResult.reason);
+      }
+
       setError(null);
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to load forensic environment.");
+      console.error("Forensics fetch error:", err);
+      setCases(forensicApi.getLocalCases());
     } finally {
       setLoading(false);
     }
@@ -152,10 +164,10 @@ export function Forensics() {
           </div>
 
           {devices.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#1e2c40] bg-[#0f172a]/50 p-12 text-center">
-              <HardDrive className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-base font-semibold text-slate-300">No Storage Sources Detected</p>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">Attach a physical drive or portable storage device.</p>
+            <div className="rounded-2xl border border-dashed border-border-subtle bg-surface-elevated/40 p-12 text-center">
+              <HardDrive className="h-12 w-12 text-text-secondary mx-auto mb-3" />
+              <p className="text-base font-semibold text-text-primary">No Storage Sources Detected</p>
+              <p className="text-xs sm:text-sm text-text-secondary mt-1">Attach a physical drive or portable storage device.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -164,25 +176,25 @@ export function Forensics() {
                 return (
                   <div
                     key={d.id}
-                    className={`rounded-2xl border bg-[#0f172a]/90 backdrop-blur-sm p-6 shadow-xl transition-all duration-200 overflow-hidden ${
+                    className={`rounded-2xl border bg-surface-card backdrop-blur-sm p-6 shadow-xl transition-all duration-200 overflow-hidden ${
                       isSystem 
-                        ? "border-rose-500/30 bg-gradient-to-r from-[#0f172a] to-rose-950/10" 
-                        : "border-[#1e2c40] hover:border-cyan-500/40"
+                        ? "border-[#EF4444]/30 bg-gradient-to-r from-surface-card to-[#EF4444]/5" 
+                        : "border-border-subtle hover:border-brand/40"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex items-center gap-3.5 min-w-0 flex-1">
                         <div className={`p-3 rounded-xl border shrink-0 ${
-                          isSystem ? "bg-rose-500/10 border-rose-500/30 text-rose-400" :
-                          "bg-cyan-500/10 border-cyan-500/30 text-cyan-400"
+                          isSystem ? "bg-[#EF4444]/10 border-[#EF4444]/30 text-[#EF4444]" :
+                          "bg-brand/10 border-brand/30 text-brand"
                         }`}>
                           <HardDrive className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-bold text-base text-white truncate" title={`${d.vendor ? `${d.vendor} ` : ""}${d.model || ""}`}>
+                          <h4 className="font-bold text-base text-text-primary truncate" title={`${d.vendor ? `${d.vendor} ` : ""}${d.model || ""}`}>
                             {d.vendor ? `${d.vendor} ` : ""}{d.model}
                           </h4>
-                          <p className="text-xs font-mono text-slate-300 mt-0.5 truncate" title={d.device_path}>
+                          <p className="text-xs font-mono text-text-secondary mt-0.5 truncate" title={d.device_path}>
                             {d.device_path} • {formatBytes(d.capacity_bytes || d.size_bytes || 0)}
                           </p>
                         </div>
@@ -190,8 +202,8 @@ export function Forensics() {
 
                       <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider whitespace-nowrap ${
                         isSystem 
-                          ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" 
-                          : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                          ? "bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30" 
+                          : "bg-brand/15 text-brand border border-brand/30"
                       }`}>
                         {isSystem ? "SYSTEM OS" : (d.device_type || "STORAGE")}
                       </span>
@@ -199,14 +211,14 @@ export function Forensics() {
 
                     <div className="pt-2">
                       {isSystem ? (
-                        <div className="w-full py-2.5 px-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-center text-xs sm:text-sm font-semibold">
+                        <div className="w-full py-2.5 px-3 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/20 text-[#EF4444] text-center text-xs sm:text-sm font-semibold">
                           Protected System Disk
                         </div>
                       ) : (
                         <Button 
-                          variant="forensic" 
+                          variant="primary" 
                           size="default" 
-                          className="w-full h-11 text-xs sm:text-sm font-bold rounded-xl"
+                          className="w-full h-11 text-xs sm:text-sm font-bold rounded-xl bg-brand hover:bg-blue-600 text-white"
                           onClick={() => handleOpenCreateModal(d.id)}
                         >
                           <Plus className="h-4 w-4 mr-1.5" /> Initialize Forensic Case
@@ -223,17 +235,17 @@ export function Forensics() {
         {/* Right Column: Active & Past Cases */}
         <div className="space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2.5">
-              <FileSearch className="h-5 w-5 text-blue-400" /> Active Forensic Cases
+            <h2 className="text-base sm:text-lg font-bold text-text-primary flex items-center gap-2.5">
+              <FileSearch className="h-5 w-5 text-brand" /> Active Forensic Cases
             </h2>
-            <span className="text-xs font-mono text-slate-400 font-semibold">{cases.length} Total Cases</span>
+            <span className="text-xs font-mono text-text-secondary font-semibold">{cases.length} Total Cases</span>
           </div>
 
           {cases.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#1e2c40] bg-[#0f172a]/50 p-12 text-center">
-              <FileSearch className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-base font-semibold text-slate-300">No Forensic Cases Created</p>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">Select an evidence source on the left to start an investigation.</p>
+            <div className="rounded-2xl border border-dashed border-border-subtle bg-surface-elevated/40 p-12 text-center">
+              <FileSearch className="h-12 w-12 text-text-secondary mx-auto mb-3" />
+              <p className="text-base font-semibold text-text-primary">No Forensic Cases Created</p>
+              <p className="text-xs sm:text-sm text-text-secondary mt-1">Select an evidence source on the left to start an investigation.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -241,19 +253,19 @@ export function Forensics() {
                 <div
                   key={c.case_id}
                   onClick={() => navigate(`/forensics/case/${c.case_id}`)}
-                  className="group rounded-2xl border border-[#1e2c40] bg-[#0f172a]/90 backdrop-blur-sm p-6 shadow-xl hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] cursor-pointer transition-all duration-200 overflow-hidden"
+                  className="group rounded-2xl border border-border-subtle bg-surface-card backdrop-blur-sm p-6 shadow-xl hover:border-brand/50 hover:shadow-[0_0_20px_rgba(47,129,247,0.18)] cursor-pointer transition-all duration-200 overflow-hidden"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2.5">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <h4 className="font-bold text-base text-white group-hover:text-blue-300 transition-colors truncate" title={c.case_name}>
+                        <h4 className="font-bold text-base text-text-primary group-hover:text-brand transition-colors truncate" title={c.case_name}>
                           {c.case_name}
                         </h4>
                         <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold border whitespace-nowrap ${getStatusBadge(c.status)}`}>
                           {c.status}
                         </span>
                       </div>
-                      <p className="text-xs font-mono text-slate-300 mt-1 truncate" title={`ID: ${c.case_id}`}>
+                      <p className="text-xs font-mono text-text-secondary mt-1 truncate" title={`ID: ${c.case_id}`}>
                         ID: {c.case_id} {c.device_id ? `• Device: ${c.device_id}` : ""}
                       </p>
                     </div>
@@ -264,23 +276,23 @@ export function Forensics() {
                         setDeleteModalCase(c);
                       }}
                       title="Delete Case"
-                      className="shrink-0 p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      className="shrink-0 p-2 rounded-lg text-text-secondary hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
 
                   {c.description && (
-                    <p className="text-xs sm:text-sm text-slate-300 line-clamp-1 mb-3.5 font-sans leading-relaxed">
+                    <p className="text-xs sm:text-sm text-text-secondary line-clamp-1 mb-3.5 font-sans leading-relaxed">
                       {c.description}
                     </p>
                   )}
 
-                  <div className="flex items-center justify-between pt-3.5 border-t border-[#1e2c40]/70 text-xs text-slate-400 font-mono">
+                  <div className="flex items-center justify-between pt-3.5 border-t border-border-subtle text-xs text-text-secondary font-mono">
                     <span className="flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5" /> {formatDate(c.created_at)}
                     </span>
-                    <span className="text-blue-400 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-1.5 text-xs sm:text-sm">
+                    <span className="text-brand font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-1.5 text-xs sm:text-sm">
                       Open Case <ArrowRight className="h-4 w-4" />
                     </span>
                   </div>

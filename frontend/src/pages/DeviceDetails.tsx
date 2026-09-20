@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { deviceApi } from "../services/api";
+import { forensicApi } from "../services/forensicApi";
 import type { UsbDeviceDetail, EvidenceRecord } from "../types/device";
 import { formatBytes, formatDate } from "../utils/format";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
@@ -58,17 +59,12 @@ export function DeviceDetails() {
     if (!device || !caseName.trim()) return;
     setCreatingCase(true);
     try {
-      const newCase = await fetch('/api/forensics/cases', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          case_name: caseName.trim(), 
-          device_id: device.id, 
-          description: caseDesc.trim() || "Created from device details view" 
-        })
-      }).then(r => r.json());
+      const newCase = await forensicApi.createCase(
+        caseName.trim(), 
+        device.id, 
+        caseDesc.trim() || "Created from device details view"
+      );
       
-      if (newCase.detail) throw new Error(newCase.detail);
       setCaseModalOpen(false);
       navigate(`/forensics/case/${newCase.case_id}`);
     } catch (err: any) {
