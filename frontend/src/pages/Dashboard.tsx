@@ -49,7 +49,7 @@ export function Dashboard() {
   const safeDevices = devices.filter(d => !d.system_disk);
 
   return (
-    <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 select-none page-enter">
+    <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-8 select-none page-enter">
 
       {/* ── Admin Privilege Warning Banner ── */}
       {adminWarning && (
@@ -93,50 +93,50 @@ export function Dashboard() {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-[#1e2c40] bg-[#0f172a]/90 backdrop-blur-sm p-5 shadow-xl">
+      {/* Metrics Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="group rounded-2xl border border-[#182035] bg-[#0c1220]/80 backdrop-blur-md p-5 shadow-xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(6,182,212,0.12)]">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[11px] font-bold tracking-wider uppercase">Detected Storage</span>
-            <HardDrive className="h-4 w-4 text-cyan-400" />
+            <span className="text-[10.5px] font-extrabold tracking-wider uppercase font-mono text-cyan-400">Detected Storage</span>
+            <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+              <HardDrive className="h-4 w-4" />
+            </div>
           </div>
-          <div className="text-2xl font-black text-white font-mono">{devices.length}</div>
-          <p className="text-[11px] text-slate-400 mt-1">Total Capacity: {formatBytes(totalCapacity)}</p>
+          <div className="text-3xl font-black text-white font-mono mt-1">{devices.length}</div>
+          <p className="text-[11px] text-slate-400 mt-2 font-mono">Total Capacity: <span className="text-slate-200 font-semibold">{formatBytes(totalCapacity)}</span></p>
         </div>
 
-        <div className="rounded-2xl border border-[#1e2c40] bg-[#0f172a]/90 backdrop-blur-sm p-5 shadow-xl overflow-hidden">
+        <div className="group rounded-2xl border border-[#182035] bg-[#0c1220]/80 backdrop-blur-md p-5 shadow-xl transition-all duration-300 hover:border-emerald-500/40 hover:-translate-y-1 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(16,185,129,0.12)]">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[11px] font-bold tracking-wider uppercase truncate">Detected Storage</span>
-            <HardDrive className="h-4 w-4 text-cyan-400 shrink-0" />
+            <span className="text-[10.5px] font-extrabold tracking-wider uppercase font-mono text-emerald-400">Safe Targets</span>
+            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
           </div>
-          <div className="text-2xl font-black text-white font-mono truncate">{devices.length}</div>
-          <p className="text-[11px] text-slate-400 mt-1 truncate">Total Capacity: {formatBytes(totalCapacity)}</p>
+          <div className="text-3xl font-black text-emerald-400 font-mono mt-1">{safeDevices.length}</div>
+          <p className="text-[11px] text-slate-400 mt-2">Cleared for Forensics &amp; Erase</p>
         </div>
 
-        <div className="rounded-2xl border border-[#1e2c40] bg-[#0f172a]/90 backdrop-blur-sm p-5 shadow-xl overflow-hidden">
+        <div className="group rounded-2xl border border-[#182035] bg-[#0c1220]/80 backdrop-blur-md p-5 shadow-xl transition-all duration-300 hover:border-amber-500/40 hover:-translate-y-1 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(245,158,11,0.12)]">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[11px] font-bold tracking-wider uppercase truncate">Safe Targets</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+            <span className="text-[10.5px] font-extrabold tracking-wider uppercase font-mono text-amber-400">OS Protection</span>
+            <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+              <Shield className="h-4 w-4" />
+            </div>
           </div>
-          <div className="text-2xl font-black text-emerald-400 font-mono truncate">{safeDevices.length}</div>
-          <p className="text-[11px] text-slate-400 mt-1 truncate">Cleared for Forensics & Erase</p>
+          <div className="text-3xl font-black text-amber-400 font-mono mt-1">ACTIVE</div>
+          <p className="text-[11px] text-slate-400 mt-2">System drive (C:) write-locked</p>
         </div>
 
-        <div className="rounded-2xl border border-[#1e2c40] bg-[#0f172a]/90 backdrop-blur-sm p-5 shadow-xl overflow-hidden">
+        <div className="group rounded-2xl border border-[#182035] bg-[#0c1220]/80 backdrop-blur-md p-5 shadow-xl transition-all duration-300 hover:border-rose-500/40 hover:-translate-y-1 hover:shadow-[0_12px_30px_rgba(0,0,0,0.5),0_0_20px_rgba(244,63,94,0.12)]">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[11px] font-bold tracking-wider uppercase truncate">OS Protection</span>
-            <Shield className="h-4 w-4 text-amber-400 shrink-0" />
+            <span className="text-[10.5px] font-extrabold tracking-wider uppercase font-mono text-rose-400">Sanitization Audit</span>
+            <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
+              <ShieldAlert className="h-4 w-4" />
+            </div>
           </div>
-          <div className="text-2xl font-black text-amber-400 font-mono truncate">ACTIVE</div>
-          <p className="text-[11px] text-slate-400 mt-1 truncate">System drive (C:) write-locked</p>
-        </div>
-
-        <div className="rounded-2xl border border-[#1e2c40] bg-[#0f172a]/90 backdrop-blur-sm p-5 shadow-xl overflow-hidden">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[11px] font-bold tracking-wider uppercase truncate">Sanitization Audit</span>
-            <ShieldAlert className="h-4 w-4 text-rose-400 shrink-0" />
-          </div>
-          <div className="text-2xl font-black text-white font-mono truncate">{historyJobs.length}</div>
-          <p className="text-[11px] text-slate-400 mt-1 truncate">Certificates on file</p>
+          <div className="text-3xl font-black text-white font-mono mt-1">{historyJobs.length}</div>
+          <p className="text-[11px] text-slate-400 mt-2 font-mono">Certificates on file</p>
         </div>
       </div>
 
@@ -251,12 +251,12 @@ export function Dashboard() {
               return (
                 <div 
                   key={dev.id}
-                  className={`rounded-2xl border bg-[#0f172a]/90 backdrop-blur-sm p-6 shadow-xl flex flex-col justify-between transition-all duration-200 overflow-hidden ${
+                  className={`group rounded-2xl border bg-[#0c1220]/80 backdrop-blur-md p-6 shadow-xl flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_35px_rgba(0,0,0,0.6)] overflow-hidden ${
                     isSystem 
-                      ? "border-rose-500/30 bg-gradient-to-b from-[#0f172a] to-rose-950/10" 
+                      ? "border-rose-500/30 bg-gradient-to-b from-[#0c1220] to-rose-950/15 hover:border-rose-500/50" 
                       : isMobile 
-                      ? "border-purple-500/30 bg-gradient-to-b from-[#0f172a] to-purple-950/10"
-                      : "border-[#1e2c40] hover:border-cyan-500/40"
+                      ? "border-purple-500/30 bg-gradient-to-b from-[#0c1220] to-purple-950/15 hover:border-purple-500/50" 
+                      : "border-[#182035] hover:border-cyan-500/40 hover:shadow-[0_0_25px_rgba(6,182,212,0.15)]"
                   }`}
                 >
                   <div>

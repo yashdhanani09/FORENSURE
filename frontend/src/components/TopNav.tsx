@@ -50,7 +50,7 @@ export function TopNav() {
 
   // Animate the sliding active indicator under nav items
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const updateIndicator = () => {
       const el = activeNavRef.current;
       const container = navRef.current;
       if (el && container) {
@@ -61,8 +61,14 @@ export function TopNav() {
           width: rect.width,
         });
       }
-    }, 50);
-    return () => clearTimeout(timer);
+    };
+
+    const timer = setTimeout(updateIndicator, 50);
+    window.addEventListener("resize", updateIndicator);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateIndicator);
+    };
   }, [location.pathname]);
 
   const handleRecheck = async () => {

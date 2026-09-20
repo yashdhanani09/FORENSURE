@@ -199,7 +199,7 @@ export function Sanitization() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 page-enter">
+    <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-8 page-enter">
       {/* Header Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-subtle pb-6">
         <div>

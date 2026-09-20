@@ -347,9 +347,9 @@ export function Recovery() {
                          (selectedDevice?.partitions?.some(p => p.filesystem === "MTP") ?? false);
 
   return (
-    <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 select-none page-enter">
+    <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-8 select-none page-enter">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#1e2c40] pb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#182035] pb-6">
         <div>
           <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.2em] text-cyan-400 uppercase mb-1">
             <RotateCcw className="h-4 w-4" /> FORENSIC RECOVERY ENGINE

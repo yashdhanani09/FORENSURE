@@ -54,7 +54,7 @@ export function Devices() {
         onRefresh={() => void refresh(true)} 
       />
 
-      <div className="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto select-none page-enter">
+      <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-6 select-none page-enter">
         {/* Filter bar & Search */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2">

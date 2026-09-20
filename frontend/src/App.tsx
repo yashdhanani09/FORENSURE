@@ -19,11 +19,14 @@ export default function App() {
     return <LandingPortal />;
   }
 
-  // Active Workspace — top nav + scrollable content
+  // Active Workspace — top nav + scrollable content with ambient spatial lighting
   return (
-    <div className="flex flex-col h-screen bg-[#070b14] text-slate-100 overflow-hidden font-sans">
+    <div className="relative flex flex-col h-screen bg-[#070b14] text-slate-100 overflow-hidden font-sans">
+      {/* ── 3D Cybernetic Ambient Spatial Lighting ── */}
+      <div className="fixed inset-0 pointer-events-none z-0 bg-[radial-gradient(ellipse_75%_50%_at_50%_-10%,rgba(6,182,212,0.08),transparent_70%)]" />
+      
       <TopNav />
-      <main className="flex-1 overflow-y-auto bg-[#070b14]">
+      <main className="relative z-10 flex-1 overflow-y-auto bg-transparent">
         <Routes>
           <Route path="/dashboard"            element={<Dashboard />} />
           <Route path="/devices"              element={<Devices />} />
