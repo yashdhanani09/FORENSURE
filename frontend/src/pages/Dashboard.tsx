@@ -117,10 +117,10 @@ export function Dashboard() {
       )}
 
       {/* ── Top Command Bar & Component View Controls (Matching Reference Image) ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-2 border-b border-[#182035]/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-2 border-b border-border-subtle">
         <div className="flex items-center gap-3.5">
-          <div className="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-ping" />
-          <span className="text-sm sm:text-base font-mono font-extrabold tracking-[0.25em] text-cyan-300 uppercase">
+          <div className="h-2.5 w-2.5 rounded-full bg-brand animate-ping" />
+          <span className="text-sm sm:text-base font-mono font-extrabold tracking-[0.25em] text-brand uppercase">
             FORENSURE COMMAND CENTER // TELEMETRY WORKSTATION
           </span>
         </div>
@@ -130,18 +130,18 @@ export function Dashboard() {
           <button
             onClick={loadData}
             title="Refresh Telemetry"
-            className="p-2.5 rounded-xl bg-[#0c1220] border border-[#182035] hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300 transition shadow-sm"
+            className="p-2.5 rounded-xl bg-surface border border-border-subtle hover:border-brand text-text-secondary hover:text-brand transition shadow-sm"
           >
-            <RefreshCw className={`h-4.5 w-4.5 ${loading ? "animate-spin text-cyan-400" : ""}`} />
+            <RefreshCw className={`h-4.5 w-4.5 ${loading ? "animate-spin text-brand" : ""}`} />
           </button>
 
-          <div className="flex items-center gap-1.5 bg-[#0c1220] border border-[#182035] rounded-xl p-1.5 shadow-sm text-sm font-mono">
+          <div className="flex items-center gap-1.5 bg-surface border border-border-subtle rounded-xl p-1.5 shadow-sm text-sm font-mono">
             <button
               onClick={() => setComponentFilter("All")}
               className={`p-2 rounded-lg transition ${
                 componentFilter === "All"
-                  ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-glow"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-brand/20 text-brand border border-brand/40 shadow-glow"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
               title="Grid View"
             >
@@ -151,8 +151,8 @@ export function Dashboard() {
               onClick={() => setComponentFilter("Storage")}
               className={`p-2 rounded-lg transition ${
                 componentFilter === "Storage"
-                  ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-glow"
-                  : "text-slate-400 hover:text-white"
+                  ? "bg-brand/20 text-brand border border-brand/40 shadow-glow"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
               title="Storage Filter"
             >
@@ -164,14 +164,14 @@ export function Dashboard() {
             <select
               value={componentFilter}
               onChange={(e) => setComponentFilter(e.target.value)}
-              className="bg-[#0c1220] border border-[#182035] text-slate-200 hover:text-white rounded-xl px-4 py-2 text-sm font-mono font-bold outline-none focus:border-cyan-500/50 transition cursor-pointer appearance-none pr-9 shadow-sm"
+              className="bg-surface border border-border-subtle text-text-primary rounded-xl px-4 py-2 text-sm font-mono font-bold outline-none focus:border-brand transition cursor-pointer appearance-none pr-9 shadow-sm"
             >
               <option value="All">Component: All</option>
               <option value="Telemetry">Component: Telemetry</option>
               <option value="Storage">Component: Storage</option>
               <option value="Forensics">Component: Forensics</option>
             </select>
-            <ChevronDown className="h-4 w-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="h-4 w-4 text-text-secondary absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
       </div>
@@ -180,7 +180,7 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
 
         {/* ── Card 1: Control Info (Top-Left) ── */}
-        <div className="group rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
+        <div className="group rounded-3xl border border-border-subtle bg-surface-card backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400 mb-5">
               <h3 className="text-lg lg:text-xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
@@ -241,7 +241,7 @@ export function Dashboard() {
         </div>
 
         {/* ── Card 2: Storage Data (Top Center-Left) — Radial Gauge ── */}
-        <div className="group rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
+        <div className="group rounded-3xl border border-border-subtle bg-surface-card backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400 mb-3">
               <h3 className="text-lg lg:text-xl font-extrabold text-white tracking-tight">
@@ -323,7 +323,7 @@ export function Dashboard() {
         </div>
 
         {/* ── Card 3: Forensics Hub (Top Center-Right) — Quick Links ── */}
-        <div className="group rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
+        <div className="group rounded-3xl border border-border-subtle bg-surface-card backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400 mb-5">
               <h3 className="text-lg lg:text-xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
@@ -368,7 +368,7 @@ export function Dashboard() {
         </div>
 
         {/* ── Card 4: Data Sanitization (Top Right) — Audit Activity Bars ── */}
-        <div className="group rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-rose-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(244,63,94,0.15)] flex flex-col justify-between">
+        <div className="group rounded-3xl border border-border-subtle bg-surface-card backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-rose-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(244,63,94,0.15)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400 mb-4">
               <h3 className="text-lg lg:text-xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
@@ -421,7 +421,7 @@ export function Dashboard() {
         </div>
 
         {/* ── Card 5: Tools & Arsenal (Bottom-Left) ── */}
-        <div className="group rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
+        <div className="group rounded-3xl border border-border-subtle bg-surface-card backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400 mb-4">
               <h3 className="text-lg lg:text-xl font-extrabold text-white tracking-tight">Tools</h3>
@@ -479,7 +479,7 @@ export function Dashboard() {
         </div>
 
         {/* ── Card 6: Storage Inventory (Bottom Center-Left) — Live Fleet ── */}
-        <div className="group rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
+        <div className="group rounded-3xl border border-border-subtle bg-surface-card backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400 mb-4">
               <h3 className="text-lg lg:text-xl font-extrabold text-white tracking-tight">
@@ -537,7 +537,7 @@ export function Dashboard() {
         </div>
 
         {/* ── Card 7: Data Sanitization Engine (Bottom Center-Right) ── */}
-        <div className="group rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-rose-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(244,63,94,0.15)] flex flex-col justify-between">
+        <div className="group rounded-3xl border border-border-subtle bg-surface-card backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-rose-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(244,63,94,0.15)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400 mb-4">
               <h3 className="text-lg lg:text-xl font-extrabold text-white tracking-tight">
@@ -577,7 +577,7 @@ export function Dashboard() {
         </div>
 
         {/* ── Card 8: File Recovery Hub (Bottom-Right) — matching screenshot menu ── */}
-        <div className="relative group rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
+        <div className="relative group rounded-3xl border border-border-subtle bg-surface-card backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-400 mb-4">
               <h3 className="text-lg lg:text-xl font-extrabold text-white tracking-tight">

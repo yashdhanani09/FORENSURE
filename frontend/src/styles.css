@@ -56,24 +56,25 @@
 
   /* ─── Light Theme Option ─── */
   .light {
+    color-scheme: light;
     --color-canvas: #F6F8FA;           /* Crisp light background */
     --color-surface: #FFFFFF;          /* Pure white card surface */
     --color-surface-card: #FFFFFF;
     --color-surface-elevated: #F0F2F5; /* Subtle elevated gray */
     --color-border-subtle: #D0D7DE;    /* Muted steel light border */
     --color-border-strong: #AFB8C1;
-    --color-text-primary: #1F2328;     /* High contrast dark text */
-    --color-text-secondary: #656D76;   /* Muted secondary gray */
-    --color-brand: #2F81F7;            /* Cyber blue */
-    --color-brand-glow: rgba(47, 129, 247, 0.15);
+    --color-text-primary: #1F2328;     /* High contrast dark text (14.5:1 ratio) */
+    --color-text-secondary: #57606A;   /* Muted secondary gray (7:1 ratio) */
+    --color-brand: #0969DA;            /* Cyber blue (tuned for light background contrast) */
+    --color-brand-glow: rgba(9, 105, 218, 0.15);
 
-    /* Mode-Specific Forensic Colors */
-    --color-recovery: #10B981;
-    --color-recovery-teal: #14B8A6;
-    --color-sanitize: #EF4444;
-    --color-sanitize-dialog: #2A1215;  /* Deep red background tint retained for wipe confirmation */
+    /* Mode-Specific Forensic Colors for Light Mode */
+    --color-recovery: #1A7F37;         /* Deep readable green */
+    --color-recovery-teal: #0969DA;    /* Deep readable blue */
+    --color-sanitize: #CF222E;         /* Deep readable red */
+    --color-sanitize-dialog: #FFEBE9;  /* Soft light red background tint for wipe confirmation */
 
-    /* Status Tokens */
+    /* Status Tokens (High Contrast) */
     --color-status-success: #1A7F37;
     --color-status-warning: #9A6700;
     --color-status-error: #CF222E;
@@ -91,17 +92,103 @@
     --card-foreground: 214 13% 14%;
     --border: 213 14% 84%;
     --input: 213 14% 84%;
-    --primary: 215 93% 57%;
+    --primary: 215 93% 45%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 14% 95%;
     --secondary-foreground: 214 13% 14%;
     --accent: 210 14% 95%;
     --accent-foreground: 214 13% 14%;
-    --destructive: 0 84% 60%;
+    --destructive: 0 75% 45%;
     --destructive-foreground: 0 0% 100%;
     --success: 137 66% 30%;
     --success-foreground: 0 0% 100%;
-    --ring: 215 93% 57%;
+    --ring: 215 93% 45%;
+  }
+
+  /* ─── Light Mode Automated Contrast & Visibility Safeguards ─── */
+  .light [class*="bg-[#0c1220]"],
+  .light [class*="bg-[#090e1a]"],
+  .light [class*="bg-[#070b14]"],
+  .light [class*="bg-[#0d1424]"],
+  .light [class*="bg-[#090d16]"],
+  .light [class*="bg-[#0a0f1c]"],
+  .light [class*="bg-[#0f172a]"],
+  .light [class*="bg-[#0b0f19]"],
+  .light [class*="bg-[#060a12]"] {
+    background-color: var(--color-surface-card) !important;
+    border-color: var(--color-border-subtle) !important;
+  }
+
+  .light [class*="border-[#182035]"],
+  .light [class*="border-[#1e2c40]"] {
+    border-color: var(--color-border-subtle) !important;
+  }
+
+  /* Text color readability overrides in light mode */
+  .light h1, .light h2, .light h3, .light h4, .light h5, .light h6 {
+    color: var(--color-text-primary);
+  }
+
+  .light .text-slate-100,
+  .light .text-slate-200,
+  .light .text-slate-300 {
+    color: var(--color-text-primary) !important;
+  }
+
+  .light .text-slate-400 {
+    color: var(--color-text-secondary) !important;
+  }
+
+  .light .text-slate-500 {
+    color: #6E7781 !important;
+  }
+
+  /* High contrast status pills in light mode */
+  .light .text-emerald-300,
+  .light .text-emerald-400 {
+    color: #1A7F37 !important;
+  }
+
+  .light .text-cyan-300,
+  .light .text-cyan-400 {
+    color: #0969DA !important;
+  }
+
+  .light .text-purple-300,
+  .light .text-purple-400 {
+    color: #8250DF !important;
+  }
+
+  .light .text-rose-300,
+  .light .text-rose-400 {
+    color: #CF222E !important;
+  }
+
+  .light .text-amber-300,
+  .light .text-amber-400 {
+    color: #9A6700 !important;
+  }
+
+  /* Ensure text on filled colored buttons and badges stays crisp white */
+  .light button[class*="bg-gradient"],
+  .light button[class*="bg-brand"],
+  .light button[class*="bg-blue-600"],
+  .light button[class*="bg-rose-600"],
+  .light button[class*="bg-emerald-600"],
+  .light [class*="bg-brand"] .text-white,
+  .light [class*="bg-gradient-to-r"] .text-white,
+  .light [class*="bg-blue-600"] .text-white,
+  .light [class*="bg-rose-600"] .text-white,
+  .light [class*="bg-emerald-600"] .text-white,
+  .light [class*="from-[#2F81F7]"] .text-white,
+  .light [class*="from-rose-600"] .text-white,
+  .light [class*="from-emerald-600"] .text-white {
+    color: #FFFFFF !important;
+  }
+
+  /* Soft shadows in light mode instead of harsh black halos */
+  .light .shadow-2xl {
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.04) !important;
   }
 
   body {
