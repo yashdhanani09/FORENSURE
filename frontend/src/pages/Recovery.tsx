@@ -347,7 +347,7 @@ export function Recovery() {
                          (selectedDevice?.partitions?.some(p => p.filesystem === "MTP") ?? false);
 
   return (
-    <div className="w-full max-w-[1850px] mx-auto px-6 sm:px-10 lg:px-14 xl:px-16 py-8 space-y-8 select-none page-enter">
+    <div className="w-full max-w-[1850px] mx-auto px-6 sm:px-10 lg:px-14 xl:px-16 py-8 space-y-10 lg:space-y-12 pb-20 select-none page-enter">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5 border-b border-[#182035] pb-6">
         <div>
@@ -445,136 +445,177 @@ export function Recovery() {
         </div>
       )}
 
-      {/* Privileges Active Badge when is_admin is true */}
-      {privileges && privileges.is_admin && (
-        <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 px-6 flex items-center justify-between backdrop-blur-sm shadow-md">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+      {/* ── SECTION 01: Forensic Target & Execution Command Center ── */}
+      <div className="bg-[#0b101e]/90 border border-[#1e2c40] rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl space-y-8 backdrop-blur-md">
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pb-6 border-b border-[#182338]">
+          <div className="flex items-center gap-3.5">
+            <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono text-sm font-black">
+              01
+            </span>
             <div>
-              <span className="text-sm font-bold text-emerald-300">
-                Kernel Administrator Access Active
-              </span>
-              <span className="text-xs text-slate-300 ml-2 hidden sm:inline">
-                — Direct physical sector carving and NTFS MFT deep scanning enabled on all drives.
-              </span>
-            </div>
-          </div>
-          <span className="text-xs font-mono font-bold px-3 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-            ELEVATED KERNEL ACCESS
-          </span>
-        </div>
-      )}
-
-      {/* SSD / NVMe TRIM Advisory Notice */}
-      {deviceProfile && (deviceProfile.category === "SSD / NVMe" || (deviceProfile.trim_status && deviceProfile.trim_status.includes("ACTIVE"))) && (
-        <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-4 px-6 flex items-start gap-3 backdrop-blur-sm shadow-md">
-          <HardDrive className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-          <div className="text-xs text-slate-300 leading-relaxed font-sans">
-            <strong className="text-cyan-300 font-bold block text-sm mb-0.5">NVMe / Solid-State Drive Architecture Detected:</strong>
-            Under Windows NTFS on SSDs, unallocated sectors for permanently deleted files are zeroed by hardware TRIM (DZAT). Small files residing inside MFT records ($DATA resident &le; 700 bytes) and Recycle Bin items remain 100% intact and restorable. If unallocated clusters return zeroed bytes, FORENSURE will honestly flag them as TRIM deallocated instead of outputting corrupted files.
-          </div>
-        </div>
-      )}
-
-      {/* Control Panel: Device Selector & Unified Single Scan */}
-      <div className="bg-[#0f172a]/90 border border-[#1e2c40] rounded-2xl p-6 shadow-xl space-y-6 backdrop-blur-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
-          {/* Target Drive Selector */}
-          <div className="lg:col-span-6 space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-              <HardDrive className="w-4 h-4 text-cyan-400" /> Target Storage Source
-            </label>
-            {showAdvancedImage ? (
-              <input
-                type="text"
-                value={imagePath}
-                onChange={(e) => setImagePath(e.target.value)}
-                placeholder="e.g. C:\cases\disk.raw or D:\image.dd"
-                className="w-full bg-[#090d16] border border-[#22334a] rounded-xl px-4 py-3 text-slate-100 text-sm focus:border-cyan-500 outline-none font-mono placeholder:text-slate-600"
-              />
-            ) : (
-              <select
-                value={selectedDeviceId}
-                onChange={(e) => setSelectedDeviceId(e.target.value)}
-                className="w-full bg-[#090d16] border border-[#22334a] rounded-xl px-4 py-3 text-slate-100 text-sm focus:border-cyan-500 outline-none font-sans font-medium"
-              >
-                <option value="all">
-                  💻 Entire Machine &amp; All Volumes (C:\, D:\, All Recycle Bins)
-                </option>
-                {devices.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.device_type === "MOBILE_DEVICE" ? "📱 " : "💾 "}{d.vendor || "Storage"} {d.model || d.device_path} ({formatBytes(d.capacity_bytes || d.size_bytes || 0)}) {d.system_disk ? "— [SYSTEM OS]" : ""}{d.device_type === "MOBILE_DEVICE" ? " — [MTP PHONE]" : ""}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Scanning Mode Switcher & Integrated Subsystems */}
-          <div className="lg:col-span-3 space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-cyan-400" /> Engine Architecture
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowAdvancedImage(!showAdvancedImage)}
-                className="text-xs text-cyan-400 hover:text-cyan-300 underline font-mono"
-              >
-                {showAdvancedImage ? "← Drive Mode" : "Disk Image (.dd)"}
-              </button>
-            </label>
-            <div className="bg-[#090d16] border border-[#22334a] rounded-xl p-3 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2 text-emerald-400 font-semibold">
-                <CheckCircle2 className="w-4 h-4 shrink-0" /> NTFS MFT Engine
-              </div>
-              <span className="text-xs font-mono text-cyan-300 font-bold px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30">
-                ACTIVE
-              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+                <HardDrive className="w-5 h-5 text-cyan-400" />
+                Forensic Acquisition &amp; Scan Command Center
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 mt-0.5 font-medium">
+                Select physical drive, volume, or forensic image file (.dd / .raw) for sector-level analysis
+              </p>
             </div>
           </div>
 
-          {/* Action Trigger */}
-          <div className="lg:col-span-3">
-            <Button
-              onClick={handleStartScan}
-              disabled={scanning || (!showAdvancedImage && !selectedDeviceId)}
-              loading={scanning}
-              variant="primary"
-              className="w-full h-12 text-sm font-bold tracking-wide shadow-lg shadow-cyan-950/50 rounded-xl"
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedImage(!showAdvancedImage)}
+              className="text-xs text-cyan-400 hover:text-cyan-300 font-mono underline decoration-cyan-500/40 hover:decoration-cyan-400 transition"
             >
-              <Search className="w-4 h-4 mr-2" /> {scanning ? "Analyzing Sectors..." : isMobileTarget ? "Scan Phone Storage" : "Run Forensic Scan"}
-            </Button>
+              {showAdvancedImage ? "← Standard Physical Drive Mode" : "Switch to Raw Image (.dd / .raw)"}
+            </button>
           </div>
         </div>
 
-        {/* Supported Formats Banner */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#1e2c40]/80 text-xs">
-          <div className="flex flex-wrap items-center gap-2 text-slate-400">
-            <span className="font-bold text-slate-200">Supported Formats:</span>
-            {["TXT", "JSON", "MD", "JPG", "PNG", "GIF", "BMP", "PDF", "DOCX", "XLSX", "PPTX", "ZIP", "MP4"].map((fmt) => (
-              <span key={fmt} className="px-2.5 py-1 rounded-lg bg-cyan-950/40 text-cyan-300 border border-cyan-800/40 font-mono text-xs font-bold">
-                {fmt}
+        {/* 2-Column Workstation Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+          {/* LEFT: Target Drive Selection & Metadata (7 cols) */}
+          <div className="lg:col-span-7 space-y-5">
+            <div className="space-y-2.5">
+              <label className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <HardDrive className="w-4 h-4 text-cyan-400" /> Target Storage Source
+                </span>
+                <span className="text-[11px] font-mono text-slate-500">
+                  {devices.length} Devices Discovered
+                </span>
+              </label>
+
+              {showAdvancedImage ? (
+                <input
+                  type="text"
+                  value={imagePath}
+                  onChange={(e) => setImagePath(e.target.value)}
+                  placeholder="e.g. C:\cases\disk.raw or D:\image.dd"
+                  className="w-full bg-[#070b14] border border-[#22334a] focus:border-cyan-500 rounded-2xl px-5 py-4 text-slate-100 text-sm sm:text-base outline-none font-mono placeholder:text-slate-600 transition shadow-inner"
+                />
+              ) : (
+                <select
+                  value={selectedDeviceId}
+                  onChange={(e) => setSelectedDeviceId(e.target.value)}
+                  className="w-full bg-[#070b14] border border-[#22334a] focus:border-cyan-500 rounded-2xl px-5 py-4 text-slate-100 text-sm sm:text-base outline-none font-medium cursor-pointer transition shadow-inner"
+                >
+                  <option value="all">
+                    💻 Entire Machine &amp; All Volumes (C:\, D:\, All Recycle Bins)
+                  </option>
+                  {devices.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.device_type === "MOBILE_DEVICE" ? "📱 " : "💾 "}{d.vendor || "Storage"} {d.model || d.device_path} ({formatBytes(d.capacity_bytes || d.size_bytes || 0)}) {d.system_disk ? "— [SYSTEM OS]" : ""}{d.device_type === "MOBILE_DEVICE" ? " — [MTP PHONE]" : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Target Storage Properties Bar */}
+            {selectedDevice && scanType !== "forensic_image" && (
+              <div className="p-4 rounded-2xl bg-[#070b14]/90 border border-[#1e2c40] flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-mono text-slate-300">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500 font-sans">Path:</span>
+                  <span className="text-slate-100 font-bold">{selectedDevice.device_path}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500 font-sans">Type:</span>
+                  <span className="text-cyan-400 font-bold">{selectedDevice.device_type || "STORAGE"}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500 font-sans">Mount:</span>
+                  <span className="text-slate-100 font-bold">{selectedDevice.mount_point || "Physical"}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500 font-sans">Status:</span>
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Read-Only Write-Blocked
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* SSD / NVMe TRIM Contextual Callout */}
+            {deviceProfile && (deviceProfile.category === "SSD / NVMe" || (deviceProfile.trim_status && deviceProfile.trim_status.includes("ACTIVE"))) && (
+              <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-4 flex items-start gap-3 backdrop-blur-sm">
+                <HardDrive className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-slate-300 leading-relaxed font-sans">
+                  <strong className="text-cyan-300 font-bold block mb-0.5">NVMe / Solid-State Drive Architecture Detected:</strong>
+                  Under Windows NTFS on SSDs, unallocated sectors are zeroed by hardware TRIM (DZAT). Small files residing inside MFT records ($DATA resident &le; 700 bytes) and Recycle Bin items remain 100% intact and restorable. Zeroed clusters are honestly flagged as TRIM deallocated.
+                </div>
+              </div>
+            )}
+
+            {/* Supported Formats Banner */}
+            <div className="pt-2 space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
+                Deep Signature Carving &amp; Parsers:
               </span>
-            ))}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {["TXT", "JSON", "MD", "JPG", "PNG", "GIF", "BMP", "PDF", "DOCX", "XLSX", "PPTX", "ZIP", "MP4"].map((fmt) => (
+                  <span key={fmt} className="px-3 py-1 rounded-xl bg-cyan-950/40 text-cyan-300 border border-cyan-800/40 font-mono text-xs font-bold">
+                    {fmt}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
-          <span className="text-slate-400 font-sans text-xs">
-            NTFS Master File Table • Resident Payloads • Non-Resident Runs • Bit-Exact Restoration
-          </span>
-        </div>
 
-        {selectedDevice && scanType !== "forensic_image" && (
-          <div className="pt-3 border-t border-[#1e2c40]/40 flex flex-wrap items-center gap-6 text-xs text-slate-300 font-mono">
-            <div><span className="text-slate-500 font-sans">Path:</span> <span className="text-slate-200 font-bold">{selectedDevice.device_path}</span></div>
-            <div><span className="text-slate-500 font-sans">Type:</span> <span className="text-cyan-400 font-bold">{selectedDevice.device_type || "STORAGE"}</span></div>
-            <div><span className="text-slate-500 font-sans">Mount:</span> <span className="text-slate-200 font-bold">{selectedDevice.mount_point || "Unmounted"}</span></div>
-            <div><span className="text-slate-500 font-sans">Status:</span> <span className="text-emerald-400 font-bold">Active &amp; Scannable</span></div>
+          {/* RIGHT: Engine Subsystem & Big Run Button (5 cols) */}
+          <div className="lg:col-span-5 space-y-5 flex flex-col justify-between h-full">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-cyan-400" /> Forensic Engine Subsystems
+                  </span>
+                  <span className="text-xs font-mono text-emerald-400 font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+                    ONLINE
+                  </span>
+                </label>
+                <div className="bg-[#070b14] border border-[#22334a] rounded-2xl p-4 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-white font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>NTFS Master File Table ($MFT) Deep Engine</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-cyan-300 font-bold px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30">
+                      ACTIVE
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs leading-relaxed font-sans">
+                    Parses Record 0 extents, $DATA resident attributes, non-resident cluster runs, and SHA-256 bitstream validation.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Trigger */}
+              <div className="space-y-2 pt-1">
+                <Button
+                  onClick={handleStartScan}
+                  disabled={scanning || (!showAdvancedImage && !selectedDeviceId)}
+                  loading={scanning}
+                  variant="primary"
+                  className="w-full h-16 text-base sm:text-lg font-black tracking-wide shadow-xl shadow-cyan-950/60 rounded-2xl flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
+                >
+                  <Search className="w-5 h-5" />
+                  <span>{scanning ? "Analyzing Disk Sectors..." : isMobileTarget ? "Scan Phone Storage" : "Run Forensic Scan"}</span>
+                </Button>
+                <p className="text-[11px] text-center text-slate-400 font-sans">
+                  Non-destructive • ISO/IEC 27037 Write-Blocked • Zero Disk Alterations
+                </p>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
 
         {/* Mobile Device Forensic Advisory Banner */}
         {isMobileTarget && (
-          <div className="bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-purple-950/20 border border-cyan-500/40 rounded-xl p-4 text-xs space-y-3">
+          <div className="bg-gradient-to-r from-cyan-950/40 via-blue-950/30 to-purple-950/20 border border-cyan-500/40 rounded-2xl p-5 text-xs space-y-3 mt-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-cyan-300 font-bold tracking-wide uppercase text-xs">
                 <Smartphone className="w-4 h-4 text-cyan-400" />
@@ -586,16 +627,16 @@ export function Recovery() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300 text-xs leading-relaxed pt-1">
-              <div className="bg-black/30 p-3 rounded-lg border border-white/5 space-y-1">
+              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
                 <div className="font-semibold text-white flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> USB & Screen Requirements
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" /> USB &amp; Screen Requirements
                 </div>
                 <p className="text-slate-400 text-xs">
                   Keep the phone screen <strong className="text-slate-200">unlocked</strong> during scanning, and verify USB mode is set to <strong className="text-slate-200">"File Transfer / MTP"</strong> (not "Charging only").
                 </p>
               </div>
 
-              <div className="bg-black/30 p-3 rounded-lg border border-white/5 space-y-1">
+              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
                 <div className="font-semibold text-white flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-cyan-400" /> Active Recovery Scope
                 </div>
@@ -604,9 +645,9 @@ export function Recovery() {
                 </p>
               </div>
 
-              <div className="bg-black/30 p-3 rounded-lg border border-white/5 space-y-1">
+              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
                 <div className="font-semibold text-white flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" /> Deep Erasure & MicroSD Carving
+                  <AlertTriangle className="w-4 h-4 text-amber-400" /> Deep Erasure &amp; MicroSD Carving
                 </div>
                 <p className="text-slate-400 text-xs">
                   Android internal storage enforces File-Based Encryption (FBE). If files were lost on an external <strong className="text-slate-200">MicroSD Card</strong>, plug the SD card directly into a PC card reader for 100% raw sector bitstream carving.
@@ -617,29 +658,30 @@ export function Recovery() {
         )}
       </div>
 
-      {/* Universal Forensic Pipeline (ISO/IEC 27037 Standard Architecture) */}
-      <div className="bg-[#0b101e]/90 border border-cyan-500/30 rounded-2xl p-5 shadow-xl space-y-4 backdrop-blur-sm">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-          <div className="flex items-center gap-2.5">
-            <span className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-              <Layers className="w-5 h-5" />
+      {/* ── SECTION 02: Universal Forensic Pipeline (ISO/IEC 27037 Standard Architecture) ── */}
+      <div className="bg-[#0b101e]/90 border border-cyan-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 backdrop-blur-md">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 pb-5 border-b border-[#182338]">
+          <div className="flex items-center gap-3.5">
+            <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono text-sm font-black">
+              02
             </span>
             <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+                <Layers className="w-5 h-5 text-cyan-400" />
                 Universal Forensic Data Pipeline (ISO/IEC 27037 Standard)
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs sm:text-sm text-slate-400 mt-0.5 font-medium">
                 Non-destructive write-blocking, Master File Table sector parsing, and dual-track cryptographic recovery
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-2 text-xs font-mono">
-            <span className="px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 font-bold">
+            <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 font-bold">
               <ShieldCheck className="w-4 h-4" /> READ-ONLY WRITE-BLOCKED
             </span>
             {deviceProfile?.category && (
-              <span className="px-3 py-1.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-bold">
+              <span className="px-3.5 py-1.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-bold">
                 {deviceProfile.category}
               </span>
             )}
@@ -647,7 +689,7 @@ export function Recovery() {
         </div>
 
         {/* 4 Responsive Architectural Stages */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             {
               id: "01",
@@ -686,23 +728,23 @@ export function Recovery() {
             return (
               <div
                 key={stage.id}
-                className={`p-3.5 rounded-xl border transition-all ${
+                className={`p-5 rounded-2xl border transition-all ${
                   stage.active
-                    ? "bg-[#0f172a] border-cyan-500/40 shadow-sm shadow-cyan-950/30"
+                    ? "bg-[#0f172a] border-cyan-500/50 shadow-md shadow-cyan-950/40 ring-1 ring-cyan-500/20"
                     : "bg-[#090d16]/70 border-[#1e2c40] opacity-60"
                 }`}
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono font-bold text-cyan-400">{stage.id}</span>
                     <Icon className="w-4 h-4 text-cyan-400" />
                   </div>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-bold">
+                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-bold">
                     {stage.tag}
                   </span>
                 </div>
-                <div className="text-sm font-bold text-white">{stage.name}</div>
-                <div className="text-xs text-slate-400 mt-0.5">{stage.desc}</div>
+                <div className="text-base font-bold text-white">{stage.name}</div>
+                <div className="text-xs text-slate-400 mt-1 leading-relaxed">{stage.desc}</div>
               </div>
             );
           })}
@@ -710,35 +752,35 @@ export function Recovery() {
 
         {/* Acquisition Bitstream Hash Live Card */}
         {acquisitionHash && (
-          <div className="bg-[#080d19] border border-cyan-500/30 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-3 min-w-0">
-              <KeyRound className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+          <div className="bg-[#070b14] border border-cyan-500/30 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <KeyRound className="w-6 h-6 text-cyan-400 flex-shrink-0" />
               <div className="min-w-0">
-                <div className="text-xs text-slate-400 font-mono uppercase tracking-wider font-semibold">
+                <div className="text-xs text-slate-400 font-mono uppercase tracking-wider font-bold">
                   Forensic Acquisition SHA-256 Bitstream Hash:
                 </div>
-                <div className="text-cyan-300 font-mono font-bold truncate text-xs mt-0.5" title={acquisitionHash}>
+                <div className="text-cyan-300 font-mono font-bold truncate text-sm mt-1" title={acquisitionHash}>
                   {acquisitionHash}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-3 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => copyHash(acquisitionHash)}
-                className="h-8 text-xs border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 px-3 font-semibold"
+                className="h-10 text-xs border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 px-4 font-bold rounded-xl"
               >
-                {copiedHash ? <Check className="w-3.5 h-3.5 text-emerald-400 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+                {copiedHash ? <Check className="w-4 h-4 text-emerald-400 mr-1.5" /> : <Copy className="w-4 h-4 mr-1.5" />}
                 {copiedHash ? "Copied" : "Copy Hash"}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleOpenReport}
-                className="h-8 text-xs px-3 font-semibold"
+                className="h-10 text-xs px-4 font-bold rounded-xl"
               >
-                <FileText className="w-3.5 h-3.5 text-cyan-400 mr-1" /> View Formal Report
+                <FileText className="w-4 h-4 text-cyan-400 mr-1.5" /> View Formal Report
               </Button>
             </div>
           </div>
@@ -822,21 +864,59 @@ export function Recovery() {
         </div>
       )}
 
-      {/* Main Table: Discovered Deleted Files */}
-      <div className="bg-[#0f172a]/90 border border-[#1e2c40] rounded-2xl p-6 shadow-xl space-y-5 backdrop-blur-sm">
+      {/* ── SECTION 03: Discovered Deleted Files ── */}
+      <div className="bg-[#0b101e]/90 border border-[#1e2c40] rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl space-y-8 backdrop-blur-md">
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-6 border-b border-[#182338]">
+          <div className="flex items-center gap-3.5">
+            <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono text-sm font-black">
+              03
+            </span>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                Discovered Evidence Files
+                <span className="px-3.5 py-1 text-xs font-mono font-bold rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                  {deletedFiles.length} Discovered
+                </span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 mt-0.5 font-medium">
+                Select files to restore with original names, NTFS timestamps, and bit-exact cluster reconstruction
+              </p>
+            </div>
+          </div>
+
+          {selectedFileIds.size > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-mono text-cyan-400 font-bold hidden sm:inline">
+                {selectedFileIds.size} files queued
+              </span>
+              <Button
+                onClick={() => handleRecoverFiles(Array.from(selectedFileIds))}
+                disabled={selectedFileIds.size === 0 || recovering}
+                loading={recovering}
+                variant="success"
+                size="default"
+                className="h-12 px-6 text-sm font-extrabold shadow-lg shadow-emerald-950/50 whitespace-nowrap rounded-2xl"
+              >
+                <Download className="w-4 h-4 mr-2" /> Restore Selected ({selectedFileIds.size})
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Filters & Batch Actions Toolbar */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5">
+          <div className="flex flex-wrap items-center gap-2.5">
             {["All", "Document", "Image", "Media", "Archive", "Code", "Other"].map((cat) => {
               const count = cat === "All" ? deletedFiles.length : (categoryCounts[cat] || 0);
               return (
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
-                  className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold inline-flex items-center gap-2 transition shadow-sm ${
+                  className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center gap-2.5 transition shadow-sm ${
                     categoryFilter === cat 
                       ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-glow" 
-                      : "border border-[#1e2c40] bg-[#090d16] text-slate-400 hover:text-white hover:border-[#2a3c54]"
+                      : "border border-[#1e2c40] bg-[#070b14] text-slate-400 hover:text-white hover:border-[#2a3c54]"
                   }`}
                 >
                   <span>{cat}</span>
@@ -852,15 +932,15 @@ export function Recovery() {
             })}
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="relative flex-1 md:w-72">
-              <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-500 pointer-events-none" />
+          <div className="flex items-center gap-3 w-full lg:w-auto">
+            <div className="relative flex-1 lg:w-80">
+              <Search className="w-4.5 h-4.5 absolute left-4 top-3.5 text-slate-500 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search file name or extension..."
-                className="w-full bg-[#090d16] border border-[#1e2c40] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500 transition"
+                placeholder="Search by file name or extension..."
+                className="w-full bg-[#070b14] border border-[#1e2c40] rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500 transition shadow-inner font-sans"
               />
             </div>
 
@@ -870,9 +950,9 @@ export function Recovery() {
               loading={recovering}
               variant="success"
               size="default"
-              className="h-11 px-5 text-sm font-bold shadow-md whitespace-nowrap rounded-xl"
+              className="h-12 px-6 text-sm font-extrabold shadow-lg shadow-emerald-950/50 whitespace-nowrap rounded-2xl"
             >
-              <Download className="w-4 h-4 mr-1.5" /> Restore Selected ({selectedFileIds.size})
+              <Download className="w-4 h-4 mr-2" /> Restore Selected ({selectedFileIds.size})
             </Button>
           </div>
         </div>
