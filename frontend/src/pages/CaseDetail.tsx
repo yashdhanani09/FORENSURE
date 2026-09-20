@@ -107,7 +107,16 @@ export function CaseDetail() {
     setLoadingReport(true);
     try {
       const rep = await forensicApi.generateReport(data.case.case_id);
-      alert(`Forensic PDF report generated.\nSHA-256 Hash: ${rep.pdf_hash}`);
+      if (rep.pdf_url && rep.pdf_url !== "#") {
+        const a = document.createElement("a");
+        a.href = rep.pdf_url;
+        a.download = `Forensic_Report_${data.case.case_id}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        alert(`Forensic PDF report generated.\nSHA-256 Hash: ${rep.pdf_hash}`);
+      }
     } catch (e: any) {
       alert(e.message || "Failed to generate report.");
     } finally {
@@ -155,17 +164,17 @@ export function CaseDetail() {
 
   return (
     <div className="w-full max-w-[1850px] mx-auto px-6 sm:px-10 lg:px-14 xl:px-16 py-8 space-y-8 select-none page-enter">
-      {/* Top Header */}
+      {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#182035] pb-6">
         <div>
           <button
-            onClick={() => navigate("/forensics")}
+            onClick={() => navigate('/forensics')}
             className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition mb-3"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Forensics Hub
           </button>
-          <div className="flex items-center gap-3.5">
-            <div className="p-3.5 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400 shrink-0">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="p-3.5 rounded-xl border shrink-0 bg-blue-500/10 border-blue-500/30 text-blue-400">
               <FileSearch className="h-8 w-8" />
             </div>
             <div>
@@ -184,7 +193,7 @@ export function CaseDetail() {
           <Button variant="outline" size="default" className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl" onClick={fetchCase}>
             <RefreshCw className="h-4 w-4 mr-1.5" /> Refresh Case
           </Button>
-          {c.status === "COMPLETED" && (
+          {(c.status === "COMPLETED" || c.status === "ANALYZED" || c.status === "IMAGED") && (
             <Button variant="primary" size="default" className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl" onClick={handleGenerateReport} loading={loadingReport}>
               <Download className="h-4 w-4 mr-1.5" /> Generate PDF Report
             </Button>

@@ -214,10 +214,10 @@ export function TopNav() {
             </div>
             <span className="truncate text-xs text-text-secondary">
               {demoMode
-                ? "Simulated forensic sandbox · carving, wiping, and evidence verification active"
+                ? "Simulated physical hardware sandbox · live sector carving, NIST sanitization, and evidence verification active"
                 : status.connected
                 ? "Physical bridge online · raw MFT sector scanning · MTP detection active · port 8000"
-                : "Bridge offline · connect FORENSURE-Bridge.exe as Administrator to enable hardware probing"}
+                : "Bridge offline · connect FORENSURE-Bridge.exe as Administrator or use Demo Mode to explore full capabilities"}
             </span>
             <span className="hidden 2xl:inline text-[11px] px-2 py-0.5 rounded-md bg-surface-elevated border border-border-subtle text-text-secondary shrink-0">
               NIST SP 800-88
@@ -229,9 +229,12 @@ export function TopNav() {
 
             {/* 1. Status Pill */}
             {demoMode ? (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-xs font-bold shadow-sm">
+              <span 
+                title="Full physical hardware simulation active. Test file carving, NIST sanitization, and disk analysis with zero hardware prerequisites."
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-xs font-bold shadow-sm cursor-help"
+              >
                 <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse shrink-0" />
-                Status: Demo Sandbox
+                Status: Demo Sandbox (Fully Active)
               </span>
             ) : status.connected ? (
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-xs font-bold shadow-sm">

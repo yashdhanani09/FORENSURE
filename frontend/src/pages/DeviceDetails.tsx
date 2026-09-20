@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { deviceApi } from "../services/api";
 import { forensicApi } from "../services/forensicApi";
+import { agentConnection } from "../services/agentConnection";
 import type { UsbDeviceDetail, EvidenceRecord } from "../types/device";
 import { formatBytes, formatDate } from "../utils/format";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
@@ -74,6 +75,64 @@ export function DeviceDetails() {
     }
   };
 
+  const handleExportPdf = () => {
+    if (!device) return;
+    if (agentConnection.isDemoMode()) {
+      const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Device Audit Report — ${device.id}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: #0D1117; color: #E6EDF3; padding: 40px; }
+    .card { max-width: 800px; margin: 0 auto; background: #161B22; border: 1px solid #30363D; border-radius: 12px; padding: 30px; }
+    h1 { color: #2F81F7; font-size: 22px; margin-bottom: 6px; }
+    .prop { margin: 12px 0; font-size: 14px; }
+    .label { color: #8B949E; font-size: 11px; text-transform: uppercase; font-weight: bold; }
+    .val { color: #FFFFFF; font-family: monospace; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>HARDWARE DEVICE AUDIT REPORT</h1>
+    <div style="color: #8B949E; font-size: 12px; margin-bottom: 20px;">FORENSURE Forensic Engine</div>
+    <div class="prop"><div class="label">Vendor & Model</div><div class="val">${device.vendor || "Generic"} ${device.model}</div></div>
+    <div class="prop"><div class="label">Physical Path</div><div class="val">${device.device_path}</div></div>
+    <div class="prop"><div class="label">Serial Number</div><div class="val">${device.serial || "Not Reported"}</div></div>
+    <div class="prop"><div class="label">Capacity</div><div class="val">${device.capacity_bytes || device.size_bytes} bytes</div></div>
+    <div class="prop"><div class="label">Filesystem</div><div class="val">${device.filesystem || "RAW"}</div></div>
+    <div class="prop"><div class="label">Protection Status</div><div class="val">${device.system_disk ? "PROTECTED SYSTEM VOLUME" : "CLEARED FOR FORENSICS"}</div></div>
+  </div>
+</body>
+</html>`;
+      const blob = new Blob([htmlContent], { type: "text/html" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Device_Report_${device.id}.html`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } else {
+      window.open(`${agentConnection.getApiBaseUrl()}/api/devices/${encodeURIComponent(device.id)}/report/pdf`);
+    }
+  };
+
+  const handleExportJson = () => {
+    if (!device) return;
+    if (agentConnection.isDemoMode()) {
+      const jsonContent = JSON.stringify(device, null, 2);
+      const blob = new Blob([jsonContent], { type: "application/json" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Device_Audit_${device.id}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } else {
+      window.open(`${agentConnection.getApiBaseUrl()}/api/devices/${encodeURIComponent(device.id)}/report/json`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-12 max-w-6xl mx-auto flex flex-col justify-center items-center h-96 select-none">
@@ -141,7 +200,7 @@ export function DeviceDetails() {
             variant="outline" 
             size="default"
             className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl"
-            onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/devices/${encodeURIComponent(device.id)}/report/pdf`)}
+            onClick={handleExportPdf}
           >
             <Download className="h-4 w-4 mr-1.5" /> Export PDF
           </Button>
@@ -149,7 +208,7 @@ export function DeviceDetails() {
             variant="outline" 
             size="default"
             className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl"
-            onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/devices/${encodeURIComponent(device.id)}/report/json`)}
+            onClick={handleExportJson}
           >
             <Download className="h-4 w-4 mr-1.5" /> Export JSON
           </Button>
@@ -227,7 +286,7 @@ export function DeviceDetails() {
                 <Button 
                   className="w-full justify-start h-11 text-sm font-bold rounded-xl" 
                   variant="signal" 
-                  onClick={() => navigate('/recovery')}
+                  onClick={() => navigate(`/recovery?target=${device.id}`)}
                 >
                   <RotateCcw className="h-4.5 w-4.5 mr-2" /> Scan for Deleted Files
                 </Button>
@@ -235,7 +294,7 @@ export function DeviceDetails() {
                 <Button 
                   className="w-full justify-start h-11 text-sm font-bold rounded-xl" 
                   variant="destructive" 
-                  onClick={() => navigate('/sanitization')}
+                  onClick={() => navigate(`/sanitization?target=${device.id}`)}
                 >
                   <ShieldAlert className="h-4.5 w-4.5 mr-2" /> Open Sanitization Suite
                 </Button>

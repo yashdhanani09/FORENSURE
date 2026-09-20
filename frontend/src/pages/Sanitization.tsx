@@ -65,8 +65,9 @@ export function Sanitization() {
       const res = await deviceApi.list();
       const list = res.devices || [];
       setDevices(list);
-      // Auto-select first safe data volume or removable disk
-      const safe = list.find(d => !d.system_disk) || list[0];
+      const searchTarget = new URLSearchParams(window.location.search).get("target");
+      const matched = searchTarget ? list.find(d => d.id === searchTarget) : null;
+      const safe = matched || list.find(d => !d.system_disk) || list[0];
       if (safe) {
         selectDevice(safe);
       }
@@ -145,7 +146,8 @@ export function Sanitization() {
   }, [activeJobId, isSanitizing]);
 
   const handleStartSanitization = async () => {
-    if (confirmInput !== "SANITIZE FILE") return;
+    const inputUpper = confirmInput.trim().toUpperCase();
+    if (inputUpper !== "DELETE" && inputUpper !== "SANITIZE FILE") return;
     if (!selectedDevice || !targetFilePath) return;
 
     setConfirmModalOpen(false);
