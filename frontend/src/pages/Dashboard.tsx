@@ -49,7 +49,7 @@ export function Dashboard() {
   const safeDevices = devices.filter(d => !d.system_disk);
 
   return (
-    <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 select-none">
+    <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 select-none page-enter">
 
       {/* ── Admin Privilege Warning Banner ── */}
       {adminWarning && (

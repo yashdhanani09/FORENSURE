@@ -358,7 +358,7 @@ export function AgentGuide() {
   const progressPct = Math.round((completed.filter(Boolean).length / STEPS.length) * 100);
 
   return (
-    <div className="min-h-screen bg-[#060a12] text-slate-100 p-4 md:p-8 lg:p-12 select-none font-sans">
+    <div className="min-h-screen bg-[#070b14] text-slate-100 p-4 md:p-8 lg:p-12 select-none font-sans page-enter">
       {/* ── Page title ── */}
       <div className="mb-8 flex items-center justify-between">
         <div>

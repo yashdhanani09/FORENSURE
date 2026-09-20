@@ -108,7 +108,7 @@ export function Forensics() {
   };
 
   return (
-    <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 select-none">
+    <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 select-none page-enter">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1e2c40] pb-6">
         <div>
