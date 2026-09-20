@@ -54,13 +54,13 @@ export function Devices() {
         onRefresh={() => void refresh(true)} 
       />
 
-      <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-6 select-none page-enter">
+      <div className="w-full max-w-[1850px] mx-auto px-6 sm:px-10 lg:px-14 xl:px-16 py-8 space-y-6 select-none page-enter">
         {/* Filter bar & Search */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => setFilter("all")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm ${
                 filter === "all"
                   ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow"
                   : "border border-[#1e2c40] bg-[#0f172a] text-slate-400 hover:text-white"
@@ -70,7 +70,7 @@ export function Devices() {
             </button>
             <button
               onClick={() => setFilter("internal")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm ${
                 filter === "internal"
                   ? "bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-glow"
                   : "border border-[#1e2c40] bg-[#0f172a] text-slate-400 hover:text-white"
@@ -80,7 +80,7 @@ export function Devices() {
             </button>
             <button
               onClick={() => setFilter("data_volume")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm ${
                 filter === "data_volume"
                   ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow"
                   : "border border-[#1e2c40] bg-[#0f172a] text-slate-400 hover:text-white"
@@ -90,7 +90,7 @@ export function Devices() {
             </button>
             <button
               onClick={() => setFilter("mobile")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm ${
                 filter === "mobile"
                   ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow"
                   : "border border-[#1e2c40] bg-[#0f172a] text-slate-400 hover:text-white"
@@ -100,7 +100,7 @@ export function Devices() {
             </button>
             <button
               onClick={() => setFilter("usb")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm ${
                 filter === "usb"
                   ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-glow"
                   : "border border-[#1e2c40] bg-[#0f172a] text-slate-400 hover:text-white"
@@ -110,7 +110,7 @@ export function Devices() {
             </button>
             <button
               onClick={() => setFilter("system")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm ${
                 filter === "system"
                   ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                   : "border border-[#1e2c40] bg-[#0f172a] text-slate-400 hover:text-white"
@@ -120,14 +120,14 @@ export function Devices() {
             </button>
           </div>
 
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500 pointer-events-none" />
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search storage devices..."
-              className="w-full bg-[#0f172a] border border-[#1e2c40] rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500 transition-colors"
+              className="w-full bg-[#0f172a] border border-[#1e2c40] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500 transition-colors"
             />
           </div>
         </div>

@@ -105,29 +105,29 @@ export function DeviceDetails() {
   const isSystem = device.system_disk;
 
   return (
-    <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-8 select-none page-enter">
+    <div className="w-full max-w-[1850px] mx-auto px-6 sm:px-10 lg:px-14 xl:px-16 py-8 space-y-8 select-none page-enter">
       {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#182035] pb-6">
         <div>
           <button
             onClick={() => navigate('/devices')}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition mb-3"
+            className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition mb-3"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to Fleet Inventory
+            <ArrowLeft className="h-4 w-4" /> Back to Fleet Inventory
           </button>
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={`p-3 rounded-xl border shrink-0 ${
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className={`p-3.5 rounded-xl border shrink-0 ${
               isSystem ? "bg-rose-500/10 border-rose-500/30 text-rose-400" :
               "bg-cyan-500/10 border-cyan-500/30 text-cyan-400"
             }`}>
-              <HardDrive className="h-7 w-7" />
+              <HardDrive className="h-8 w-8" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-bold text-white break-words">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="text-2xl lg:text-3xl font-black text-white break-words">
                   {device.vendor ? `${device.vendor} ` : ""}{device.model}
                 </h1>
-                <span className={`shrink-0 whitespace-nowrap px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                <span className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
                   isSystem 
                     ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" 
                     : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
@@ -135,7 +135,7 @@ export function DeviceDetails() {
                   {isSystem ? "PROTECTED SYSTEM DISK" : (device.device_type || "DATA STORAGE")}
                 </span>
               </div>
-              <p className="text-xs font-mono text-slate-400 mt-1 break-all">{device.id} • {device.device_path}</p>
+              <p className="text-xs sm:text-sm font-mono text-slate-300 mt-1 break-all">{device.id} • {device.device_path}</p>
             </div>
           </div>
         </div>
@@ -143,17 +143,19 @@ export function DeviceDetails() {
         <div className="flex items-center gap-3">
           <Button 
             variant="outline" 
-            size="sm"
+            size="default"
+            className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl"
             onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/devices/${encodeURIComponent(device.id)}/report/pdf`)}
           >
-            <Download className="h-3.5 w-3.5" /> Export PDF
+            <Download className="h-4 w-4 mr-1.5" /> Export PDF
           </Button>
           <Button 
             variant="outline" 
-            size="sm"
+            size="default"
+            className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl"
             onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/devices/${encodeURIComponent(device.id)}/report/json`)}
           >
-            <Download className="h-3.5 w-3.5" /> Export JSON
+            <Download className="h-4 w-4 mr-1.5" /> Export JSON
           </Button>
         </div>
       </div>
@@ -163,37 +165,37 @@ export function DeviceDetails() {
         {/* Specs Card */}
         <Card className="lg:col-span-2">
           <CardHeader className="border-b border-[#1e2c40]/70 pb-4">
-            <CardTitle className="text-sm font-bold flex items-center gap-2 text-white">
-              <Cpu className="h-4 w-4 text-cyan-400" /> Physical Hardware Attributes
+            <CardTitle className="text-base font-bold flex items-center gap-2.5 text-white">
+              <Cpu className="h-5 w-5 text-cyan-400" /> Physical Hardware Attributes
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="grid grid-cols-2 gap-y-5 gap-x-6 text-xs font-mono">
+            <div className="grid grid-cols-2 gap-y-6 gap-x-8 text-sm font-mono">
               <div className="space-y-1">
-                <span className="text-slate-500 uppercase tracking-wider text-[10px] block">Manufacturer / Vendor</span>
-                <span className="text-white font-bold text-sm font-sans">{device.vendor || "Unknown"}</span>
+                <span className="text-slate-400 uppercase tracking-wider text-xs block font-semibold">Manufacturer / Vendor</span>
+                <span className="text-white font-bold text-base font-sans">{device.vendor || "Unknown"}</span>
               </div>
               <div className="space-y-1">
-                <span className="text-slate-500 uppercase tracking-wider text-[10px] block">Product Model</span>
-                <span className="text-white font-bold text-sm font-sans">{device.model || "Unknown"}</span>
+                <span className="text-slate-400 uppercase tracking-wider text-xs block font-semibold">Product Model</span>
+                <span className="text-white font-bold text-base font-sans">{device.model || "Unknown"}</span>
               </div>
               <div className="space-y-1">
-                <span className="text-slate-500 uppercase tracking-wider text-[10px] block">Serial Number</span>
-                <span className="text-slate-200 break-all">{device.serial || "Not reported"}</span>
+                <span className="text-slate-400 uppercase tracking-wider text-xs block font-semibold">Serial Number</span>
+                <span className="text-slate-200 break-all text-sm">{device.serial || "Not reported"}</span>
               </div>
               <div className="space-y-1">
-                <span className="text-slate-500 uppercase tracking-wider text-[10px] block">Total Capacity</span>
-                <span className="text-cyan-400 font-bold text-sm font-sans">
+                <span className="text-slate-400 uppercase tracking-wider text-xs block font-semibold">Total Capacity</span>
+                <span className="text-cyan-400 font-bold text-base sm:text-lg font-sans">
                   {formatBytes(device.capacity_bytes || device.size_bytes || 0)}
                 </span>
               </div>
               <div className="space-y-1">
-                <span className="text-slate-500 uppercase tracking-wider text-[10px] block">Physical Path</span>
-                <span className="text-slate-300">{device.device_path}</span>
+                <span className="text-slate-400 uppercase tracking-wider text-xs block font-semibold">Physical Path</span>
+                <span className="text-slate-300 text-sm">{device.device_path}</span>
               </div>
               <div className="space-y-1">
-                <span className="text-slate-500 uppercase tracking-wider text-[10px] block">Transport / Interface</span>
-                <span className="text-white uppercase">{device.transport || device.device_type || "Direct"}</span>
+                <span className="text-slate-400 uppercase tracking-wider text-xs block font-semibold">Transport / Interface</span>
+                <span className="text-white uppercase font-bold text-sm">{device.transport || device.device_type || "Direct"}</span>
               </div>
             </div>
           </CardContent>
@@ -202,44 +204,44 @@ export function DeviceDetails() {
         {/* Action Panel */}
         <Card>
           <CardHeader className="border-b border-[#1e2c40]/70 pb-4">
-            <CardTitle className="text-sm font-bold flex items-center gap-2 text-white">
-              <Shield className="h-4 w-4 text-emerald-400" /> Operational Directives
+            <CardTitle className="text-base font-bold flex items-center gap-2.5 text-white">
+              <Shield className="h-5 w-5 text-emerald-400" /> Operational Directives
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             {isSystem ? (
-              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs space-y-2">
-                <div className="flex items-center gap-2 font-bold text-rose-400">
+              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs sm:text-sm space-y-2">
+                <div className="flex items-center gap-2 font-bold text-rose-400 text-sm">
                   <AlertTriangle className="h-4 w-4" /> System Protection Active
                 </div>
-                <p className="text-[11px] leading-relaxed">
+                <p className="text-xs leading-relaxed text-slate-300">
                   This storage device contains the active OS boot volume (C:). Write modifications, full-disk overwrites, and wiping are strictly prevented to protect system integrity.
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
                 <Button 
-                  className="w-full justify-start" 
+                  className="w-full justify-start h-11 text-sm font-bold rounded-xl" 
                   variant="forensic" 
                   onClick={() => { setCaseName(`Case-${device.model}`); setCaseModalOpen(true); }}
                 >
-                  <FileSearch className="h-4 w-4" /> Start Forensic Case
+                  <FileSearch className="h-4.5 w-4.5 mr-2" /> Start Forensic Case
                 </Button>
 
                 <Button 
-                  className="w-full justify-start" 
+                  className="w-full justify-start h-11 text-sm font-bold rounded-xl" 
                   variant="signal" 
                   onClick={() => navigate('/recovery')}
                 >
-                  <RotateCcw className="h-4 w-4" /> Scan for Deleted Files
+                  <RotateCcw className="h-4.5 w-4.5 mr-2" /> Scan for Deleted Files
                 </Button>
 
                 <Button 
-                  className="w-full justify-start" 
+                  className="w-full justify-start h-11 text-sm font-bold rounded-xl" 
                   variant="destructive" 
                   onClick={() => navigate('/sanitization')}
                 >
-                  <ShieldAlert className="h-4 w-4" /> Open Sanitization Suite
+                  <ShieldAlert className="h-4.5 w-4.5 mr-2" /> Open Sanitization Suite
                 </Button>
               </div>
             )}
@@ -250,36 +252,36 @@ export function DeviceDetails() {
       {/* Logical Partitions Card */}
       <Card>
         <CardHeader className="border-b border-[#1e2c40]/70 pb-4">
-          <CardTitle className="text-sm font-bold flex items-center gap-2 text-white">
-            <Layers className="h-4 w-4 text-cyan-400" /> Partition Topology & Filesystem Mounts
+          <CardTitle className="text-base font-bold flex items-center gap-2.5 text-white">
+            <Layers className="h-5 w-5 text-cyan-400" /> Partition Topology & Filesystem Mounts
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono">
-              <thead className="border-b border-[#1e2c40] bg-[#0b0f19] text-slate-400 uppercase tracking-wider text-[10px]">
+            <table className="w-full text-left text-sm font-mono">
+              <thead className="border-b border-[#1e2c40] bg-[#0b0f19] text-slate-300 uppercase tracking-wider text-xs font-extrabold">
                 <tr>
-                  <th className="p-4">Partition Path</th>
-                  <th className="p-4">Filesystem</th>
-                  <th className="p-4">Capacity</th>
-                  <th className="p-4">Mount Point</th>
-                  <th className="p-4">Volume Label</th>
+                  <th className="px-6 py-4.5">Partition Path</th>
+                  <th className="px-6 py-4.5">Filesystem</th>
+                  <th className="px-6 py-4.5">Capacity</th>
+                  <th className="px-6 py-4.5">Mount Point</th>
+                  <th className="px-6 py-4.5">Volume Label</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1e2c40]/60">
                 {device.partitions && device.partitions.length > 0 ? (
                   device.partitions.map((p) => (
                     <tr key={p.device_path} className="hover:bg-white/[0.02] transition">
-                      <td className="p-4 text-slate-200 font-bold">{p.device_path}</td>
-                      <td className="p-4 uppercase text-cyan-400">{p.filesystem || "RAW"}</td>
-                      <td className="p-4 text-slate-300 font-sans">{formatBytes(p.capacity_bytes)}</td>
-                      <td className="p-4 text-slate-200">{p.mount_points?.[0] || "Not mounted"}</td>
-                      <td className="p-4 text-slate-400">{p.label || "—"}</td>
+                      <td className="px-6 py-4.5 text-slate-200 font-bold">{p.device_path}</td>
+                      <td className="px-6 py-4.5 uppercase text-cyan-400 font-bold">{p.filesystem || "RAW"}</td>
+                      <td className="px-6 py-4.5 text-slate-100 font-sans font-bold">{formatBytes(p.capacity_bytes)}</td>
+                      <td className="px-6 py-4.5 text-slate-200">{p.mount_points?.[0] || "Not mounted"}</td>
+                      <td className="px-6 py-4.5 text-slate-400">{p.label || "—"}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-slate-500 font-sans">
+                    <td colSpan={5} className="p-8 text-center text-slate-400 font-sans text-sm">
                       No logical partitions detected on this physical drive.
                     </td>
                   </tr>
@@ -294,26 +296,26 @@ export function DeviceDetails() {
       {evidence.length > 0 && (
         <Card>
           <CardHeader className="border-b border-[#1e2c40]/70 pb-4">
-            <CardTitle className="text-sm font-bold flex items-center gap-2 text-white">
-              <DatabaseZap className="h-4 w-4 text-emerald-400" /> Cryptographic Evidence Log
+            <CardTitle className="text-base font-bold flex items-center gap-2.5 text-white">
+              <DatabaseZap className="h-5 w-5 text-emerald-400" /> Cryptographic Evidence Log
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs font-mono">
-                <thead className="border-b border-[#1e2c40] bg-[#0b0f19] text-slate-400 uppercase tracking-wider text-[10px]">
+              <table className="w-full text-left text-sm font-mono">
+                <thead className="border-b border-[#1e2c40] bg-[#0b0f19] text-slate-300 uppercase tracking-wider text-xs font-extrabold">
                   <tr>
-                    <th className="p-4">Target File</th>
-                    <th className="p-4">SHA-256 Hash</th>
-                    <th className="p-4">Timestamp</th>
+                    <th className="px-6 py-4.5">Target File</th>
+                    <th className="px-6 py-4.5">SHA-256 Hash</th>
+                    <th className="px-6 py-4.5">Timestamp</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#1e2c40]/60">
                   {evidence.map((e) => (
                     <tr key={e.id} className="hover:bg-white/[0.02] transition">
-                      <td className="p-4 text-slate-300 max-w-sm truncate">{e.path}</td>
-                      <td className="p-4 text-emerald-400 break-all">{e.sha256 || "—"}</td>
-                      <td className="p-4 text-slate-400 font-sans">{formatDate(e.created_at)}</td>
+                      <td className="px-6 py-4.5 text-slate-200 max-w-sm truncate font-sans font-medium">{e.path}</td>
+                      <td className="px-6 py-4.5 text-emerald-400 break-all">{e.sha256 || "—"}</td>
+                      <td className="px-6 py-4.5 text-slate-300 font-sans">{formatDate(e.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>

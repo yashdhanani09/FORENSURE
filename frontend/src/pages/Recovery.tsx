@@ -347,18 +347,18 @@ export function Recovery() {
                          (selectedDevice?.partitions?.some(p => p.filesystem === "MTP") ?? false);
 
   return (
-    <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-8 select-none page-enter">
+    <div className="w-full max-w-[1850px] mx-auto px-6 sm:px-10 lg:px-14 xl:px-16 py-8 space-y-8 select-none page-enter">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#182035] pb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-5 border-b border-[#182035] pb-6">
         <div>
-          <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.2em] text-cyan-400 uppercase mb-1">
-            <RotateCcw className="h-4 w-4" /> FORENSIC RECOVERY ENGINE
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-extrabold tracking-[0.22em] text-cyan-400 uppercase mb-1.5 font-mono">
+            <RotateCcw className="h-4.5 w-4.5" /> FORENSIC RECOVERY ENGINE
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
-            <RotateCcw className="w-8 h-8 text-cyan-400 animate-in spin-in-12 duration-300" />
+          <h1 className="text-3xl lg:text-4xl font-black tracking-tight text-white flex items-center gap-3">
+            <RotateCcw className="w-9 h-9 text-cyan-400 animate-in spin-in-12 duration-300" />
             Forensic Data Recovery Engine
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm sm:text-base text-slate-300 mt-1.5 max-w-4xl">
             NTFS Master File Table ($MFT) extraction, hardware write-blocking, and cryptographic SHA-256 bitstream restoration.
           </p>
         </div>
@@ -927,62 +927,62 @@ export function Recovery() {
         {/* Table */}
         <div className="overflow-x-auto rounded-xl border border-[#1e2c40] bg-[#0b0f19]">
           <table className="w-full text-left text-sm">
-            <thead className="bg-[#080d19] border-b border-[#1e2c40] text-xs font-bold text-slate-300 uppercase tracking-wider">
+            <thead className="bg-[#080d19] border-b border-[#1e2c40] text-sm font-extrabold text-slate-200 uppercase tracking-wider">
               <tr>
-                <th className="px-4 py-3.5 w-12 text-center">
+                <th className="px-5 py-4 w-14 text-center">
                   <button onClick={toggleSelectAll} className="text-slate-400 hover:text-white inline-flex items-center justify-center">
                     {selectedFileIds.size === displayFiles.length && displayFiles.length > 0 ? (
-                      <CheckSquare className="w-4 h-4 text-cyan-400" />
+                      <CheckSquare className="w-5 h-5 text-cyan-400" />
                     ) : (
-                      <Square className="w-4 h-4" />
+                      <Square className="w-5 h-5" />
                     )}
                   </button>
                 </th>
                 <th 
-                  className="px-4 py-3.5 cursor-pointer hover:text-cyan-300 transition select-none"
+                  className="px-5 py-4 cursor-pointer hover:text-cyan-300 transition select-none"
                   onClick={() => setSortBy(sortBy === "name" ? "recent" : "name")}
                   title="Click to sort by filename"
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span>File Name & Source</span>
                     {sortBy === "name" && <span className="text-cyan-400 font-bold">↑</span>}
                   </div>
                 </th>
-                <th className="px-4 py-3.5">Category</th>
-                <th className="px-4 py-3.5">Storage Location / Path</th>
+                <th className="px-5 py-4">Category</th>
+                <th className="px-5 py-4">Storage Location / Path</th>
                 <th 
-                  className="px-4 py-3.5 cursor-pointer hover:text-cyan-300 transition select-none"
+                  className="px-5 py-4 cursor-pointer hover:text-cyan-300 transition select-none"
                   onClick={() => setSortBy(sortBy === "size_desc" ? "recent" : "size_desc")}
                   title="Click to sort by file size"
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span>Size</span>
                     {sortBy === "size_desc" && <span className="text-cyan-400 font-bold">↓</span>}
                   </div>
                 </th>
                 <th 
-                  className="px-4 py-3.5 cursor-pointer hover:text-cyan-300 transition select-none"
+                  className="px-5 py-4 cursor-pointer hover:text-cyan-300 transition select-none"
                   onClick={() => setSortBy(sortBy === "recent" ? "oldest" : "recent")}
                   title="Click to toggle Newest / Oldest sequence"
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span>Timestamp</span>
                     {sortBy === "recent" && <span className="text-cyan-400 font-bold">↓ (Recent)</span>}
                     {sortBy === "oldest" && <span className="text-cyan-400 font-bold">↑ (Oldest)</span>}
-                    {sortBy !== "recent" && sortBy !== "oldest" && <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />}
+                    {sortBy !== "recent" && sortBy !== "oldest" && <ArrowUpDown className="w-4 h-4 text-slate-500" />}
                   </div>
                 </th>
                 <th 
-                  className="px-4 py-3.5 cursor-pointer hover:text-cyan-300 transition select-none"
+                  className="px-5 py-4 cursor-pointer hover:text-cyan-300 transition select-none"
                   onClick={() => setSortBy(sortBy === "confidence" ? "recent" : "confidence")}
                   title="Click to sort by evidence quality"
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span>Integrity / Confidence</span>
                     {sortBy === "confidence" && <span className="text-cyan-400 font-bold">↓</span>}
                   </div>
                 </th>
-                <th className="px-4 py-3.5 text-right">Action</th>
+                <th className="px-5 py-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1e2c40]/60">
@@ -994,25 +994,25 @@ export function Recovery() {
                     key={file.id} 
                     className={`transition-colors group ${isSelected ? "bg-cyan-500/[0.08]" : "hover:bg-white/[0.03]"}`}
                   >
-                    <td className="px-4 py-3.5 text-center">
+                    <td className="px-5 py-4 text-center">
                       <button onClick={() => toggleSelectFile(file.id)} className="text-slate-400 hover:text-white inline-flex items-center justify-center">
                         {isSelected ? (
-                          <CheckSquare className="w-4 h-4 text-cyan-400" />
+                          <CheckSquare className="w-5 h-5 text-cyan-400" />
                         ) : (
-                          <Square className="w-4 h-4" />
+                          <Square className="w-5 h-5" />
                         )}
                       </button>
                     </td>
-                    <td className="px-4 py-3.5 font-sans">
-                      <div className="flex items-center gap-3">
+                    <td className="px-5 py-4 font-sans">
+                      <div className="flex items-center gap-3.5">
                         <div className="p-2.5 rounded-xl bg-[#090d16] border border-[#1e2c40] group-hover:border-cyan-500/40 transition shrink-0">
                           {getCategoryIcon(file.category)}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-bold text-sm sm:text-base text-white group-hover:text-cyan-300 transition truncate max-w-xs sm:max-w-md" title={file.filename}>
+                          <div className="font-bold text-base text-white group-hover:text-cyan-300 transition truncate max-w-sm sm:max-w-md" title={file.filename}>
                             {file.filename}
                           </div>
-                          <div className="text-xs font-mono text-cyan-400/90 uppercase font-medium">
+                          <div className="text-xs font-mono text-cyan-400/90 uppercase font-semibold mt-0.5">
                             {file.recovery_method.startsWith("raw_carver")
                               ? `Raw Carver (${file.extension.toUpperCase()})`
                               : file.recovery_method.startsWith("android_")
@@ -1022,21 +1022,21 @@ export function Recovery() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <span className="text-xs font-bold text-slate-200 uppercase px-2.5 py-1 rounded-md bg-[#090d16] border border-[#1e2c40]">
+                    <td className="px-5 py-4 whitespace-nowrap">
+                      <span className="text-xs font-bold text-slate-200 uppercase px-3 py-1 rounded-lg bg-[#090d16] border border-[#1e2c40]">
                         {file.category}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-300 truncate max-w-sm font-mono" title={cleanPath}>
+                    <td className="px-5 py-4 text-sm text-slate-300 truncate max-w-sm font-mono" title={cleanPath}>
                       {cleanPath}
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-bold text-slate-100 font-mono whitespace-nowrap">
+                    <td className="px-5 py-4 text-sm sm:text-base font-bold text-slate-100 font-mono whitespace-nowrap">
                       {formatBytes(file.size_bytes)}
                     </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-300 font-sans whitespace-nowrap">
+                    <td className="px-5 py-4 text-xs sm:text-sm text-slate-300 font-sans whitespace-nowrap">
                       {file.deleted_at ? formatDate(file.deleted_at) : "Unknown"}
                     </td>
-                    <td className="px-4 py-3.5 font-sans">
+                    <td className="px-5 py-4 font-sans">
                       <div className="space-y-1">
                         <div className="flex items-center gap-1.5">
                           <span className={`px-2.5 py-1 rounded text-xs font-bold font-mono whitespace-nowrap ${
@@ -1060,9 +1060,9 @@ export function Recovery() {
                         variant="signal"
                         onClick={() => handleRecoverFiles([file.id])}
                         disabled={recovering}
-                        className="h-9 px-3.5 text-xs font-bold shadow-sm rounded-xl"
+                        className="h-10 px-4 text-xs sm:text-sm font-bold shadow-sm rounded-xl"
                       >
-                        <Download className="w-3.5 h-3.5 mr-1" /> Recover
+                        <Download className="w-4 h-4 mr-1.5" /> Recover
                       </Button>
                     </td>
                   </tr>

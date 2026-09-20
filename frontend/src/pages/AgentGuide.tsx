@@ -165,7 +165,7 @@ function RailNode({
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const baseNode =
-    "relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 font-mono text-xs font-black transition-all duration-300 cursor-pointer select-none";
+    "relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 font-mono text-sm font-black transition-all duration-300 cursor-pointer select-none";
 
   const nodeStyle = completed
     ? "border-emerald-500 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.35)]"
@@ -187,7 +187,7 @@ function RailNode({
           <Checkmark visible={completed} />
         </span>
       ) : (
-        <Icon className="h-4 w-4" />
+        <Icon className="h-5 w-5" />
       )}
     </button>
   );
@@ -358,18 +358,18 @@ export function AgentGuide() {
   const progressPct = Math.round((completed.filter(Boolean).length / STEPS.length) * 100);
 
   return (
-    <div className="w-full max-w-[1500px] mx-auto min-h-screen bg-[#070b14] text-slate-100 p-4 md:p-8 lg:p-12 select-none font-sans page-enter">
+    <div className="w-full max-w-[1850px] mx-auto min-h-screen bg-[#070b14] text-slate-100 px-6 sm:px-10 lg:px-14 xl:px-16 py-8 select-none font-sans page-enter">
       {/* ── Page title ── */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-extrabold tracking-[0.22em] text-cyan-400 uppercase mb-1">
-            <MonitorSmartphone className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.22em] text-cyan-400 uppercase mb-1.5 font-mono">
+            <MonitorSmartphone className="h-4 w-4" />
             Hardware Bridge Setup
           </div>
-          <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-white">
+          <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-white">
             Physical Hardware Connection Guide
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-sm text-slate-300 mt-1 max-w-4xl">
             Follow each step to enable real-time sector-level forensics on your machine.
           </p>
         </div>
@@ -377,9 +377,9 @@ export function AgentGuide() {
         {/* Demo mode shortcut */}
         <button
           onClick={() => { agentConnection.setDemoMode(true); navigate("/dashboard"); }}
-          className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200 text-xs font-semibold transition"
+          className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white text-xs sm:text-sm font-semibold transition"
         >
-          <Sparkles className="h-3.5 w-3.5" /> Try Demo instead
+          <Sparkles className="h-4 w-4" /> Try Demo instead
         </button>
       </div>
 

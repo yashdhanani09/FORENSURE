@@ -199,19 +199,19 @@ export function Sanitization() {
   };
 
   return (
-    <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-8 page-enter">
+    <div className="w-full max-w-[1850px] mx-auto px-6 sm:px-10 lg:px-14 xl:px-16 py-8 space-y-8 page-enter">
       {/* Header Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border-subtle pb-6">
         <div>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
-              <ShieldAlert className="h-6 w-6" />
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 shrink-0">
+              <ShieldAlert className="h-7 w-7" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-white flex items-center gap-2.5">
                 Data Sanitization & Secure Erase
               </h1>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-sm text-slate-300 mt-1 max-w-4xl">
                 NIST SP 800-88 Rev 1 & DoD 5220.22-M compliant cryptographic sanitization with chain-of-custody verification.
               </p>
             </div>
@@ -219,27 +219,27 @@ export function Sanitization() {
         </div>
 
         {/* Tab Controls */}
-        <div className="flex items-center gap-1.5 bg-surface-card p-1.5 rounded-xl border border-border-subtle">
+        <div className="flex items-center gap-2 bg-surface-card p-1.5 rounded-2xl border border-border-subtle">
           <button
             onClick={() => setActiveTab("sanitize")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
               activeTab === "sanitize" 
                 ? "bg-rose-500/20 text-rose-300 border border-rose-500/30 shadow-sm" 
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            <ShieldCheck className="h-4 w-4" />
+            <ShieldCheck className="h-4.5 w-4.5" />
             Sanitize Engine
           </button>
           <button
             onClick={() => { setActiveTab("history"); loadHistory(); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition ${
               activeTab === "history" 
                 ? "bg-signal/20 text-signal border border-signal/30 shadow-sm" 
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            <History className="h-4 w-4" />
+            <History className="h-4.5 w-4.5" />
             Audit History ({historyJobs.length})
           </button>
         </div>
@@ -251,24 +251,24 @@ export function Sanitization() {
           {activeJobId && (
             <div className="bg-surface-card border border-border-subtle rounded-2xl p-6 shadow-2xl space-y-6">
               <div className="flex items-center justify-between border-b border-border-subtle pb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl ${
+                <div className="flex items-center gap-3.5">
+                  <div className={`p-3 rounded-xl ${
                     jobProgress?.status === "COMPLETED" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
                     jobProgress?.status === "FAILED" || jobProgress?.status === "ABORTED" ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" :
                     "bg-signal/20 text-signal border border-signal/30 animate-pulse"
                   }`}>
-                    {jobProgress?.status === "COMPLETED" ? <CheckCircle2 className="h-5 w-5" /> :
-                     jobProgress?.status === "FAILED" || jobProgress?.status === "ABORTED" ? <AlertTriangle className="h-5 w-5" /> :
-                     <RefreshCw className="h-5 w-5 animate-spin" />}
+                    {jobProgress?.status === "COMPLETED" ? <CheckCircle2 className="h-6 w-6" /> :
+                     jobProgress?.status === "FAILED" || jobProgress?.status === "ABORTED" ? <AlertTriangle className="h-6 w-6" /> :
+                     <RefreshCw className="h-6 w-6 animate-spin" />}
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                       {jobProgress?.status === "COMPLETED" ? "Sanitization Completed & Cryptographically Verified" :
                        jobProgress?.status === "FAILED" ? "Sanitization Failed" :
                        jobProgress?.status === "ABORTED" ? "Sanitization Aborted" :
                        "Sanitization in Progress"}
                     </h3>
-                    <p className="text-xs text-slate-400 font-mono">Job ID: {activeJobId}</p>
+                    <p className="text-xs sm:text-sm text-slate-400 font-mono">Job ID: {activeJobId}</p>
                   </div>
                 </div>
 
@@ -276,17 +276,18 @@ export function Sanitization() {
                   {isSanitizing && (
                     <Button
                       variant="destructive"
-                      size="sm"
+                      size="default"
+                      className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl"
                       onClick={handleAbort}
                     >
-                      <XOctagon className="h-3.5 w-3.5" /> Abort Job
+                      <XOctagon className="h-4 w-4 mr-1.5" /> Abort Job
                     </Button>
                   )}
                   {jobProgress?.status === "COMPLETED" && (
                     <a
                       href={sanitizationApi.getCertificateUrl(activeJobId)}
                       download
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition shadow-lg"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs sm:text-sm font-bold transition shadow-lg"
                     >
                       <Download className="h-4 w-4" /> Download Certificate (PDF)
                     </a>
@@ -294,7 +295,8 @@ export function Sanitization() {
                   {!isSanitizing && (
                     <Button
                       variant="secondary"
-                      size="sm"
+                      size="default"
+                      className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl"
                       onClick={() => { setActiveJobId(null); setJobProgress(null); }}
                     >
                       Dismiss
@@ -304,14 +306,14 @@ export function Sanitization() {
               </div>
 
               {jobError && (
-                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono">
+                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs sm:text-sm font-mono">
                   Error Details: {jobError}
                 </div>
               )}
 
               {/* Progress Bar */}
               <div className="space-y-2">
-                <div className="flex justify-between text-xs">
+                <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-slate-400 font-medium">
                     Current Phase: <strong className="text-white">{jobProgress?.current_stage || "Initializing"}</strong>
                   </span>
@@ -319,7 +321,7 @@ export function Sanitization() {
                     {(jobProgress?.progress_percent || 0).toFixed(1)}%
                   </span>
                 </div>
-                <div className="h-3 bg-canvas rounded-full overflow-hidden border border-border-subtle">
+                <div className="h-3.5 bg-canvas rounded-full overflow-hidden border border-border-subtle">
                   <div 
                     className={`h-full transition-all duration-300 ${
                       jobProgress?.status === "COMPLETED" ? "bg-emerald-500" :
@@ -333,27 +335,27 @@ export function Sanitization() {
 
               {/* Metric Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-surface p-3.5 rounded-xl border border-border-subtle overflow-hidden">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold block truncate">Processed</span>
-                  <p className="text-sm font-bold text-white font-mono mt-1 truncate">
+                <div className="bg-surface p-4 rounded-xl border border-border-subtle overflow-hidden">
+                  <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block truncate">Processed</span>
+                  <p className="text-base font-bold text-white font-mono mt-1 truncate">
                     {formatBytes(jobProgress?.bytes_processed || 0)} / {formatBytes(jobProgress?.total_bytes || 0)}
                   </p>
                 </div>
-                <div className="bg-surface p-3.5 rounded-xl border border-border-subtle overflow-hidden">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold block truncate">Write Speed</span>
-                  <p className="text-sm font-bold text-signal font-mono mt-1 truncate">
+                <div className="bg-surface p-4 rounded-xl border border-border-subtle overflow-hidden">
+                  <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block truncate">Write Speed</span>
+                  <p className="text-base font-bold text-signal font-mono mt-1 truncate">
                     {formatBytes(jobProgress?.speed_bytes_per_second || 0)}/s
                   </p>
                 </div>
-                <div className="bg-surface p-3.5 rounded-xl border border-border-subtle overflow-hidden">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold block truncate">Estimated Time</span>
-                  <p className="text-sm font-bold text-white font-mono mt-1 truncate">
+                <div className="bg-surface p-4 rounded-xl border border-border-subtle overflow-hidden">
+                  <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block truncate">Estimated Time</span>
+                  <p className="text-base font-bold text-white font-mono mt-1 truncate">
                     {jobProgress?.estimated_seconds_remaining || 0}s remaining
                   </p>
                 </div>
-                <div className="bg-surface p-3.5 rounded-xl border border-border-subtle overflow-hidden">
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold block truncate">Target Device</span>
-                  <p className="text-sm font-bold text-slate-300 truncate mt-1" title={selectedDevice?.model || jobProgress?.device_id}>
+                <div className="bg-surface p-4 rounded-xl border border-border-subtle overflow-hidden">
+                  <span className="text-xs uppercase tracking-wider text-slate-400 font-bold block truncate">Target Device</span>
+                  <p className="text-base font-bold text-slate-200 truncate mt-1" title={selectedDevice?.model || jobProgress?.device_id}>
                     {selectedDevice?.model || jobProgress?.device_id}
                   </p>
                 </div>
@@ -365,21 +367,22 @@ export function Sanitization() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold tracking-widest text-signal uppercase">STEP 1</span>
-                <h2 className="text-lg font-bold text-white">Select Storage Target</h2>
+                <span className="text-xs font-bold tracking-widest text-signal uppercase font-mono">STEP 1</span>
+                <h2 className="text-xl font-bold text-white">Select Storage Target</h2>
               </div>
               <Button 
                 variant="ghost"
-                size="sm"
+                size="default"
+                className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl"
                 onClick={loadDevices}
                 disabled={loadingDevices}
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${loadingDevices ? "animate-spin" : ""}`} />
+                <RefreshCw className={`h-4 w-4 mr-1.5 ${loadingDevices ? "animate-spin" : ""}`} />
                 Refresh Devices
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {devices.map((dev) => {
                 const isSelected = selectedDeviceId === dev.id;
                 const isSystem = dev.system_disk;
@@ -389,7 +392,7 @@ export function Sanitization() {
                   <div
                     key={dev.id}
                     onClick={() => selectDevice(dev)}
-                    className={`relative rounded-2xl p-5 border cursor-pointer transition-all overflow-hidden ${
+                    className={`relative rounded-2xl p-6 border cursor-pointer transition-all overflow-hidden ${
                       isSelected 
                         ? "border-signal/80 bg-signal/[0.05] shadow-[0_0_20px_rgba(6,182,212,0.15)] ring-1 ring-signal/50" 
                         : isSystem 
@@ -397,9 +400,9 @@ export function Sanitization() {
                         : "border-border-subtle bg-surface-card hover:border-border-strong hover:bg-surface-elevated/50"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className={`p-2.5 rounded-xl shrink-0 ${
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div className={`p-3 rounded-xl shrink-0 ${
                           isSystem ? "bg-rose-500/10 text-rose-400 border border-rose-500/20" :
                           isMobile ? "bg-purple-500/10 text-purple-400 border border-purple-500/20" :
                           "bg-blue-500/10 text-blue-400 border border-blue-500/20"
@@ -407,16 +410,16 @@ export function Sanitization() {
                           <HardDrive className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-bold text-sm text-white truncate" title={`${dev.vendor ? `${dev.vendor} ` : ""}${dev.model || ""}`}>
+                          <h4 className="font-bold text-base text-white truncate" title={`${dev.vendor ? `${dev.vendor} ` : ""}${dev.model || ""}`}>
                             {dev.vendor ? `${dev.vendor} ` : ""}{dev.model}
                           </h4>
-                          <p className="text-[11px] text-slate-400 font-mono truncate" title={dev.device_path}>
+                          <p className="text-xs text-slate-400 font-mono truncate mt-0.5" title={dev.device_path}>
                             {dev.device_path}
                           </p>
                         </div>
                       </div>
 
-                      <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider whitespace-nowrap ${
+                      <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider whitespace-nowrap ${
                         isSystem ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" :
                         isMobile ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" :
                         "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
@@ -425,16 +428,16 @@ export function Sanitization() {
                       </span>
                     </div>
 
-                    <div className="space-y-2 text-xs text-slate-400 border-t border-border-subtle pt-3">
+                    <div className="space-y-2.5 text-xs sm:text-sm text-slate-400 border-t border-border-subtle pt-3.5">
                       <div className="flex justify-between items-center gap-2">
                         <span className="shrink-0 text-slate-400">Capacity</span>
-                        <span className="font-mono text-slate-200 font-bold truncate text-right">
+                        <span className="font-mono text-slate-100 font-bold truncate text-right">
                           {formatBytes(dev.capacity_bytes || dev.size_bytes || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center gap-2">
                         <span className="shrink-0 text-slate-400">Mount Point</span>
-                        <span className="font-mono text-slate-200 truncate text-right max-w-[140px]" title={dev.mount_point || "None"}>
+                        <span className="font-mono text-slate-200 truncate text-right max-w-[160px]" title={dev.mount_point || "None"}>
                           {dev.mount_point || "None"}
                         </span>
                       </div>
@@ -466,11 +469,11 @@ export function Sanitization() {
           {selectedDevice && !selectedDevice.system_disk && (
             <div className="space-y-4">
               <div>
-                <span className="text-[10px] font-bold tracking-widest text-signal uppercase">STEP 2</span>
-                <h2 className="text-lg font-bold text-white">Select Sanitization Standard</h2>
+                <span className="text-xs font-bold tracking-widest text-signal uppercase font-mono">STEP 2</span>
+                <h2 className="text-xl font-bold text-white">Select Sanitization Standard</h2>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {(Object.keys(patternDescriptions) as SanitizationPattern[]).map((key) => {
                   const item = patternDescriptions[key];
                   const isChecked = pattern === key;
@@ -479,25 +482,25 @@ export function Sanitization() {
                     <div
                       key={key}
                       onClick={() => setPattern(key)}
-                      className={`p-5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between overflow-hidden ${
+                      className={`p-6 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between overflow-hidden ${
                         isChecked 
                           ? "border-signal/80 bg-signal/[0.05] shadow-[0_0_20px_rgba(6,182,212,0.12)] ring-1 ring-signal/50" 
                           : "border-border-subtle bg-surface-card hover:border-border-strong hover:bg-surface-elevated/40"
                       }`}
                     >
                       <div>
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <span className="text-xs font-bold text-white min-w-0 flex-1 leading-snug">{item.name}</span>
-                          <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded bg-signal/10 text-signal border border-signal/20 whitespace-nowrap">
+                        <div className="flex items-start justify-between gap-2 mb-2.5">
+                          <span className="text-sm sm:text-base font-bold text-white min-w-0 flex-1 leading-snug">{item.name}</span>
+                          <span className="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg bg-signal/10 text-signal border border-signal/20 whitespace-nowrap">
                             {item.badge}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-400 leading-relaxed mb-4 break-words">{item.desc}</p>
+                        <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4 break-words">{item.desc}</p>
                       </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 border-t border-border-subtle pt-3 font-mono">
-                        <span>Passes: <strong className="text-slate-300">{item.passes}</strong></span>
-                        <span className="text-signal font-semibold flex items-center gap-1 shrink-0">
-                          {isChecked ? <><Check className="h-3.5 w-3.5" /> SELECTED</> : "Click to select"}
+                      <div className="flex items-center justify-between text-xs text-slate-400 border-t border-border-subtle pt-3.5 font-mono">
+                        <span>Passes: <strong className="text-slate-200">{item.passes}</strong></span>
+                        <span className="text-signal font-semibold flex items-center gap-1.5 shrink-0">
+                          {isChecked ? <><Check className="h-4 w-4" /> SELECTED</> : "Click to select"}
                         </span>
                       </div>
                     </div>
@@ -512,27 +515,27 @@ export function Sanitization() {
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-bold tracking-widest text-signal uppercase">STEP 3</span>
-                  <h2 className="text-lg font-bold text-white">Select Target File on {selectedDevice.model}</h2>
-                  <p className="text-xs text-slate-400">
+                  <span className="text-xs font-bold tracking-widest text-signal uppercase font-mono">STEP 3</span>
+                  <h2 className="text-xl font-bold text-white">Select Target File on {selectedDevice.model}</h2>
+                  <p className="text-xs sm:text-sm text-slate-300 mt-0.5">
                     Use the integrated browser below to locate the sensitive file to securely sanitize, or click "Securely Sanitize File" on any item.
                   </p>
                 </div>
 
                 {targetFilePath && (
-                  <div className="flex items-center gap-3 bg-rose-500/10 border border-rose-500/30 px-4 py-2.5 rounded-2xl max-w-full overflow-hidden shrink-0">
-                    <FileText className="h-4 w-4 text-rose-400 shrink-0" />
+                  <div className="flex items-center gap-3.5 bg-rose-500/10 border border-rose-500/30 px-5 py-3 rounded-2xl max-w-full overflow-hidden shrink-0">
+                    <FileText className="h-5 w-5 text-rose-400 shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] text-rose-400 uppercase font-bold block">Selected for Erase:</span>
-                      <span className="text-xs font-mono text-white font-semibold truncate block max-w-[200px]" title={targetFilePath}>{targetFilePath}</span>
+                      <span className="text-xs text-rose-400 uppercase font-bold block">Selected for Erase:</span>
+                      <span className="text-xs sm:text-sm font-mono text-white font-semibold truncate block max-w-[240px]" title={targetFilePath}>{targetFilePath}</span>
                     </div>
                     <Button
                       variant="destructive"
-                      size="sm"
+                      size="default"
                       onClick={() => setConfirmModalOpen(true)}
-                      className="ml-2 shrink-0 whitespace-nowrap"
+                      className="ml-2 h-11 px-5 text-xs sm:text-sm font-bold shrink-0 whitespace-nowrap rounded-xl shadow-md"
                     >
-                      <Play className="h-3.5 w-3.5 fill-current" /> Proceed to Erase
+                      <Play className="h-4 w-4 mr-1.5 fill-current" /> Proceed to Erase
                     </Button>
                   </div>
                 )}
@@ -554,60 +557,61 @@ export function Sanitization() {
 
       {/* Audit History Tab */}
       {activeTab === "history" && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-white">Sanitization Audit Log & Certificates</h2>
-              <p className="text-xs text-slate-400">
+              <h2 className="text-xl font-bold text-white">Sanitization Audit Log & Certificates</h2>
+              <p className="text-sm text-slate-300 mt-0.5">
                 Tamper-evident record of all previous sanitization runs with cryptographic verification hashes.
               </p>
             </div>
             <Button
               variant="outline"
-              size="sm"
+              size="default"
+              className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl"
               onClick={loadHistory}
               disabled={loadingHistory}
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${loadingHistory ? "animate-spin" : ""}`} /> Refresh
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${loadingHistory ? "animate-spin" : ""}`} /> Refresh
             </Button>
           </div>
 
           {historyJobs.length === 0 ? (
             <div className="rounded-2xl border border-border-subtle bg-surface-card p-12 text-center">
-              <History className="h-10 w-10 text-slate-600 mx-auto mb-3" />
-              <h3 className="text-sm font-semibold text-slate-300">No Sanitization History Recorded</h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              <History className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+              <h3 className="text-base font-semibold text-slate-300">No Sanitization History Recorded</h3>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-sm mx-auto">
                 Once a file or volume is sanitized, the cryptographic audit record and certificate will appear here.
               </p>
             </div>
           ) : (
             <div className="rounded-2xl border border-border-subtle bg-surface-card overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-border-subtle bg-surface text-slate-400 font-bold uppercase tracking-wider">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-border-subtle bg-surface text-slate-300 font-extrabold text-xs uppercase tracking-wider">
                   <tr>
-                    <th className="p-4">Job ID</th>
-                    <th className="p-4">Target File</th>
-                    <th className="p-4">Standard / Method</th>
-                    <th className="p-4">Timestamp</th>
-                    <th className="p-4">Verification</th>
-                    <th className="p-4">Certificate</th>
+                    <th className="px-6 py-4.5">Job ID</th>
+                    <th className="px-6 py-4.5">Target File</th>
+                    <th className="px-6 py-4.5">Standard / Method</th>
+                    <th className="px-6 py-4.5">Timestamp</th>
+                    <th className="px-6 py-4.5">Verification</th>
+                    <th className="px-6 py-4.5 text-right">Certificate</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle font-mono">
                   {historyJobs.map((job) => (
                     <tr key={job.job_id} className="hover:bg-white/[0.02] transition">
-                      <td className="p-4 font-bold text-slate-200">{job.job_id}</td>
-                      <td className="p-4 text-slate-300 max-w-[200px] truncate" title={job.target_file_path}>
+                      <td className="px-6 py-4.5 font-bold text-slate-200">{job.job_id}</td>
+                      <td className="px-6 py-4.5 text-slate-200 max-w-[220px] truncate font-sans" title={job.target_file_path}>
                         {job.target_file_path || "—"}
                       </td>
-                      <td className="p-4 uppercase text-slate-400">
+                      <td className="px-6 py-4.5 uppercase text-slate-400 text-xs font-bold">
                         {job.method} ({job.pattern})
                       </td>
-                      <td className="p-4 text-slate-400 font-sans">
+                      <td className="px-6 py-4.5 text-slate-300 font-sans">
                         {job.completed_at ? formatDate(job.completed_at) : job.started_at ? formatDate(job.started_at) : "—"}
                       </td>
-                      <td className="p-4">
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${
+                      <td className="px-6 py-4.5">
+                        <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
                           job.verification_result === "PASSED" || job.status === "COMPLETED"
                             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                             : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
@@ -615,13 +619,13 @@ export function Sanitization() {
                           {job.verification_result || job.status}
                         </span>
                       </td>
-                      <td className="p-4 font-sans">
+                      <td className="px-6 py-4.5 font-sans text-right">
                         <a
                           href={sanitizationApi.getCertificateUrl(job.job_id)}
                           download
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-signal/10 hover:bg-signal/20 text-signal text-xs font-semibold transition border border-signal/20"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-signal/10 hover:bg-signal/20 text-signal text-xs sm:text-sm font-semibold transition border border-signal/20"
                         >
-                          <Download className="h-3 w-3" /> PDF Cert
+                          <Download className="h-4 w-4" /> PDF Cert
                         </a>
                       </td>
                     </tr>

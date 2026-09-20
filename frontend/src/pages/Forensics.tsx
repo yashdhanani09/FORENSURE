@@ -108,34 +108,34 @@ export function Forensics() {
   };
 
   return (
-    <div className="w-full max-w-[1550px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-8 select-none page-enter">
+    <div className="w-full max-w-[1850px] mx-auto px-6 sm:px-10 lg:px-14 xl:px-16 py-8 space-y-8 select-none page-enter">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#182035] pb-6">
         <div>
-          <div className="flex items-center gap-2 text-[10px] font-extrabold tracking-[0.2em] text-blue-400 uppercase mb-1">
-            <FileSearch className="h-3.5 w-3.5" /> FORENSIC OPERATIONS CENTER
+          <div className="flex items-center gap-2 text-xs font-extrabold tracking-[0.2em] text-blue-400 uppercase mb-1.5 font-mono">
+            <FileSearch className="h-4 w-4" /> FORENSIC OPERATIONS CENTER
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+          <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-white flex items-center gap-2.5">
             Digital Forensics & Chain-of-Custody
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-sm text-slate-300 mt-1 max-w-4xl">
             Read-only bitstream disk imaging, raw block carving, metadata recovery, and evidence logging.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={fetchData} loading={loading}>
-            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Refresh
+          <Button variant="outline" size="default" className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl" onClick={fetchData} loading={loading}>
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-mono font-semibold">
-            <Shield className="h-3.5 w-3.5 text-blue-400" />
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-mono font-bold">
+            <Shield className="h-4 w-4 text-blue-400" />
             READ-ONLY ENFORCED
           </div>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs font-mono text-rose-300">
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-sm font-mono text-rose-300">
           Forensics Subsystem Error: {error}
         </div>
       )}
@@ -143,52 +143,52 @@ export function Forensics() {
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column: Discovered Evidence Sources */}
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <HardDrive className="h-4 w-4 text-cyan-400" /> Connected Evidence Sources
+            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2.5">
+              <HardDrive className="h-5 w-5 text-cyan-400" /> Connected Evidence Sources
             </h2>
-            <span className="text-[11px] font-mono text-slate-400">{devices.length} Detected</span>
+            <span className="text-xs font-mono text-slate-400 font-semibold">{devices.length} Detected</span>
           </div>
 
           {devices.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#1e2c40] bg-[#0f172a]/50 p-12 text-center">
-              <HardDrive className="h-10 w-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-slate-300">No Storage Sources Detected</p>
-              <p className="text-xs text-slate-500 mt-1">Attach a physical drive or portable storage device.</p>
+              <HardDrive className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-base font-semibold text-slate-300">No Storage Sources Detected</p>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">Attach a physical drive or portable storage device.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {devices.map((d) => {
                 const isSystem = d.system_disk;
                 return (
                   <div
                     key={d.id}
-                    className={`rounded-2xl border bg-[#0f172a]/90 backdrop-blur-sm p-5 shadow-xl transition-all duration-200 overflow-hidden ${
+                    className={`rounded-2xl border bg-[#0f172a]/90 backdrop-blur-sm p-6 shadow-xl transition-all duration-200 overflow-hidden ${
                       isSystem 
                         ? "border-rose-500/30 bg-gradient-to-r from-[#0f172a] to-rose-950/10" 
                         : "border-[#1e2c40] hover:border-cyan-500/40"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className={`p-2.5 rounded-xl border shrink-0 ${
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        <div className={`p-3 rounded-xl border shrink-0 ${
                           isSystem ? "bg-rose-500/10 border-rose-500/30 text-rose-400" :
                           "bg-cyan-500/10 border-cyan-500/30 text-cyan-400"
                         }`}>
-                          <HardDrive className="h-4 w-4" />
+                          <HardDrive className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-bold text-sm text-white truncate" title={`${d.vendor ? `${d.vendor} ` : ""}${d.model || ""}`}>
+                          <h4 className="font-bold text-base text-white truncate" title={`${d.vendor ? `${d.vendor} ` : ""}${d.model || ""}`}>
                             {d.vendor ? `${d.vendor} ` : ""}{d.model}
                           </h4>
-                          <p className="text-[11px] font-mono text-slate-400 mt-0.5 truncate" title={d.device_path}>
+                          <p className="text-xs font-mono text-slate-300 mt-0.5 truncate" title={d.device_path}>
                             {d.device_path} • {formatBytes(d.capacity_bytes || d.size_bytes || 0)}
                           </p>
                         </div>
                       </div>
 
-                      <span className={`shrink-0 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider whitespace-nowrap ${
+                      <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider whitespace-nowrap ${
                         isSystem 
                           ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" 
                           : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
@@ -199,17 +199,17 @@ export function Forensics() {
 
                     <div className="pt-2">
                       {isSystem ? (
-                        <div className="w-full py-2 px-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-center text-xs font-semibold">
+                        <div className="w-full py-2.5 px-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-center text-xs sm:text-sm font-semibold">
                           Protected System Disk
                         </div>
                       ) : (
                         <Button 
                           variant="forensic" 
-                          size="sm" 
-                          className="w-full"
+                          size="default" 
+                          className="w-full h-11 text-xs sm:text-sm font-bold rounded-xl"
                           onClick={() => handleOpenCreateModal(d.id)}
                         >
-                          <Plus className="h-3.5 w-3.5" /> Initialize Forensic Case
+                          <Plus className="h-4 w-4 mr-1.5" /> Initialize Forensic Case
                         </Button>
                       )}
                     </div>
@@ -221,39 +221,39 @@ export function Forensics() {
         </div>
 
         {/* Right Column: Active & Past Cases */}
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <FileSearch className="h-4 w-4 text-blue-400" /> Active Forensic Cases
+            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2.5">
+              <FileSearch className="h-5 w-5 text-blue-400" /> Active Forensic Cases
             </h2>
-            <span className="text-[11px] font-mono text-slate-400">{cases.length} Total Cases</span>
+            <span className="text-xs font-mono text-slate-400 font-semibold">{cases.length} Total Cases</span>
           </div>
 
           {cases.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#1e2c40] bg-[#0f172a]/50 p-12 text-center">
-              <FileSearch className="h-10 w-10 text-slate-600 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-slate-300">No Forensic Cases Created</p>
-              <p className="text-xs text-slate-500 mt-1">Select an evidence source on the left to start an investigation.</p>
+              <FileSearch className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-base font-semibold text-slate-300">No Forensic Cases Created</p>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">Select an evidence source on the left to start an investigation.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {cases.map((c) => (
                 <div
                   key={c.case_id}
                   onClick={() => navigate(`/forensics/case/${c.case_id}`)}
-                  className="group rounded-2xl border border-[#1e2c40] bg-[#0f172a]/90 backdrop-blur-sm p-5 shadow-xl hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] cursor-pointer transition-all duration-200 overflow-hidden"
+                  className="group rounded-2xl border border-[#1e2c40] bg-[#0f172a]/90 backdrop-blur-sm p-6 shadow-xl hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] cursor-pointer transition-all duration-200 overflow-hidden"
                 >
-                  <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex items-start justify-between gap-3 mb-2.5">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <h4 className="font-bold text-sm text-white group-hover:text-blue-300 transition-colors truncate" title={c.case_name}>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <h4 className="font-bold text-base text-white group-hover:text-blue-300 transition-colors truncate" title={c.case_name}>
                           {c.case_name}
                         </h4>
-                        <span className={`shrink-0 px-2 py-0.5 rounded text-[9px] font-bold border whitespace-nowrap ${getStatusBadge(c.status)}`}>
+                        <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold border whitespace-nowrap ${getStatusBadge(c.status)}`}>
                           {c.status}
                         </span>
                       </div>
-                      <p className="text-[11px] font-mono text-slate-400 mt-1 truncate" title={`ID: ${c.case_id}`}>
+                      <p className="text-xs font-mono text-slate-300 mt-1 truncate" title={`ID: ${c.case_id}`}>
                         ID: {c.case_id} {c.device_id ? `• Device: ${c.device_id}` : ""}
                       </p>
                     </div>
@@ -264,24 +264,24 @@ export function Forensics() {
                         setDeleteModalCase(c);
                       }}
                       title="Delete Case"
-                      className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      className="shrink-0 p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
 
                   {c.description && (
-                    <p className="text-xs text-slate-400 line-clamp-1 mb-3 font-sans">
+                    <p className="text-xs sm:text-sm text-slate-300 line-clamp-1 mb-3.5 font-sans leading-relaxed">
                       {c.description}
                     </p>
                   )}
 
-                  <div className="flex items-center justify-between pt-3 border-t border-[#1e2c40]/70 text-[11px] text-slate-500 font-mono">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {formatDate(c.created_at)}
+                  <div className="flex items-center justify-between pt-3.5 border-t border-[#1e2c40]/70 text-xs text-slate-400 font-mono">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5" /> {formatDate(c.created_at)}
                     </span>
-                    <span className="text-blue-400 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
-                      Open Case <ArrowRight className="h-3 w-3" />
+                    <span className="text-blue-400 font-semibold group-hover:translate-x-0.5 transition-transform flex items-center gap-1.5 text-xs sm:text-sm">
+                      Open Case <ArrowRight className="h-4 w-4" />
                     </span>
                   </div>
                 </div>

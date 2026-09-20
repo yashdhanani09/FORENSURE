@@ -93,37 +93,37 @@ export function TopNav() {
         {/* Top accent line with animated gradient */}
         <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-500/60 to-transparent animate-glow-line" />
 
-        {/* Frosted glass bar */}
+        {/* Frosted glass bar with larger workstation presence */}
         <div className="bg-[#070b14]/90 backdrop-blur-xl border-b border-[#182035] shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
-          <div className="flex h-14 items-center gap-4 px-4 lg:px-6">
+          <div className="flex h-16 lg:h-18 items-center gap-5 px-6 lg:px-10">
 
             {/* ── Logo ── */}
             <Link
               to="/"
-              className="flex items-center gap-2.5 shrink-0 group mr-2"
+              className="flex items-center gap-3 shrink-0 group mr-2"
             >
-              <div className="relative h-8 w-8 rounded-xl border border-cyan-500/40 bg-gradient-to-br from-cyan-500/25 to-teal-500/10 flex items-center justify-center text-cyan-400 shadow-[0_0_16px_rgba(6,182,212,0.25)] group-hover:shadow-[0_0_24px_rgba(6,182,212,0.45)] transition-shadow">
-                <DatabaseZap className="h-4 w-4" />
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-cyan-400 border border-[#070b14] animate-ping" />
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-cyan-400 border border-[#070b14]" />
+              <div className="relative h-10 w-10 rounded-2xl border border-cyan-500/40 bg-gradient-to-br from-cyan-500/25 to-teal-500/10 flex items-center justify-center text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.3)] group-hover:shadow-[0_0_28px_rgba(6,182,212,0.5)] transition-shadow">
+                <DatabaseZap className="h-5 w-5" />
+                <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-cyan-400 border-2 border-[#070b14] animate-ping" />
+                <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-cyan-400 border-2 border-[#070b14]" />
               </div>
               <div className="hidden sm:block">
-                <div className="text-[11px] font-black tracking-[0.22em] text-white leading-none">
+                <div className="text-sm lg:text-base font-black tracking-[0.24em] text-white leading-tight">
                   FORENSURE
                 </div>
-                <div className="text-[7.5px] font-bold tracking-[0.16em] text-cyan-400/80 font-mono mt-0.5">
+                <div className="text-[9px] lg:text-[10px] font-extrabold tracking-[0.18em] text-cyan-400/90 font-mono mt-0.5">
                   VERIFY · SANITIZE · RECOVER
                 </div>
               </div>
             </Link>
 
             {/* ── Divider ── */}
-            <div className="hidden lg:block h-6 w-px bg-[#182035] shrink-0" />
+            <div className="hidden lg:block h-7 w-px bg-[#182035] shrink-0" />
 
             {/* ── Desktop Nav Links ── */}
             <nav
               ref={navRef}
-              className="relative hidden lg:flex items-center gap-0.5 flex-1"
+              className="relative hidden lg:flex items-center gap-1.5 flex-1"
               aria-label="Main navigation"
             >
               {/* Animated sliding indicator */}
@@ -142,21 +142,21 @@ export function TopNav() {
                     if (isActive && node) activeNavRef.current = node;
                   }}
                   className={({ isActive }) =>
-                    `relative group flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 whitespace-nowrap ${
+                    `relative group flex items-center gap-2.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
                       isActive
-                        ? "bg-gradient-to-r from-cyan-500/25 via-cyan-500/20 to-teal-500/15 text-cyan-200 border border-cyan-400/50 shadow-[0_0_22px_rgba(6,182,212,0.4)]"
-                        : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] border border-transparent"
+                        ? "bg-gradient-to-r from-cyan-500/25 via-cyan-500/20 to-teal-500/15 text-cyan-200 border border-cyan-400/50 shadow-[0_0_22px_rgba(6,182,212,0.4)] font-bold"
+                        : "text-slate-300 hover:text-white hover:bg-white/[0.05] border border-transparent"
                     }`
                   }
                 >
                   {({ isActive }) => (
                     <>
-                      <Icon className={`h-3.5 w-3.5 shrink-0 transition-colors ${isActive ? "text-cyan-300" : "text-slate-500 group-hover:text-slate-300"}`} />
+                      <Icon className={`h-4 w-4 shrink-0 transition-colors ${isActive ? "text-cyan-300" : "text-slate-400 group-hover:text-slate-200"}`} />
                       <span>{label}</span>
-                      <span className={`text-[8px] font-bold font-mono px-1.5 py-0.5 rounded transition-colors ${
+                      <span className={`text-[9px] font-extrabold font-mono px-2 py-0.5 rounded transition-colors ${
                         isActive
                           ? "bg-cyan-400/25 text-cyan-100 border border-cyan-400/40"
-                          : "bg-white/[0.03] text-slate-600 group-hover:text-slate-500"
+                          : "bg-white/[0.04] text-slate-500 group-hover:text-slate-400"
                       }`}>
                         {tag}
                       </span>
@@ -167,22 +167,22 @@ export function TopNav() {
             </nav>
 
             {/* ── Right Controls ── */}
-            <div className="flex items-center gap-2 ml-auto shrink-0">
+            <div className="flex items-center gap-2.5 ml-auto shrink-0">
 
               {/* Bridge / Mode Status Badge matching reference image */}
               {demoMode ? (
-                <span className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-[11px] font-semibold shadow-[0_0_12px_rgba(168,85,247,0.2)]">
-                  <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+                <span className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-xs font-semibold shadow-[0_0_12px_rgba(168,85,247,0.2)]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-purple-400 animate-pulse" />
                   Status: Demo Sandbox
                 </span>
               ) : status.connected ? (
-                <span className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[11px] font-semibold shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-xs font-semibold shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
                   Status: Connected
                 </span>
               ) : (
-                <span className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono text-[11px] font-semibold shadow-[0_0_12px_rgba(244,63,94,0.2)]">
-                  <span className="h-2 w-2 rounded-full bg-rose-500" />
+                <span className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono text-xs font-semibold shadow-[0_0_12px_rgba(244,63,94,0.2)]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
                   Status: Standby
                 </span>
               )}
@@ -190,16 +190,16 @@ export function TopNav() {
               {/* Admin Badge */}
               {status.connected && !demoMode && (
                 isAdmin ? (
-                  <span className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[10px] font-semibold">
-                    <ShieldCheck className="h-3 w-3" /> Admin
+                  <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Admin
                   </span>
                 ) : (
                   <Link
                     to="/agent-guide"
-                    className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[10px] font-semibold transition"
+                    className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-semibold transition"
                     title="Admin required for raw disk access"
                   >
-                    <ShieldAlert className="h-3 w-3 text-amber-400" /> Admin Required
+                    <ShieldAlert className="h-3.5 w-3.5 text-amber-400" /> Admin Required
                   </Link>
                 )
               )}
@@ -208,7 +208,7 @@ export function TopNav() {
               {demoMode ? (
                 <button
                   onClick={() => handleToggleDemo(false)}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-[#182035] text-slate-300 hover:text-white text-[10px] font-semibold transition"
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-[#182035] text-slate-300 hover:text-white text-xs font-semibold transition"
                 >
                   Exit Demo
                 </button>
@@ -216,24 +216,24 @@ export function TopNav() {
                 <>
                   <button
                     onClick={() => handleToggleDemo(true)}
-                    className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-300 text-[10px] font-semibold transition"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-300 text-xs font-semibold transition"
                   >
-                    <Sparkles className="h-3 w-3" /> Demo
+                    <Sparkles className="h-3.5 w-3.5" /> Demo
                   </button>
                   <button
                     onClick={() => setShowModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-[10px] font-bold transition shadow-[0_0_12px_rgba(6,182,212,0.3)]"
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition shadow-[0_0_16px_rgba(6,182,212,0.35)]"
                   >
-                    <Download className="h-3 w-3" />
-                    <span className="hidden md:inline">{status.connected ? "Bridge" : "Download"}</span>
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="hidden md:inline">{status.connected ? "Bridge Info" : "Download"}</span>
                   </button>
                   <button
                     onClick={handleRecheck}
                     disabled={checking}
                     title="Recheck bridge connection"
-                    className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-[#182035] text-slate-400 hover:text-slate-200 transition"
+                    className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-[#182035] text-slate-300 hover:text-white transition"
                   >
-                    <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin text-cyan-400" : ""}`} />
+                    <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin text-cyan-400" : ""}`} />
                   </button>
                 </>
               )}
@@ -241,9 +241,9 @@ export function TopNav() {
               {/* Mobile hamburger */}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="lg:hidden p-1.5 rounded-lg border border-[#182035] bg-slate-800/60 text-slate-400 hover:text-white transition"
+                className="lg:hidden p-2 rounded-xl border border-[#182035] bg-slate-800/60 text-slate-300 hover:text-white transition"
               >
-                <Menu className="h-4 w-4" />
+                <Menu className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -287,8 +287,8 @@ export function TopNav() {
           )}
 
           {/* ── Sub-status bar (connection detail line) ── */}
-          <div className="hidden md:flex items-center gap-3 px-6 py-1 border-t border-[#182035]/60 bg-[#060a12]/50 text-[10px] font-mono text-slate-500">
-            <span className="text-slate-600">SYS:</span>
+          <div className="hidden md:flex items-center gap-4 px-8 lg:px-10 py-1.5 border-t border-[#182035]/70 bg-[#060a12]/60 text-xs font-mono text-slate-400">
+            <span className="text-cyan-400 font-bold">SYS TELEMETRY:</span>
             <span>
               {demoMode
                 ? "Simulated forensic sandbox · carving, wiping, and evidence verification active"
@@ -296,8 +296,8 @@ export function TopNav() {
                 ? "Physical bridge online · raw MFT sector scanning · MTP detection active · port 8000"
                 : "Bridge offline · connect FORENSURE-Bridge.exe as Administrator to enable hardware probing"}
             </span>
-            <span className="ml-auto flex items-center gap-1">
-              <Cpu className="h-3 w-3" />
+            <span className="ml-auto flex items-center gap-2 text-slate-300 font-semibold">
+              <Cpu className="h-3.5 w-3.5 text-cyan-400" />
               FORENSURE v2.4 · NIST SP 800-88
             </span>
           </div>
