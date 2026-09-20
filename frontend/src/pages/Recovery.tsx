@@ -448,6 +448,17 @@ export function Recovery() {
         </div>
       )}
 
+      {/* SSD / NVMe TRIM Advisory Notice */}
+      {deviceProfile && (deviceProfile.category === "SSD / NVMe" || (deviceProfile.trim_status && deviceProfile.trim_status.includes("ACTIVE"))) && (
+        <div className="bg-cyan-950/20 border border-cyan-500/30 rounded-2xl p-4 px-6 flex items-start gap-3 backdrop-blur-sm shadow-md">
+          <HardDrive className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+          <div className="text-xs text-slate-300 leading-relaxed font-sans">
+            <strong className="text-cyan-300 font-bold block text-sm mb-0.5">NVMe / Solid-State Drive Architecture Detected:</strong>
+            Under Windows NTFS on SSDs, unallocated sectors for permanently deleted files are zeroed by hardware TRIM (DZAT). Small files residing inside MFT records ($DATA resident &le; 700 bytes) and Recycle Bin items remain 100% intact and restorable. If unallocated clusters return zeroed bytes, FORENSURE will honestly flag them as TRIM deallocated instead of outputting corrupted files.
+          </div>
+        </div>
+      )}
+
       {/* Control Panel: Device Selector & Unified Single Scan */}
       <div className="bg-[#0f172a]/90 border border-[#1e2c40] rounded-2xl p-6 shadow-xl space-y-6 backdrop-blur-sm">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
@@ -960,6 +971,7 @@ export function Recovery() {
             <tbody className="divide-y divide-[#1e2c40]/60">
               {displayFiles.map((file) => {
                 const isSelected = selectedFileIds.has(file.id);
+                const cleanPath = (file.original_path || "").replace(/\s*\(MFT Record #\d+\)/i, "");
                 return (
                   <tr 
                     key={file.id} 
@@ -976,11 +988,11 @@ export function Recovery() {
                     </td>
                     <td className="px-4 py-3.5 font-sans">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-[#090d16] border border-[#1e2c40] group-hover:border-cyan-500/40 transition">
+                        <div className="p-2.5 rounded-xl bg-[#090d16] border border-[#1e2c40] group-hover:border-cyan-500/40 transition shrink-0">
                           {getCategoryIcon(file.category)}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-semibold text-sm text-white group-hover:text-cyan-300 transition truncate max-w-xs sm:max-w-md" title={file.filename}>
+                          <div className="font-bold text-sm sm:text-base text-white group-hover:text-cyan-300 transition truncate max-w-xs sm:max-w-md" title={file.filename}>
                             {file.filename}
                           </div>
                           <div className="text-xs font-mono text-cyan-400/90 uppercase font-medium">
@@ -993,24 +1005,24 @@ export function Recovery() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
-                      <span className="text-xs font-bold text-slate-300 uppercase px-2.5 py-1 rounded-md bg-[#090d16] border border-[#1e2c40]">
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <span className="text-xs font-bold text-slate-200 uppercase px-2.5 py-1 rounded-md bg-[#090d16] border border-[#1e2c40]">
                         {file.category}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 text-xs text-slate-300 truncate max-w-sm font-mono" title={file.original_path}>
-                      {file.original_path}
+                    <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-300 truncate max-w-sm font-mono" title={cleanPath}>
+                      {cleanPath}
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-semibold text-slate-200 font-sans">
+                    <td className="px-4 py-3.5 text-sm font-bold text-slate-100 font-mono whitespace-nowrap">
                       {formatBytes(file.size_bytes)}
                     </td>
-                    <td className="px-4 py-3.5 text-xs font-mono text-slate-300 font-sans">
+                    <td className="px-4 py-3.5 text-xs text-slate-300 font-sans whitespace-nowrap">
                       {file.deleted_at ? formatDate(file.deleted_at) : "Unknown"}
                     </td>
                     <td className="px-4 py-3.5 font-sans">
                       <div className="space-y-1">
                         <div className="flex items-center gap-1.5">
-                          <span className={`px-2.5 py-1 rounded text-xs font-bold font-mono ${
+                          <span className={`px-2.5 py-1 rounded text-xs font-bold font-mono whitespace-nowrap ${
                             file.confidence === "HIGH" ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/40" :
                             file.confidence === "MEDIUM" ? "bg-amber-500/15 text-amber-300 border border-amber-500/40" :
                             "bg-rose-500/15 text-rose-300 border border-rose-500/40"
@@ -1025,7 +1037,7 @@ export function Recovery() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 text-right font-sans">
+                    <td className="px-4 py-3.5 text-right font-sans whitespace-nowrap">
                       <Button
                         size="sm"
                         variant="signal"
@@ -1177,6 +1189,16 @@ export function Recovery() {
                         </span>
                       )}
                     </div>
+
+                    {item.status !== "RECOVERED" && item.error && (
+                      <div className="mt-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs leading-relaxed font-sans">
+                        <div className="font-bold flex items-center gap-1.5 mb-1 text-amber-300">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Forensic Advisory</span>
+                        </div>
+                        {item.error}
+                      </div>
+                    )}
                   </div>
 
                   {item.status === "RECOVERED" && (

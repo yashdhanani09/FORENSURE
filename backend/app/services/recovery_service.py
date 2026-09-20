@@ -33,11 +33,22 @@ LAST_SCANNED_FILES: Dict[str, List[DeletedFileItem]] = {}
 LAST_TARGET_DEVICES: Dict[str, Dict[str, Any]] = {}
 
 
-def _read_mft_clusters_to_file(drive_prefix: str, data_runs: List[Tuple[int, int]], cluster_size: int, real_size: int, out_path: str) -> Tuple[int, str]:
-    """Reads non-resident NTFS clusters directly from physical volume sectors and writes bit-exact file payload to out_path."""
+def _read_mft_clusters_to_file(
+    drive_prefix: str,
+    data_runs: List[Tuple[int, int]],
+    cluster_size: int,
+    real_size: int,
+    out_path: str,
+) -> Tuple[int, str, bool]:
+    """
+    Reads non-resident NTFS clusters directly from physical volume sectors and writes bit-exact file payload to out_path.
+    Returns: (bytes_written, sha256_hexdigest, is_trimmed)
+    is_trimmed is True if 100% of read bytes across physical clusters were zeroes (0x00) - an indicator of NVMe/SATA SSD TRIM (DZAT).
+    """
     hasher = hashlib.sha256()
     bytes_written = 0
     remaining = real_size
+    has_non_zero = False
 
     with open(out_path, "wb") as dst:
         for lcn, cluster_count in data_runs:
@@ -65,6 +76,8 @@ def _read_mft_clusters_to_file(drive_prefix: str, data_runs: List[Tuple[int, int
                     take = min(run_rem, chunk_step)
                     block_chunk = _read_raw_volume_at_offset(drive_prefix, offset, take)
                     if block_chunk:
+                        if not has_non_zero and any(b != 0 for b in block_chunk):
+                            has_non_zero = True
                         dst.write(block_chunk)
                         hasher.update(block_chunk)
                         bytes_written += len(block_chunk)
@@ -74,7 +87,8 @@ def _read_mft_clusters_to_file(drive_prefix: str, data_runs: List[Tuple[int, int
                         break
             remaining = real_size - bytes_written
 
-    return bytes_written, hasher.hexdigest()
+    is_trimmed = (bytes_written > 0 and not has_non_zero)
+    return bytes_written, hasher.hexdigest(), is_trimmed
 
 
 def _get_category(extension: str) -> str:
@@ -342,13 +356,13 @@ def _read_raw_volume_at_offset(drive_letter: str, offset: int, length: int) -> O
     return None
 
 
-def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFileItem]:
+def _scan_raw_carver(mount_root: str, max_files: int = 15000) -> List[DeletedFileItem]:
     """
     Performs raw binary signature carving from physical/logical storage volumes,
     disk images, temporary clusters, and unallocated slack. Supports JPG, PNG, PDF, DOCX, XLSX, ZIP, MP4, TXT.
     """
     items: List[DeletedFileItem] = []
-    logger.info("Initiating forensic raw file carving on %s", mount_root)
+    logger.info("Initiating forensic raw file carving on %s (quota: %d)", mount_root, max_files)
 
     # Strategy A: Direct Raw Disk Handle (if elevated/accessible)
     drive_prefix = mount_root[:2] if len(mount_root) >= 2 and mount_root[1] == ":" else ""
@@ -386,7 +400,7 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
                 if mftmirr_lcn > 0:
                     mft_extents.append((mftmirr_lcn * cluster_size, 4 * 1024 * 1024))
 
-            # Scan MFT extents for unallocated records ($FILE_NAME, resident $DATA, and non-resident data runs)
+            # Scan all MFT extents thoroughly for unallocated records
             chunk_step = 16 * 1024 * 1024
             for extent_offset, extent_total in mft_extents:
                 if len(items) >= max_files:
@@ -401,34 +415,49 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
                             curr_off += to_read
                             continue
 
-                        deleted_mft = scan_mft_records_from_stream(chunk, base_offset=curr_off, max_items=max_files - len(items))
+                        deleted_mft = scan_mft_records_from_stream(
+                            chunk,
+                            base_offset=curr_off,
+                            max_items=max_files - len(items),
+                            ignore_synthetic=True,
+                        )
                         for mft_item in deleted_mft:
                             cid = f"mft_{uuid.uuid4().hex[:10]}"
                             ext = Path(mft_item.filename).suffix.lstrip(".") or "bin"
                             cat = _get_category(ext)
                             mft_data = mft_item.data if mft_item.data else b""
                             has_runs = bool(mft_item.data_runs)
-                            is_recoverable = len(mft_data) > 0 or has_runs
+                            is_resident = bool(mft_data and len(mft_data) > 0)
+                            is_recoverable = is_resident or has_runs
 
                             if has_runs:
                                 vol_cluster_size = cluster_size if 'cluster_size' in locals() and cluster_size else 4096
                                 MFT_RUNS_CACHE[cid] = (drive_prefix, mft_item.data_runs, vol_cluster_size, mft_item.size_bytes)
 
-                            details = (
-                                f"Extracted from unallocated NTFS Master File Table record #{mft_item.record_number} "
-                                f"({'Resident payload' if mft_data else f'Non-resident Data Runlist, {len(mft_item.data_runs or [])} runs'})"
-                            )
+                            if is_resident:
+                                details = f"MFT Record #{mft_item.record_number} (Resident payload, {len(mft_data)} bytes - Immune to SSD TRIM)"
+                                conf = "HIGH"
+                                score = 98
+                            elif has_runs:
+                                details = f"MFT Record #{mft_item.record_number} (Non-resident Data Runlist, {len(mft_item.data_runs or [])} runs)"
+                                conf = "HIGH"
+                                score = 90
+                            else:
+                                details = f"MFT Record #{mft_item.record_number} (Metadata record)"
+                                conf = "LOW"
+                                score = 45
+
                             item = DeletedFileItem(
                                 id=cid,
                                 filename=mft_item.filename,
-                                original_path=f"{drive_prefix}\\{mft_item.filename} (MFT Record #{mft_item.record_number})",
+                                original_path=f"{drive_prefix}\\{mft_item.filename}",
                                 source_path=f"mft://{cid}",
                                 size_bytes=mft_item.size_bytes or len(mft_data),
                                 extension=ext,
                                 category=cat,
                                 deleted_at=mft_item.deleted_at,
-                                confidence="HIGH",
-                                confidence_score=95,
+                                confidence=conf,
+                                confidence_score=score,
                                 validation_details=details,
                                 offset_bytes=mft_item.offset_bytes,
                                 recovery_method="ntfs_mft_carved",
@@ -500,7 +529,6 @@ def _scan_raw_carver(mount_root: str, max_files: int = 5000) -> List[DeletedFile
     unallocated_dirs = [
         os.path.join(mount_root, "Temp"),
         os.path.join(mount_root, "tmp"),
-        os.path.join(mount_root, "evidence"),
         os.path.join(mount_root, ".Trash-1000"),
     ]
     # Only check user AppData/Temp if specifically scanning the system C: drive
@@ -884,7 +912,7 @@ def scan_device_deleted_files(
 
         # Layer 3. Raw Data File Carving & Text Remnant Reconstruction (Always active in unified/auto/deep)
         if scan_type in {"unified", "auto", "deep", "carving", "all"}:
-            carved_items = _scan_raw_carver(mp, max_files=5000)
+            carved_items = _scan_raw_carver(mp, max_files=15000)
             for item in carved_items:
                 key = (item.filename, item.size_bytes, item.original_path)
                 if key not in seen_keys:
@@ -1056,13 +1084,46 @@ def restore_files(file_ids: List[str], destination_folder: Optional[str] = None)
 
                 # Reconstruct and copy: write from CARVED_DATA_CACHE, MFT volume clusters, or disk stream
                 if raw_payload is not None:
+                    if len(raw_payload) > 0 and all(b == 0 for b in raw_payload):
+                        restored.append(RestoredItem(
+                            file_id=fid,
+                            filename=item.filename,
+                            output_path="",
+                            size_bytes=0,
+                            sha256="",
+                            status="FAILED",
+                            error="Resident payload contained only null bytes.",
+                        ))
+                        continue
                     with open(out_path, "wb") as dst:
                         dst.write(raw_payload)
                     bytes_copied = len(raw_payload)
                     digest = hashlib.sha256(raw_payload).hexdigest()
                 elif fid in MFT_RUNS_CACHE:
                     drv, runs, csz, rsz = MFT_RUNS_CACHE[fid]
-                    bytes_copied, digest = _read_mft_clusters_to_file(drv, runs, csz, rsz, out_path)
+                    bytes_copied, digest, is_trimmed = _read_mft_clusters_to_file(drv, runs, csz, rsz, out_path)
+                    if is_trimmed:
+                        if os.path.exists(out_path):
+                            try:
+                                os.remove(out_path)
+                            except Exception:
+                                pass
+                        err_msg = (
+                            "Physical sectors were cleared by SSD TRIM (DZAT). "
+                            "NVMe wear-leveling deallocated clusters upon deletion. "
+                            "File content is unrecoverable from this SSD partition."
+                        )
+                        logger.warning("File %s on %s was zeroed by SSD TRIM", item.filename, drv)
+                        restored.append(RestoredItem(
+                            file_id=fid,
+                            filename=item.filename,
+                            output_path="",
+                            size_bytes=0,
+                            sha256="",
+                            status="FAILED",
+                            error=err_msg,
+                        ))
+                        continue
                 else:
                     hasher = hashlib.sha256()
                     bytes_copied = 0

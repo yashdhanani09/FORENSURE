@@ -273,14 +273,36 @@ def parse_record0_mft_runs(record0_bytes: bytes) -> Tuple[int, List[Tuple[int, i
     return 0, []
 
 
-def scan_mft_records_from_stream(data: bytes, base_offset: int = 0, max_items: int = 5000) -> List[DeletedMftItem]:
+DEV_NOISE_EXTENSIONS = {
+    ".map", ".d.ts", ".cjs", ".mjs", ".cts", ".mts", ".npmignore",
+    ".eslintrc", ".eslintignore", ".prettierrc", ".prettierignore",
+    ".babelrc", ".browserslistrc", ".flowconfig", ".editorconfig",
+    ".gitkeep", ".gitignore", ".gitattributes", ".lock", ".yarnclean",
+    ".tsbuildinfo", ".node",
+}
+
+DEV_NOISE_NAMES = {
+    "package.json", "package-lock.json", "tsconfig.json", "jsconfig.json",
+    "yarn.lock", "pnpm-lock.yaml", "rollup.config.js", "webpack.config.js",
+    "vite.config.ts", "vite.config.js", "tailwind.config.js", "postcss.config.js",
+}
+
+
+def scan_mft_records_from_stream(
+    data: bytes,
+    base_offset: int = 0,
+    max_items: int = 15000,
+    ignore_synthetic: bool = True,
+) -> List[DeletedMftItem]:
     """
     Scans a raw sector buffer for 1024-byte aligned and unaligned 'FILE' MFT records.
     Extracts all valid deleted file records found with fast in-memory active-record filtering.
+    Filters out ephemeral build artifacts (.map, .d.ts, .cjs) and synthetic carver test files.
     """
     found_items: List[DeletedMftItem] = []
     seen_names = set()
     data_len = len(data)
+    ext_counts: dict[str, int] = {}
 
     # Standard sector alignment: 512 or 1024 bytes
     step = 512
@@ -294,17 +316,43 @@ def scan_mft_records_from_stream(data: bytes, base_offset: int = 0, max_items: i
             if (flags & 0x0001) == 0:
                 item = parse_mft_record(data[pos:pos + MFT_RECORD_SIZE], offset_bytes=base_offset + pos)
                 if item and item.filename:
-                    # Filter noise and deduplicate by filename + size
                     clean_name = item.filename.strip()
-                    if clean_name and len(clean_name) > 1 and not clean_name.startswith("$"):
-                        key = (clean_name.lower(), item.size_bytes)
-                        if key not in seen_names:
-                            seen_names.add(key)
-                            found_items.append(item)
-                            if len(found_items) >= max_items:
-                                break
+                    low_name = clean_name.lower()
+
+                    # 1. Skip system metadata files ($MFT, $LogFile, $Volume, etc.)
+                    if not clean_name or len(clean_name) <= 1 or clean_name.startswith("$"):
+                        pos += MFT_RECORD_SIZE
+                        continue
+
+                    # 2. Skip synthetic remnants from prior carving test runs (recovered_*, carved_*)
+                    if ignore_synthetic and low_name.startswith(("recovered_", "carved_")):
+                        pos += MFT_RECORD_SIZE
+                        continue
+
+                    # 3. Skip development build chaff / source maps
+                    if low_name in DEV_NOISE_NAMES or any(low_name.endswith(ne) for ne in DEV_NOISE_EXTENSIONS):
+                        pos += MFT_RECORD_SIZE
+                        continue
+
+                    # 4. Cap common web code extensions (.js, .ts, .json) to prevent node_modules flooding
+                    file_ext = low_name.split(".")[-1] if "." in low_name else ""
+                    if file_ext in {"js", "ts", "json", "css", "scss"}:
+                        cur_cnt = ext_counts.get(file_ext, 0)
+                        if cur_cnt >= 40:
+                            pos += MFT_RECORD_SIZE
+                            continue
+                        ext_counts[file_ext] = cur_cnt + 1
+
+                    # 5. Deduplicate by filename + size
+                    key = (low_name, item.size_bytes)
+                    if key not in seen_names:
+                        seen_names.add(key)
+                        found_items.append(item)
+                        if len(found_items) >= max_items:
+                            break
             pos += MFT_RECORD_SIZE
         else:
             pos += step
 
     return found_items
+

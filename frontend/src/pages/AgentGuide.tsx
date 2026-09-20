@@ -46,7 +46,10 @@ const STEPS = [
     -> Runs silently in background forever (Zero UAC Popups, Zero Terminal Windows).
 
 [*] Mode 2 (Interactive Terminal):
-    Right-click RUN-AS-ADMIN.bat -> "Run as administrator"`,
+    Right-click RUN-AS-ADMIN.bat -> "Run as administrator"
+
+[*] To Update an existing running bridge:
+    Right-click UPDATE-BRIDGE.bat -> "Run as administrator" (restarts bridge with latest fixes)`,
     actionLabel: null,
     confirmLabel: "Bridge is running as Administrator",
   },

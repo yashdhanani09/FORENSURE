@@ -170,3 +170,19 @@ def test_parse_record0_mft_runs():
     assert runs[0][0] == 1024
     assert runs[0][1] == 16
 
+
+def test_scan_mft_filtering_noise_and_synthetic():
+    """Verifies that scan_mft_records_from_stream filters dev build artifacts and synthetic carver remnants."""
+    rec_user = _build_synthetic_deleted_mft_record("Quarterly_Report.docx", b"PK\x03\x04doc")
+    rec_map = _build_synthetic_deleted_mft_record("bundle.js.map", b'{"version":3}')
+    rec_cjs = _build_synthetic_deleted_mft_record("index.cjs", b"module.exports = {};")
+    rec_synth = _build_synthetic_deleted_mft_record("recovered_document_0004a9d3_1.docx", b"\x00" * 100)
+
+    stream = rec_user + rec_map + rec_cjs + rec_synth
+    items = scan_mft_records_from_stream(stream, ignore_synthetic=True)
+
+    # Only the authentic user file should be returned
+    assert len(items) == 1
+    assert items[0].filename == "Quarterly_Report.docx"
+
+

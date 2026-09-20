@@ -243,3 +243,24 @@ def test_carve_rar_and_rtf():
     assert carved_rtf[0].extension == "rtf"
     assert carved_rtf[0].category == "Document"
 
+
+def test_read_mft_clusters_trim_zero_detection(tmp_path, monkeypatch):
+    """Verifies that _read_mft_clusters_to_file detects SSD TRIM zeroing."""
+    from app.services.recovery_service import _read_mft_clusters_to_file
+    import app.services.recovery_service as rec_mod
+
+    # Mock _read_raw_volume_at_offset to simulate an SSD returning all zeroes
+    monkeypatch.setattr(rec_mod, "_read_raw_volume_at_offset", lambda drv, off, sz: b"\x00" * sz)
+
+    out_file = str(tmp_path / "trimmed_test.docx")
+    bytes_wr, digest, is_trimmed = _read_mft_clusters_to_file("D:", [(100, 4)], 4096, 16384, out_file)
+
+    assert bytes_wr == 16384
+    assert is_trimmed is True  # All zeroes returned -> flagged as trimmed!
+
+    # Now mock with real non-zero payload
+    monkeypatch.setattr(rec_mod, "_read_raw_volume_at_offset", lambda drv, off, sz: b"PK\x03\x04" + b"\x00" * (sz - 4))
+    bytes_wr2, digest2, is_trimmed2 = _read_mft_clusters_to_file("D:", [(100, 4)], 4096, 16384, out_file)
+    assert is_trimmed2 is False  # Non-zero bytes found -> authentic data!
+
+
