@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { 
   RotateCcw, Search, Download, CheckCircle2, AlertTriangle, 
   FileText, Image as ImageIcon, Film, Archive, Code, File, HardDrive, 
@@ -16,6 +16,7 @@ import { formatBytes, formatDate } from "../utils/format";
 import { Button } from "../components/ui/button";
 
 export function Recovery() {
+  const [searchParams] = useSearchParams();
   const [devices, setDevices] = useState<UsbDeviceDetail[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const [scanType, setScanType] = useState<"unified" | "auto" | "quick" | "deep" | "forensic_image">("unified");
@@ -97,8 +98,10 @@ export function Recovery() {
       const res = await deviceApi.list({ refresh: force });
       const list = res.devices || [];
       setDevices(list);
-      // Auto-select "all" for whole machine recovery or maintain selection
-      if (!selectedDeviceId) {
+      const targetParam = searchParams.get("target");
+      if (targetParam && (targetParam === "all" || list.some(d => d.id === targetParam))) {
+        setSelectedDeviceId(targetParam);
+      } else if (!selectedDeviceId) {
         setSelectedDeviceId("all");
       }
     } catch (e: any) {
@@ -498,20 +501,85 @@ export function Recovery() {
                   className="w-full bg-[#070b14] border border-[#22334a] focus:border-cyan-500 rounded-2xl px-5 py-4 text-slate-100 text-sm sm:text-base outline-none font-mono placeholder:text-slate-600 transition shadow-inner"
                 />
               ) : (
-                <select
-                  value={selectedDeviceId}
-                  onChange={(e) => setSelectedDeviceId(e.target.value)}
-                  className="w-full bg-[#070b14] border border-[#22334a] focus:border-cyan-500 rounded-2xl px-5 py-4 text-slate-100 text-sm sm:text-base outline-none font-medium cursor-pointer transition shadow-inner"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-80 overflow-y-auto pr-1">
+                {/* Square Card: Entire Machine */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedDeviceId("all")}
+                  className={`p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between ${
+                    selectedDeviceId === "all"
+                      ? "bg-cyan-500/[0.12] border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] ring-2 ring-cyan-500/40"
+                      : "bg-[#070b14] border-[#1e2c40] hover:border-slate-600 hover:bg-white/[0.02]"
+                  }`}
                 >
-                  <option value="all">
-                    💻 Entire Machine &amp; All Volumes (C:\, D:\, All Recycle Bins)
-                  </option>
-                  {devices.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.device_type === "MOBILE_DEVICE" ? "📱 " : "💾 "}{d.vendor || "Storage"} {d.model || d.device_path} ({formatBytes(d.capacity_bytes || d.size_bytes || 0)}) {d.system_disk ? "— [SYSTEM OS]" : ""}{d.device_type === "MOBILE_DEVICE" ? " — [MTP PHONE]" : ""}
-                    </option>
-                  ))}
-                </select>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shadow-sm">
+                      <Layers className="w-5 h-5" />
+                    </div>
+                    {selectedDeviceId === "all" ? (
+                      <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0" />
+                    ) : (
+                      <span className="w-5 h-5 rounded-full border border-slate-700 shrink-0" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-sm font-black text-white">Entire Machine &amp; All Volumes</div>
+                    <div className="text-xs font-mono text-cyan-300/80 mt-0.5">C:\, D:\, All Recycle Bins</div>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-slate-400">Scan Scope</span>
+                    <span className="text-cyan-400 font-bold">ALL DISKS</span>
+                  </div>
+                </button>
+
+                {/* Square Card for Each Discovered Device */}
+                {devices.map((d) => {
+                  const isSelected = selectedDeviceId === d.id;
+                  const isMobile = d.device_type === "MOBILE_DEVICE";
+                  const isSystem = d.system_disk;
+                  return (
+                    <button
+                      type="button"
+                      key={d.id}
+                      onClick={() => setSelectedDeviceId(d.id)}
+                      className={`p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between ${
+                        isSelected
+                          ? "bg-cyan-500/[0.12] border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.25)] ring-2 ring-cyan-500/40"
+                          : "bg-[#070b14] border-[#1e2c40] hover:border-slate-600 hover:bg-white/[0.02]"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className={`p-2.5 rounded-xl border ${
+                          isSystem ? "bg-rose-500/10 border-rose-500/20 text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.15)]" :
+                          isMobile ? "bg-purple-500/10 border-purple-500/20 text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.15)]" :
+                          "bg-cyan-500/10 border-cyan-500/20 text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.15)]"
+                        }`}>
+                          {isMobile ? <Smartphone className="w-5 h-5" /> : <HardDrive className="w-5 h-5" />}
+                        </div>
+                        {isSelected ? (
+                          <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0" />
+                        ) : (
+                          <span className="w-5 h-5 rounded-full border border-slate-700 shrink-0" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-sm font-black text-white truncate" title={d.vendor || d.model || d.device_path}>
+                          {d.vendor || "Storage"} {d.model || d.device_path}
+                        </div>
+                        <div className="text-xs font-mono text-slate-400 mt-0.5">
+                          {formatBytes(d.capacity_bytes || d.size_bytes || 0)} • {d.mount_point || d.device_path}
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-slate-400">{d.device_type || "STORAGE"}</span>
+                        <span className={`font-bold ${isSystem ? "text-rose-400" : isMobile ? "text-purple-400" : "text-emerald-400"}`}>
+                          {isSystem ? "SYSTEM OS" : isMobile ? "MTP PHONE" : "READY"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
               )}
             </div>
 

@@ -1,9 +1,14 @@
 import React, { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { Header } from "../components/Header";
 import { DeviceTable } from "../components/DeviceTable";
 import { EmptyState } from "../components/EmptyState";
 import { useDevices } from "../hooks/useDevices";
-import { Search, HardDrive, Smartphone, Usb, Filter, ShieldCheck } from "lucide-react";
+import { deviceName, formatBytes } from "../utils/format";
+import { 
+  Search, HardDrive, Smartphone, Usb, Filter, ShieldCheck, 
+  LayoutGrid, List, ChevronRight, Shield, RotateCcw 
+} from "lucide-react";
 
 type FilterCategory = "all" | "internal" | "usb" | "data_volume" | "mobile" | "system";
 
@@ -11,6 +16,7 @@ export function Devices() {
   const { devices, loading, error, refresh } = useDevices();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterCategory>("all");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
   const filteredDevices = useMemo(() => {
     return devices.filter((d) => {
@@ -120,15 +126,45 @@ export function Devices() {
             </button>
           </div>
 
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 pointer-events-none" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search storage devices..."
-              className="w-full bg-[#0f172a] border border-[#1e2c40] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500 transition-colors"
-            />
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="relative flex-1 md:w-80">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500 pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search storage devices..."
+                className="w-full bg-[#0f172a] border border-[#1e2c40] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-500 transition-colors"
+              />
+            </div>
+
+            {/* View Mode Toggle: Grid (Dashboard Squares) vs Table */}
+            <div className="flex items-center p-1 rounded-xl bg-[#090e1a] border border-[#1e2c40] shrink-0">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-lg transition flex items-center gap-1.5 text-xs font-bold ${
+                  viewMode === "grid"
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+                title="Dashboard Squares View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="hidden sm:inline">Squares</span>
+              </button>
+              <button
+                onClick={() => setViewMode("table")}
+                className={`p-2 rounded-lg transition flex items-center gap-1.5 text-xs font-bold ${
+                  viewMode === "table"
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                    : "text-slate-400 hover:text-white"
+                }`}
+                title="Table View"
+              >
+                <List className="w-4 h-4" />
+                <span className="hidden sm:inline">Table</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -139,9 +175,121 @@ export function Devices() {
         )}
 
         {loading && !devices.length ? (
-          <div className="h-72 animate-pulse rounded-2xl border border-[#1e2c40] bg-[#0f172a]/50" />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-72 animate-pulse rounded-3xl border border-[#1e2c40] bg-[#0c1220]/50" />
+            ))}
+          </div>
         ) : filteredDevices.length ? (
-          <DeviceTable devices={filteredDevices} />
+          viewMode === "grid" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8">
+              {filteredDevices.map((device) => {
+                const isSystem = device.system_disk;
+                const isMobile = device.device_type === "MOBILE_DEVICE";
+                const isUsb = device.is_usb || device.transport === "usb";
+
+                return (
+                  <div
+                    key={device.id}
+                    className="group relative rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Card Header: Icon + Title + Status Badge */}
+                      <div className="flex items-start justify-between gap-3 mb-5">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className={`p-3 rounded-2xl shrink-0 ${
+                            isSystem ? "bg-rose-500/10 text-rose-400 border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.15)]" :
+                            isMobile ? "bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]" :
+                            device.device_type === "INTERNAL_STORAGE" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.15)]" :
+                            "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+                          }`}>
+                            {isMobile ? <Smartphone className="h-6 w-6" /> : isUsb ? <Usb className="h-6 w-6" /> : <HardDrive className="h-6 w-6" />}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="text-base sm:text-lg font-black text-white truncate group-hover:text-cyan-300 transition" title={deviceName(device.vendor, device.model)}>
+                              {deviceName(device.vendor, device.model)}
+                            </h3>
+                            <p className="text-xs font-mono text-slate-400 truncate mt-0.5" title={device.device_path}>
+                              {device.device_path}
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border ${
+                          isSystem ? "bg-rose-500/15 text-rose-300 border-rose-500/30" :
+                          isMobile ? "bg-purple-500/15 text-purple-300 border-purple-500/30" :
+                          isUsb ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/30" :
+                          "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                        }`}>
+                          {isSystem ? "SYSTEM OS" : isMobile ? "MTP PHONE" : isUsb ? "USB REMOVABLE" : "INTERNAL DISK"}
+                        </span>
+                      </div>
+
+                      {/* Capacity Big Metric Box */}
+                      <div className="p-4 rounded-2xl bg-[#080d19] border border-[#182035] mb-5 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold block">
+                            STORAGE CAPACITY
+                          </span>
+                          <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-300 tracking-tight">
+                            {formatBytes(device.capacity_bytes || (device as any).size_bytes || 0)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold block">
+                            MOUNT POINT
+                          </span>
+                          <span className="text-sm font-mono font-bold text-white">
+                            {device.mount_point || <span className="text-slate-500 italic">Unmounted</span>}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Metadata Grid */}
+                      <div className="grid grid-cols-2 gap-3 text-xs mb-5">
+                        <div className="p-3 rounded-xl bg-[#090e1a]/80 border border-[#182035]/80">
+                          <span className="text-slate-500 font-sans block text-[10px] uppercase font-semibold">Filesystem</span>
+                          <span className="text-slate-200 font-mono font-bold uppercase mt-0.5 block truncate">
+                            {device.filesystem || (device.partitions?.[0]?.filesystem) || "NTFS / RAW"}
+                          </span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-[#090e1a]/80 border border-[#182035]/80">
+                          <span className="text-slate-500 font-sans block text-[10px] uppercase font-semibold">Safety Clearance</span>
+                          <span className={`font-mono font-bold text-[11px] mt-0.5 flex items-center gap-1 truncate ${
+                            isSystem ? "text-rose-400" : "text-emerald-400"
+                          }`}>
+                            {isSystem ? <Shield className="w-3.5 h-3.5 shrink-0" /> : <ShieldCheck className="w-3.5 h-3.5 shrink-0" />}
+                            {isSystem ? "WRITE-PROTECTED" : "READ-ONLY BLOCKED"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Footer: Action Links */}
+                    <div className="pt-4 border-t border-[#182035] flex items-center justify-between gap-2">
+                      <Link
+                        to={`/devices/${encodeURIComponent(device.id)}`}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition shadow-sm"
+                      >
+                        <span>Inspect Details</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                      <Link
+                        to={`/recovery?target=${encodeURIComponent(device.id)}`}
+                        className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#090e1a] hover:bg-white/5 text-slate-300 hover:text-white border border-[#1e2c40] text-xs font-semibold transition"
+                        title="Run Forensic Recovery on this drive"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Recover</span>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <DeviceTable devices={filteredDevices} />
+          )
         ) : (
           <EmptyState />
         )}
