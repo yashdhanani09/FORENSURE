@@ -191,56 +191,56 @@ export function Devices() {
                 return (
                   <div
                     key={device.id}
-                    className="group relative rounded-3xl border border-[#182035] bg-[#0c1220]/85 backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(6,182,212,0.15)] flex flex-col justify-between overflow-hidden"
+                    className="group relative rounded-3xl border border-border-subtle bg-surface-card backdrop-blur-2xl p-7 lg:p-8 shadow-2xl transition-all duration-300 hover:border-brand/50 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.7),0_0_25px_rgba(47,129,247,0.18)] flex flex-col justify-between overflow-hidden"
                   >
                     <div>
                       {/* Card Header: Icon + Title + Status Badge */}
                       <div className="flex items-start justify-between gap-3 mb-5">
                         <div className="flex items-center gap-3.5 min-w-0">
                           <div className={`p-3 rounded-2xl shrink-0 ${
-                            isSystem ? "bg-rose-500/10 text-rose-400 border border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.15)]" :
-                            isMobile ? "bg-purple-500/10 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]" :
-                            device.device_type === "INTERNAL_STORAGE" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.15)]" :
-                            "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
+                            isSystem ? "bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/25 shadow-[0_0_15px_rgba(239,68,68,0.15)]" :
+                            isMobile ? "bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30 shadow-[0_0_15px_rgba(167,139,250,0.15)]" :
+                            device.device_type === "INTERNAL_STORAGE" ? "bg-[#2F81F7]/10 text-[#2F81F7] border border-[#2F81F7]/25 shadow-[0_0_15px_rgba(47,129,247,0.15)]" :
+                            "bg-brand/10 text-brand border border-brand/25 shadow-[0_0_15px_rgba(47,129,247,0.15)]"
                           }`}>
                             {isMobile ? <Smartphone className="h-6 w-6" /> : isUsb ? <Usb className="h-6 w-6" /> : <HardDrive className="h-6 w-6" />}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="text-base sm:text-lg font-black text-white truncate group-hover:text-cyan-300 transition" title={deviceName(device.vendor, device.model)}>
+                            <h3 className="text-base sm:text-lg font-black text-text-primary truncate group-hover:text-brand transition" title={deviceName(device.vendor, device.model)}>
                               {deviceName(device.vendor, device.model)}
                             </h3>
-                            <p className="text-xs font-mono text-slate-400 truncate mt-0.5" title={device.device_path}>
+                            <p className="text-xs font-mono text-text-secondary truncate mt-0.5" title={device.device_path}>
                               {device.device_path}
                             </p>
                           </div>
                         </div>
 
                         <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border ${
-                          isSystem ? "bg-rose-500/15 text-rose-300 border-rose-500/30" :
-                          isMobile ? "bg-purple-500/15 text-purple-300 border-purple-500/30" :
-                          isUsb ? "bg-cyan-500/15 text-cyan-300 border-cyan-500/30" :
-                          "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                          isSystem ? "bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30" :
+                          isMobile ? "bg-[#A78BFA]/15 text-[#A78BFA] border-[#A78BFA]/30" :
+                          isUsb ? "bg-[#2F81F7]/15 text-[#2F81F7] border-[#2F81F7]/30" :
+                          "bg-brand/15 text-brand border-brand/30"
                         }`}>
                           {isSystem ? "SYSTEM OS" : isMobile ? "MTP PHONE" : isUsb ? "USB REMOVABLE" : "INTERNAL DISK"}
                         </span>
                       </div>
 
                       {/* Capacity Big Metric Box */}
-                      <div className="p-4 rounded-2xl bg-[#080d19] border border-[#182035] mb-5 flex items-center justify-between gap-3 overflow-hidden">
+                      <div className="p-4 rounded-2xl bg-surface-elevated border border-border-subtle mb-5 flex items-center justify-between gap-3 overflow-hidden">
                         <div className="shrink-0">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold block">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-text-secondary font-bold block">
                             STORAGE CAPACITY
                           </span>
-                          <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-300 tracking-tight">
+                          <span className="text-2xl sm:text-3xl font-black font-mono text-brand tracking-tight">
                             {formatBytes(device.capacity_bytes || (device as any).size_bytes || 0)}
                           </span>
                         </div>
                         <div className="text-right min-w-0 flex-1 overflow-hidden">
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold block">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-text-secondary font-bold block">
                             MOUNT POINT
                           </span>
                           <span
-                            className="text-sm font-mono font-bold text-white truncate block max-w-full"
+                            className="text-sm font-mono font-bold text-text-primary truncate block max-w-full"
                             title={device.mount_point || "Unmounted"}
                           >
                             {formatMountPoint(device.mount_point)}
@@ -250,16 +250,16 @@ export function Devices() {
 
                       {/* Metadata Grid */}
                       <div className="grid grid-cols-2 gap-3 text-xs mb-5">
-                        <div className="p-3 rounded-xl bg-[#090e1a]/80 border border-[#182035]/80">
-                          <span className="text-slate-500 font-sans block text-[10px] uppercase font-semibold">Filesystem</span>
-                          <span className="text-slate-200 font-mono font-bold uppercase mt-0.5 block truncate">
+                        <div className="p-3 rounded-xl bg-surface border border-border-subtle">
+                          <span className="text-text-secondary font-sans block text-[10px] uppercase font-semibold">Filesystem</span>
+                          <span className="text-text-primary font-mono font-bold uppercase mt-0.5 block truncate">
                             {device.filesystem || (device.partitions?.[0]?.filesystem) || "NTFS / RAW"}
                           </span>
                         </div>
-                        <div className="p-3 rounded-xl bg-[#090e1a]/80 border border-[#182035]/80">
-                          <span className="text-slate-500 font-sans block text-[10px] uppercase font-semibold">Safety Clearance</span>
+                        <div className="p-3 rounded-xl bg-surface border border-border-subtle">
+                          <span className="text-text-secondary font-sans block text-[10px] uppercase font-semibold">Safety Clearance</span>
                           <span className={`font-mono font-bold text-[11px] mt-0.5 flex items-center gap-1 truncate ${
-                            isSystem ? "text-rose-400" : "text-emerald-400"
+                            isSystem ? "text-[#EF4444]" : "text-[#22C55E]"
                           }`}>
                             {isSystem ? <Shield className="w-3.5 h-3.5 shrink-0" /> : <ShieldCheck className="w-3.5 h-3.5 shrink-0" />}
                             {isSystem ? "WRITE-PROTECTED" : "READ-ONLY BLOCKED"}
@@ -269,20 +269,20 @@ export function Devices() {
                     </div>
 
                     {/* Card Footer: Action Links */}
-                    <div className="pt-4 border-t border-[#182035] flex items-center justify-between gap-2">
+                    <div className="pt-4 border-t border-border-subtle flex items-center justify-between gap-2">
                       <Link
                         to={`/devices/${encodeURIComponent(device.id)}`}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition shadow-sm"
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 text-xs font-bold transition shadow-sm"
                       >
                         <span>Inspect Details</span>
                         <ChevronRight className="w-3.5 h-3.5" />
                       </Link>
                       <Link
                         to={`/recovery?target=${encodeURIComponent(device.id)}`}
-                        className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#090e1a] hover:bg-white/5 text-slate-300 hover:text-white border border-[#1e2c40] text-xs font-semibold transition"
+                        className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-surface hover:bg-surface-elevated text-text-secondary hover:text-text-primary border border-border-subtle text-xs font-semibold transition"
                         title="Run Forensic Recovery on this drive"
                       >
-                        <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
+                        <RotateCcw className="w-3.5 h-3.5 text-brand" />
                         <span>Recover</span>
                       </Link>
                     </div>

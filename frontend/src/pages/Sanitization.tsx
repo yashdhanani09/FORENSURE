@@ -253,9 +253,9 @@ export function Sanitization() {
               <div className="flex items-center justify-between border-b border-border-subtle pb-4">
                 <div className="flex items-center gap-3.5">
                   <div className={`p-3 rounded-xl ${
-                    jobProgress?.status === "COMPLETED" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" :
-                    jobProgress?.status === "FAILED" || jobProgress?.status === "ABORTED" ? "bg-rose-500/20 text-rose-400 border border-rose-500/30" :
-                    "bg-signal/20 text-signal border border-signal/30 animate-pulse"
+                    jobProgress?.status === "COMPLETED" ? "bg-[#A78BFA]/20 text-[#A78BFA] border border-[#A78BFA]/40 shadow-[0_0_15px_rgba(167,139,250,0.25)]" :
+                    jobProgress?.status === "FAILED" || jobProgress?.status === "ABORTED" ? "bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/30" :
+                    "bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/30 animate-pulse"
                   }`}>
                     {jobProgress?.status === "COMPLETED" ? <CheckCircle2 className="h-6 w-6" /> :
                      jobProgress?.status === "FAILED" || jobProgress?.status === "ABORTED" ? <AlertTriangle className="h-6 w-6" /> :
@@ -277,7 +277,7 @@ export function Sanitization() {
                     <Button
                       variant="destructive"
                       size="default"
-                      className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl"
+                      className="h-10 px-4 text-xs sm:text-sm font-semibold rounded-xl bg-[#EF4444] hover:bg-red-600 text-white"
                       onClick={handleAbort}
                     >
                       <XOctagon className="h-4 w-4 mr-1.5" /> Abort Job
@@ -287,7 +287,7 @@ export function Sanitization() {
                     <a
                       href={sanitizationApi.getCertificateUrl(activeJobId)}
                       download
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs sm:text-sm font-bold transition shadow-lg"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#A78BFA] hover:bg-[#9065fa] text-white text-xs sm:text-sm font-bold transition shadow-lg shadow-[0_0_15px_rgba(167,139,250,0.3)]"
                     >
                       <Download className="h-4 w-4" /> Download Certificate (PDF)
                     </a>
@@ -613,8 +613,8 @@ export function Sanitization() {
                       <td className="px-6 py-4.5">
                         <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
                           job.verification_result === "PASSED" || job.status === "COMPLETED"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                            ? "bg-[#A78BFA]/15 text-[#A78BFA] border border-[#A78BFA]/30"
+                            : "bg-[#EF4444]/15 text-[#EF4444] border border-[#EF4444]/30"
                         }`}>
                           {job.verification_result || job.status}
                         </span>
@@ -623,7 +623,7 @@ export function Sanitization() {
                         <a
                           href={sanitizationApi.getCertificateUrl(job.job_id)}
                           download
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-signal/10 hover:bg-signal/20 text-signal text-xs sm:text-sm font-semibold transition border border-signal/20"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#A78BFA]/15 hover:bg-[#A78BFA]/25 text-[#A78BFA] text-xs sm:text-sm font-semibold transition border border-[#A78BFA]/30"
                         >
                           <Download className="h-4 w-4" /> PDF Cert
                         </a>
@@ -640,62 +640,62 @@ export function Sanitization() {
       {/* Confirmation Modal */}
       {confirmModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-md">
-          <div className="w-full max-w-lg rounded-2xl border-2 border-rose-500/50 bg-surface-card p-6 shadow-2xl space-y-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                <AlertTriangle className="h-6 w-6" />
+          <div className="w-full max-w-lg rounded-2xl border-2 border-[#EF4444] bg-[#2A1215] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_30px_rgba(239,68,68,0.25)] space-y-6">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3.5 rounded-2xl bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/40 shadow-[0_0_15px_rgba(239,68,68,0.3)] shrink-0">
+                <AlertTriangle className="h-7 w-7" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Confirm Permanent Sanitization</h3>
-                <p className="text-xs text-rose-300">Irreversible cryptographic data destruction</p>
+                <h3 className="text-xl font-black text-white tracking-tight">Confirm Permanent Sanitization</h3>
+                <p className="text-xs font-semibold text-rose-300/90 mt-0.5">Irreversible cryptographic data destruction • Caution: No Undo</p>
               </div>
             </div>
 
-            <div className="bg-canvas p-4 rounded-xl border border-border-subtle space-y-2.5 text-xs font-mono">
-              <div className="flex justify-between border-b border-border-subtle pb-2">
-                <span className="text-slate-500">Target Drive:</span>
-                <span className="text-slate-200">{selectedDevice?.vendor} {selectedDevice?.model}</span>
+            <div className="bg-[#190a0d] p-4 rounded-xl border border-[#EF4444]/30 space-y-2.5 text-xs font-mono">
+              <div className="flex justify-between border-b border-[#EF4444]/20 pb-2">
+                <span className="text-slate-400">Target Drive:</span>
+                <span className="text-slate-100 font-bold">{selectedDevice?.vendor} {selectedDevice?.model}</span>
               </div>
-              <div className="flex justify-between border-b border-border-subtle pb-2">
-                <span className="text-slate-500">Target File:</span>
-                <span className="text-rose-400 font-bold break-all">/{targetFilePath}</span>
+              <div className="flex justify-between border-b border-[#EF4444]/20 pb-2">
+                <span className="text-slate-400">Target File:</span>
+                <span className="text-[#EF4444] font-bold break-all">/{targetFilePath}</span>
               </div>
-              <div className="flex justify-between border-b border-border-subtle pb-2">
-                <span className="text-slate-500">Algorithm:</span>
-                <span className="text-signal uppercase">{pattern} Overwrite</span>
+              <div className="flex justify-between border-b border-[#EF4444]/20 pb-2">
+                <span className="text-slate-400">Algorithm:</span>
+                <span className="text-cyan-300 font-bold uppercase">{pattern} Overwrite</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Standard:</span>
+                <span className="text-slate-400">Standard:</span>
                 <span className="text-slate-300">{patternDescriptions[pattern].name}</span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-medium text-slate-300">
-                To confirm permanent erasure, type <strong className="text-rose-400 font-mono bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-800">SANITIZE FILE</strong> below:
+              <label className="block text-xs font-medium text-slate-200">
+                To confirm permanent erasure, type <strong className="text-white font-mono bg-[#EF4444] px-2 py-0.5 rounded font-black tracking-widest shadow-sm">DELETE</strong> below:
               </label>
               <input
                 type="text"
                 value={confirmInput}
                 onChange={(e) => setConfirmInput(e.target.value)}
-                placeholder="SANITIZE FILE"
-                className="w-full bg-canvas border border-border-subtle rounded-xl px-3 py-2.5 text-sm font-mono text-white outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/30 transition"
+                placeholder="DELETE"
+                className="w-full bg-[#14080a] border border-[#EF4444]/50 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white outline-none focus:border-[#EF4444] focus:ring-2 focus:ring-[#EF4444]/40 transition placeholder:text-rose-900/60"
               />
             </div>
 
             <div className="flex items-center gap-3 pt-2">
               <Button
                 variant="secondary"
-                className="flex-1"
+                className="flex-1 bg-surface-card hover:bg-surface-elevated border border-border-subtle text-slate-200"
                 onClick={() => { setConfirmModalOpen(false); setConfirmInput(""); }}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
-                className="flex-1"
+                className="flex-1 bg-[#EF4444] hover:bg-red-600 text-white font-bold shadow-[0_0_15px_rgba(239,68,68,0.4)] disabled:opacity-40"
                 onClick={handleStartSanitization}
-                disabled={confirmInput !== "SANITIZE FILE"}
+                disabled={confirmInput.trim().toUpperCase() !== "DELETE" && confirmInput.trim().toUpperCase() !== "SANITIZE FILE"}
               >
                 <ShieldAlert className="h-4 w-4" /> Confirm & Erase
               </Button>

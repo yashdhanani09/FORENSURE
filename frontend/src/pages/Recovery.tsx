@@ -668,7 +668,7 @@ export function Recovery() {
                   disabled={scanning || (!showAdvancedImage && !selectedDeviceId)}
                   loading={scanning}
                   variant="primary"
-                  className="w-full h-16 text-base sm:text-lg font-black tracking-wide shadow-xl shadow-cyan-950/60 rounded-2xl flex items-center justify-center gap-3 transition-transform active:scale-[0.99]"
+                  className="w-full h-16 text-base sm:text-lg font-black tracking-wide shadow-xl shadow-blue-950/60 rounded-2xl flex items-center justify-center gap-3 transition-transform active:scale-[0.99] bg-[#2F81F7] hover:bg-blue-600 text-white"
                 >
                   <Search className="w-5 h-5" />
                   <span>{scanning ? "Analyzing Disk Sectors..." : isMobileTarget ? "Scan Phone Storage" : "Run Forensic Scan"}</span>
@@ -1018,7 +1018,7 @@ export function Recovery() {
               loading={recovering}
               variant="success"
               size="default"
-              className="h-12 px-6 text-sm font-extrabold shadow-lg shadow-emerald-950/50 whitespace-nowrap rounded-2xl"
+              className="h-12 px-6 text-sm font-extrabold shadow-lg shadow-emerald-950/50 whitespace-nowrap rounded-2xl bg-[#10B981] hover:bg-[#059669] text-white"
             >
               <Download className="w-4 h-4 mr-2" /> Restore Selected ({selectedFileIds.size})
             </Button>

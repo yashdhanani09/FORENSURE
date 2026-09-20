@@ -4,41 +4,117 @@
 
 @layer base {
   :root {
-    --background: 222 47% 4%;
-    --foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
-    --card: 222 47% 6%;
-    --card-foreground: 210 40% 98%;
-    --border: 217 33% 13%;
-    --input: 217 33% 18%;
-    --primary: 189 94% 43%;
-    --primary-foreground: 222 47% 6%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 347 77% 50%;
-    --destructive-foreground: 210 40% 98%;
-    --success: 158 64% 45%;
-    --success-foreground: 210 40% 98%;
-    --ring: 189 94% 43%;
+    /* ─── Core Dark Theme (Specialized for Forensic Tools) ─── */
+    --color-canvas: #0D1117;           /* Deep navy / charcoal */
+    --color-surface: #161B22;          /* Dark slate */
+    --color-surface-card: #161B22;     /* Dark slate */
+    --color-surface-elevated: #21262D; /* Elevated slate */
+    --color-border-subtle: #30363D;    /* Muted steel */
+    --color-border-strong: #484F58;    /* Strong steel */
+    --color-text-primary: #E6EDF3;     /* Soft white (WCAG AA 14.5:1) */
+    --color-text-secondary: #8B949E;   /* Muted gray (WCAG AA 5.8:1) */
+    --color-brand: #2F81F7;            /* Cyber blue */
+    --color-brand-glow: rgba(47, 129, 247, 0.25);
+
+    /* Mode-Specific Forensic Colors */
+    --color-recovery: #10B981;         /* Teal / emerald: safe, restorative retrieval */
+    --color-recovery-teal: #14B8A6;    /* Teal */
+    --color-sanitize: #EF4444;         /* Red: dangerous, irreversible */
+    --color-sanitize-dialog: #2A1215;  /* Deep red background tint for wipe confirmation */
+
+    /* Status Tokens */
+    --color-status-success: #22C55E;   /* Success / recovered */
+    --color-status-warning: #F59E0B;   /* Amber / in progress */
+    --color-status-error: #DC2626;     /* Error / failed */
+    --color-status-info: #38BDF8;      /* Info / scanning */
+    --color-status-wipe: #A78BFA;      /* Verified wipe complete (distinct purple) */
+
+    /* Legacy Radix / Shadcn compatible HSL tokens */
+    --background: 215 28% 7%;          /* #0D1117 */
+    --foreground: 210 30% 93%;         /* #E6EDF3 */
+    --muted: 215 15% 18%;              /* #161B22 */
+    --muted-foreground: 215 9% 58%;    /* #8B949E */
+    --popover: 215 20% 11%;
+    --popover-foreground: 210 30% 93%;
+    --card: 215 20% 11%;
+    --card-foreground: 210 30% 93%;
+    --border: 212 12% 21%;             /* #30363D */
+    --input: 212 12% 21%;
+    --primary: 215 93% 57%;            /* #2F81F7 */
+    --primary-foreground: 215 28% 7%;
+    --secondary: 215 15% 18%;
+    --secondary-foreground: 210 30% 93%;
+    --accent: 215 15% 18%;
+    --accent-foreground: 210 30% 93%;
+    --destructive: 0 84% 60%;          /* #EF4444 */
+    --destructive-foreground: 210 30% 93%;
+    --success: 142 71% 45%;            /* #22C55E */
+    --success-foreground: 215 28% 7%;
+    --ring: 215 93% 57%;
     --radius: 0.75rem;
   }
 
+  /* ─── Light Theme Option ─── */
+  .light {
+    --color-canvas: #F6F8FA;           /* Crisp light background */
+    --color-surface: #FFFFFF;          /* Pure white card surface */
+    --color-surface-card: #FFFFFF;
+    --color-surface-elevated: #F0F2F5; /* Subtle elevated gray */
+    --color-border-subtle: #D0D7DE;    /* Muted steel light border */
+    --color-border-strong: #AFB8C1;
+    --color-text-primary: #1F2328;     /* High contrast dark text */
+    --color-text-secondary: #656D76;   /* Muted secondary gray */
+    --color-brand: #2F81F7;            /* Cyber blue */
+    --color-brand-glow: rgba(47, 129, 247, 0.15);
+
+    /* Mode-Specific Forensic Colors */
+    --color-recovery: #10B981;
+    --color-recovery-teal: #14B8A6;
+    --color-sanitize: #EF4444;
+    --color-sanitize-dialog: #2A1215;  /* Deep red background tint retained for wipe confirmation */
+
+    /* Status Tokens */
+    --color-status-success: #1A7F37;
+    --color-status-warning: #9A6700;
+    --color-status-error: #CF222E;
+    --color-status-info: #0969DA;
+    --color-status-wipe: #8250DF;
+
+    /* Legacy Radix / Shadcn compatible HSL tokens */
+    --background: 210 17% 98%;         /* #F6F8FA */
+    --foreground: 214 13% 14%;         /* #1F2328 */
+    --muted: 210 14% 95%;
+    --muted-foreground: 212 8% 43%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 214 13% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 214 13% 14%;
+    --border: 213 14% 84%;
+    --input: 213 14% 84%;
+    --primary: 215 93% 57%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 14% 95%;
+    --secondary-foreground: 214 13% 14%;
+    --accent: 210 14% 95%;
+    --accent-foreground: 214 13% 14%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 137 66% 30%;
+    --success-foreground: 0 0% 100%;
+    --ring: 215 93% 57%;
+  }
+
   body {
-    background-color: #070b14;
-    color: #f1f5f9;
+    background-color: var(--color-canvas);
+    color: var(--color-text-primary);
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  /* Custom dark scrollbar */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: #070b14; }
-  ::-webkit-scrollbar-thumb { background: #182035; border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: #243250; }
+  /* Custom scrollbar matching core palette */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--color-canvas); }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-subtle); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
 }
 
 /* ─── Motion Keyframes ───────────────────────────────────────────────────── */
