@@ -4,11 +4,10 @@ import {
   DatabaseZap, LayoutDashboard, HardDrive, FileSearch,
   ShieldAlert, RotateCcw, MonitorSmartphone, Sparkles,
   ShieldCheck, Download, RefreshCw, BookOpen, X,
-  Cpu, Menu, ChevronDown, Sun, Moon
+  Cpu, Menu, ChevronDown
 } from "lucide-react";
 import { agentConnection, type AgentStatus } from "../services/agentConnection";
 import { recoveryApi } from "../services/recoveryApi";
-import { useTheme } from "../context/ThemeContext";
 
 const NAV_ITEMS = [
   { label: "Hardware Guide", to: "/agent-guide", icon: MonitorSmartphone, tag: "Setup" },
@@ -21,7 +20,6 @@ const NAV_ITEMS = [
 
 export function TopNav() {
   const location = useLocation();
-  const { theme, toggleTheme } = useTheme();
   const [status, setStatus] = useState<AgentStatus>(agentConnection.getStatus());
   const [demoMode, setDemoMode] = useState(agentConnection.isDemoMode());
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -168,31 +166,12 @@ export function TopNav() {
               ))}
             </nav>
 
-            {/* ── Right: Theme Toggle & Mobile Menu Trigger ── */}
-            <div className="flex items-center gap-2.5 ml-auto shrink-0">
-              <button
-                onClick={toggleTheme}
-                title={theme === "dark" ? "Switch to Light Theme" : "Switch to Dark Forensic Theme"}
-                className="p-2 sm:px-3 sm:py-2 rounded-xl bg-surface hover:bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary transition shadow-sm flex items-center gap-2"
-                aria-label="Toggle dark/light theme"
-              >
-                {theme === "dark" ? (
-                  <>
-                    <Sun className="h-4 w-4 text-amber-400 shrink-0" />
-                    <span className="hidden sm:inline text-xs font-mono font-semibold">Light</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="h-4 w-4 text-brand shrink-0" />
-                    <span className="hidden sm:inline text-xs font-mono font-semibold">Dark</span>
-                  </>
-                )}
-              </button>
-
+            {/* ── Right: Mobile Menu Trigger ── */}
+            <div className="flex items-center gap-2.5 ml-auto shrink-0 lg:hidden">
               {/* Mobile hamburger */}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
-                className="lg:hidden p-2 rounded-xl border border-border-subtle bg-surface text-text-secondary hover:text-text-primary transition"
+                className="p-2 rounded-xl border border-border-subtle bg-surface text-text-secondary hover:text-text-primary transition"
                 aria-label="Toggle navigation menu"
               >
                 <Menu className="h-5 w-5" />
@@ -250,17 +229,17 @@ export function TopNav() {
 
             {/* 1. Status Pill */}
             {demoMode ? (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-700 dark:text-purple-300 font-mono text-xs font-bold shadow-sm">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-xs font-bold shadow-sm">
                 <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse shrink-0" />
                 Status: Demo Sandbox
               </span>
             ) : status.connected ? (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold shadow-sm">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-xs font-bold shadow-sm">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 Status: Connected
               </span>
             ) : (
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 font-mono text-xs font-bold shadow-sm">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono text-xs font-bold shadow-sm">
                 <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
                 Status: Standby
               </span>
@@ -269,13 +248,13 @@ export function TopNav() {
             {/* 2. Admin Badge */}
             {status.connected && !demoMode && (
               isAdmin ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-xs font-bold shadow-sm">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-bold shadow-sm">
                   <ShieldCheck className="h-3.5 w-3.5" /> Admin Access
                 </span>
               ) : (
                 <Link
                   to="/agent-guide"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold transition shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold transition shadow-sm"
                   title="Admin required for raw disk access"
                 >
                   <ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Admin Required
@@ -294,7 +273,7 @@ export function TopNav() {
             ) : (
               <button
                 onClick={() => handleToggleDemo(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-700 dark:text-purple-300 text-xs font-bold transition shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-300 text-xs font-bold transition shadow-sm"
               >
                 <Sparkles className="h-3.5 w-3.5" /> Demo Mode
               </button>
