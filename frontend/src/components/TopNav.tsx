@@ -138,25 +138,24 @@ export function TopNav() {
                   to={to}
                   end={to === "/"}
                   ref={node => {
-                    // Store ref if this is the active link
                     const isActive = location.pathname === to || location.pathname.startsWith(to + "/");
                     if (isActive && node) activeNavRef.current = node;
                   }}
                   className={({ isActive }) =>
-                    `relative group flex items-center gap-1.5 px-3 py-4 text-[11px] font-semibold transition-colors duration-200 whitespace-nowrap ${
+                    `relative group flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 whitespace-nowrap ${
                       isActive
-                        ? "text-cyan-300"
-                        : "text-slate-400 hover:text-slate-200"
+                        ? "bg-gradient-to-r from-cyan-500/25 via-cyan-500/20 to-teal-500/15 text-cyan-200 border border-cyan-400/50 shadow-[0_0_22px_rgba(6,182,212,0.4)]"
+                        : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] border border-transparent"
                     }`
                   }
                 >
                   {({ isActive }) => (
                     <>
-                      <Icon className={`h-3.5 w-3.5 shrink-0 transition-colors ${isActive ? "text-cyan-400" : "text-slate-500 group-hover:text-slate-300"}`} />
+                      <Icon className={`h-3.5 w-3.5 shrink-0 transition-colors ${isActive ? "text-cyan-300" : "text-slate-500 group-hover:text-slate-300"}`} />
                       <span>{label}</span>
                       <span className={`text-[8px] font-bold font-mono px-1.5 py-0.5 rounded transition-colors ${
                         isActive
-                          ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                          ? "bg-cyan-400/25 text-cyan-100 border border-cyan-400/40"
                           : "bg-white/[0.03] text-slate-600 group-hover:text-slate-500"
                       }`}>
                         {tag}
@@ -170,21 +169,21 @@ export function TopNav() {
             {/* ── Right Controls ── */}
             <div className="flex items-center gap-2 ml-auto shrink-0">
 
-              {/* Bridge / Mode Status Badge */}
+              {/* Bridge / Mode Status Badge matching reference image */}
               {demoMode ? (
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-[10px] font-semibold">
-                  <Sparkles className="h-3 w-3 text-purple-400" />
-                  DEMO
+                <span className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-[11px] font-semibold shadow-[0_0_12px_rgba(168,85,247,0.2)]">
+                  <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+                  Status: Demo Sandbox
                 </span>
               ) : status.connected ? (
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-semibold">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  LIVE
+                <span className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[11px] font-semibold shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Status: Connected
                 </span>
               ) : (
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono text-[10px] font-semibold">
-                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                  OFFLINE
+                <span className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono text-[11px] font-semibold shadow-[0_0_12px_rgba(244,63,94,0.2)]">
+                  <span className="h-2 w-2 rounded-full bg-rose-500" />
+                  Status: Standby
                 </span>
               )}
 
