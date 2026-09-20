@@ -95,37 +95,37 @@ export function TopNav() {
         {/* Top accent line with animated gradient (Cyber blue brand) */}
         <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#2F81F7] to-transparent animate-glow-line" />
 
-        {/* Frosted glass bar with larger workstation presence */}
-        <div className="bg-canvas/90 backdrop-blur-xl border-b border-border-subtle shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
-          <div className="flex h-16 lg:h-18 items-center gap-2 xl:gap-4 px-3 sm:px-4 xl:px-6">
+        {/* ── ROW 1: PRIMARY NAVIGATION BAR ── */}
+        <div className="bg-canvas/95 backdrop-blur-xl border-b border-border-subtle">
+          <div className="flex h-16 lg:h-17 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
 
             {/* ── Logo ── */}
             <Link
               to="/"
-              className="flex items-center gap-2.5 shrink-0 group mr-1"
+              className="flex items-center gap-3 shrink-0 group mr-2"
             >
-              <div className="relative h-9 w-9 xl:h-10 xl:w-10 rounded-2xl border border-brand/40 bg-gradient-to-br from-brand/25 to-recovery/10 flex items-center justify-center text-brand shadow-glow group-hover:shadow-glow-strong transition-shadow shrink-0">
+              <div className="relative h-10 w-10 rounded-2xl border border-brand/40 bg-gradient-to-br from-brand/25 to-recovery/10 flex items-center justify-center text-brand shadow-glow group-hover:shadow-glow-strong transition-shadow shrink-0">
                 <DatabaseZap className="h-5 w-5" />
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-brand border-2 border-canvas animate-ping" />
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-brand border-2 border-canvas" />
+                <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-brand border-2 border-canvas animate-ping" />
+                <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-brand border-2 border-canvas" />
               </div>
               <div className="hidden sm:block">
-                <div className="text-xs xl:text-base font-black tracking-[0.2em] text-text-primary leading-tight">
+                <div className="text-sm lg:text-base font-black tracking-[0.22em] text-text-primary leading-tight">
                   FORENSURE
                 </div>
-                <div className="hidden 2xl:block text-[9px] font-extrabold tracking-[0.16em] text-brand font-mono mt-0.5">
+                <div className="text-[9px] lg:text-[10px] font-extrabold tracking-[0.18em] text-brand font-mono mt-0.5">
                   VERIFY · SANITIZE · RECOVER
                 </div>
               </div>
             </Link>
 
             {/* ── Divider ── */}
-            <div className="hidden xl:block h-6 w-px bg-border-subtle shrink-0" />
+            <div className="hidden lg:block h-7 w-px bg-border-subtle shrink-0" />
 
-            {/* ── Desktop Nav Links ── */}
+            {/* ── Desktop Nav Links (Full Room, Never Overlapping) ── */}
             <nav
               ref={navRef}
-              className="relative hidden lg:flex items-center gap-1 xl:gap-1.5 flex-1 min-w-0"
+              className="relative hidden lg:flex items-center gap-1.5 xl:gap-2 flex-1 max-w-5xl justify-start overflow-x-auto no-scrollbar"
               aria-label="Main navigation"
             >
               {/* Animated sliding indicator */}
@@ -144,7 +144,7 @@ export function TopNav() {
                     if (isActive && node) activeNavRef.current = node;
                   }}
                   className={({ isActive }) =>
-                    `relative group flex items-center gap-1.5 xl:gap-2 px-2 py-1.5 xl:px-3.5 xl:py-2 rounded-xl text-xs xl:text-sm font-semibold transition-all duration-200 whitespace-nowrap shrink-0 ${
+                    `relative group flex items-center gap-2 px-3 py-2 xl:px-4 xl:py-2.5 rounded-xl text-xs xl:text-sm font-semibold transition-all duration-200 whitespace-nowrap shrink-0 ${
                       isActive
                         ? "bg-gradient-to-r from-brand/25 via-brand/15 to-transparent text-text-primary border border-brand/50 shadow-glow font-bold"
                         : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated/60 border border-transparent"
@@ -155,7 +155,7 @@ export function TopNav() {
                     <>
                       <Icon className={`h-4 w-4 shrink-0 transition-colors ${isActive ? "text-brand" : "text-text-secondary group-hover:text-text-primary"}`} />
                       <span>{label}</span>
-                      <span className={`hidden 2xl:inline-block text-[9px] font-extrabold font-mono px-1.5 py-0.5 rounded transition-colors ${
+                      <span className={`text-[9px] font-extrabold font-mono px-2 py-0.5 rounded transition-colors ${
                         isActive
                           ? "bg-brand/20 text-brand border border-brand/40"
                           : "bg-surface-elevated text-text-secondary group-hover:text-text-primary"
@@ -168,102 +168,32 @@ export function TopNav() {
               ))}
             </nav>
 
-            {/* ── Right Controls ── */}
-            <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
-
-              {/* Theme Toggle (Dark / Light) */}
+            {/* ── Right: Theme Toggle & Mobile Menu Trigger ── */}
+            <div className="flex items-center gap-2.5 ml-auto shrink-0">
               <button
                 onClick={toggleTheme}
                 title={theme === "dark" ? "Switch to Light Theme" : "Switch to Dark Forensic Theme"}
-                className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-surface hover:bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary transition shadow-sm flex items-center gap-1.5 shrink-0"
+                className="p-2 sm:px-3 sm:py-2 rounded-xl bg-surface hover:bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary transition shadow-sm flex items-center gap-2"
                 aria-label="Toggle dark/light theme"
               >
                 {theme === "dark" ? (
                   <>
                     <Sun className="h-4 w-4 text-amber-400 shrink-0" />
-                    <span className="hidden 2xl:inline text-[11px] font-mono font-semibold">Light</span>
+                    <span className="hidden sm:inline text-xs font-mono font-semibold">Light</span>
                   </>
                 ) : (
                   <>
                     <Moon className="h-4 w-4 text-brand shrink-0" />
-                    <span className="hidden 2xl:inline text-[11px] font-mono font-semibold">Dark</span>
+                    <span className="hidden sm:inline text-xs font-mono font-semibold">Dark</span>
                   </>
                 )}
               </button>
-
-              {/* Bridge / Mode Status Badge — optimized width, never cut off */}
-              {demoMode ? (
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-700 dark:text-purple-300 font-mono text-xs font-semibold shrink-0 shadow-sm">
-                  <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse shrink-0" />
-                  <span className="hidden xl:inline">Status: </span>Demo
-                </span>
-              ) : status.connected ? (
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-semibold shrink-0 shadow-sm">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  <span className="hidden xl:inline">Status: </span>Connected
-                </span>
-              ) : (
-                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 font-mono text-xs font-semibold shrink-0 shadow-sm">
-                  <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
-                  <span className="hidden xl:inline">Status: </span>Standby
-                </span>
-              )}
-
-              {/* Admin Badge */}
-              {status.connected && !demoMode && (
-                isAdmin ? (
-                  <span className="hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-xs font-semibold shrink-0">
-                    <ShieldCheck className="h-3.5 w-3.5" /> Admin
-                  </span>
-                ) : (
-                  <Link
-                    to="/agent-guide"
-                    className="hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-semibold transition shrink-0"
-                    title="Admin required for raw disk access"
-                  >
-                    <ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Admin Req
-                  </Link>
-                )
-              )}
-
-              {/* Demo / Physical Toggle */}
-              {demoMode ? (
-                <button
-                  onClick={() => handleToggleDemo(false)}
-                  className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-surface hover:bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary text-xs font-semibold transition shrink-0"
-                >
-                  Exit Demo
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => handleToggleDemo(true)}
-                    className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-700 dark:text-purple-300 text-xs font-semibold transition shrink-0"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" /> Demo
-                  </button>
-                  <button
-                    onClick={() => setShowModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand hover:bg-blue-600 text-white text-xs font-bold transition shadow-glow shrink-0"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span className="hidden xl:inline">{status.connected ? "Bridge Info" : "Download"}</span>
-                  </button>
-                  <button
-                    onClick={handleRecheck}
-                    disabled={checking}
-                    title="Recheck bridge connection"
-                    className="p-1.5 sm:p-2 rounded-xl bg-surface hover:bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary transition shrink-0"
-                  >
-                    <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${checking ? "animate-spin text-brand" : ""}`} />
-                  </button>
-                </>
-              )}
 
               {/* Mobile hamburger */}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className="lg:hidden p-2 rounded-xl border border-border-subtle bg-surface text-text-secondary hover:text-text-primary transition"
+                aria-label="Toggle navigation menu"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -291,37 +221,103 @@ export function TopNav() {
                   <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded bg-surface-elevated text-text-secondary">{tag}</span>
                 </NavLink>
               ))}
-
-              {/* Mobile status row */}
-              <div className="flex items-center justify-between px-3 pt-2 border-t border-border-subtle mt-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-mono">
-                  {demoMode ? (
-                    <span className="text-purple-600 dark:text-purple-300 flex items-center gap-1"><Sparkles className="h-3 w-3" /> DEMO MODE</span>
-                  ) : status.connected ? (
-                    <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE HARDWARE</span>
-                  ) : (
-                    <span className="text-rose-700 dark:text-rose-400 flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> BRIDGE OFFLINE</span>
-                  )}
-                </div>
-                <span className="text-[10px] text-text-secondary font-mono">FORENSURE v2.4</span>
-              </div>
             </div>
           )}
+        </div>
 
-          {/* ── Sub-status bar (connection detail line) ── */}
-          <div className="hidden md:flex items-center gap-4 px-4 xl:px-6 py-1.5 border-t border-border-subtle bg-surface-elevated/70 text-xs font-mono text-text-secondary">
-            <span className="text-brand font-bold">SYS TELEMETRY:</span>
-            <span className="truncate">
+        {/* ── ROW 2: PERMANENT SYSTEM STATUS & BRIDGE CONTROL BAR ── */}
+        <div className="bg-surface/90 backdrop-blur-xl border-b border-border-subtle px-4 sm:px-6 lg:px-8 py-2 min-h-[44px] flex flex-wrap items-center justify-between gap-3 shadow-sm">
+          {/* Left: Engine Telemetry Info */}
+          <div className="flex items-center gap-3 text-xs font-mono text-text-secondary min-w-0 flex-1">
+            <div className="flex items-center gap-2 shrink-0">
+              <Cpu className="h-4 w-4 text-brand animate-pulse" />
+              <span className="text-brand font-black tracking-wider uppercase">SYS TELEMETRY:</span>
+            </div>
+            <span className="truncate text-xs text-text-secondary">
               {demoMode
                 ? "Simulated forensic sandbox · carving, wiping, and evidence verification active"
                 : status.connected
                 ? "Physical bridge online · raw MFT sector scanning · MTP detection active · port 8000"
                 : "Bridge offline · connect FORENSURE-Bridge.exe as Administrator to enable hardware probing"}
             </span>
-            <span className="ml-auto flex items-center gap-2 text-text-primary font-semibold shrink-0">
-              <Cpu className="h-3.5 w-3.5 text-brand" />
-              FORENSURE v2.4 · NIST SP 800-88
+            <span className="hidden 2xl:inline text-[11px] px-2 py-0.5 rounded-md bg-surface-elevated border border-border-subtle text-text-secondary shrink-0">
+              NIST SP 800-88
             </span>
+          </div>
+
+          {/* Right: Status, Admin, Demo, Bridge Info, Recheck Buttons */}
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap">
+
+            {/* 1. Status Pill */}
+            {demoMode ? (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-700 dark:text-purple-300 font-mono text-xs font-bold shadow-sm">
+                <span className="h-2 w-2 rounded-full bg-purple-500 animate-pulse shrink-0" />
+                Status: Demo Sandbox
+              </span>
+            ) : status.connected ? (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold shadow-sm">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                Status: Connected
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 font-mono text-xs font-bold shadow-sm">
+                <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
+                Status: Standby
+              </span>
+            )}
+
+            {/* 2. Admin Badge */}
+            {status.connected && !demoMode && (
+              isAdmin ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 text-xs font-bold shadow-sm">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Admin Access
+                </span>
+              ) : (
+                <Link
+                  to="/agent-guide"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold transition shadow-sm"
+                  title="Admin required for raw disk access"
+                >
+                  <ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Admin Required
+                </Link>
+              )
+            )}
+
+            {/* 3. Demo Button */}
+            {demoMode ? (
+              <button
+                onClick={() => handleToggleDemo(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-elevated hover:bg-surface border border-border-subtle text-text-primary text-xs font-bold transition shadow-sm"
+              >
+                Exit Demo
+              </button>
+            ) : (
+              <button
+                onClick={() => handleToggleDemo(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-700 dark:text-purple-300 text-xs font-bold transition shadow-sm"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Demo Mode
+              </button>
+            )}
+
+            {/* 4. Bridge Info / Download Button */}
+            <button
+              onClick={() => setShowModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-brand hover:bg-blue-600 text-white text-xs font-bold transition shadow-glow"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span>{status.connected ? "Bridge Info" : "Download Bridge"}</span>
+            </button>
+
+            {/* 5. Recheck Connection Button */}
+            <button
+              onClick={handleRecheck}
+              disabled={checking}
+              title="Recheck hardware bridge connection"
+              className="p-1.5 sm:p-2 rounded-xl bg-surface hover:bg-surface-elevated border border-border-subtle text-text-secondary hover:text-text-primary transition shadow-sm"
+            >
+              <RefreshCw className={`h-4 w-4 ${checking ? "animate-spin text-brand" : ""}`} />
+            </button>
           </div>
         </div>
       </header>
