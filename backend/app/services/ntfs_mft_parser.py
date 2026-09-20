@@ -287,6 +287,9 @@ DEV_NOISE_NAMES = {
     "vite.config.ts", "vite.config.js", "tailwind.config.js", "postcss.config.js",
 }
 
+# Pre-compute tuple once for fast C-level str.endswith() checks
+_DEV_NOISE_EXT_TUPLE: tuple = tuple(DEV_NOISE_EXTENSIONS)
+
 
 def scan_mft_records_from_stream(
     data: bytes,
@@ -330,12 +333,12 @@ def scan_mft_records_from_stream(
                         continue
 
                     # 3. Skip development build chaff / source maps
-                    if low_name in DEV_NOISE_NAMES or any(low_name.endswith(ne) for ne in DEV_NOISE_EXTENSIONS):
+                    if low_name in DEV_NOISE_NAMES or low_name.endswith(_DEV_NOISE_EXT_TUPLE):
                         pos += MFT_RECORD_SIZE
                         continue
 
                     # 4. Cap common web code extensions (.js, .ts, .json) to prevent node_modules flooding
-                    file_ext = low_name.split(".")[-1] if "." in low_name else ""
+                    file_ext = low_name.rsplit(".", 1)[-1] if "." in low_name else ""
                     if file_ext in {"js", "ts", "json", "css", "scss"}:
                         cur_cnt = ext_counts.get(file_ext, 0)
                         if cur_cnt >= 40:

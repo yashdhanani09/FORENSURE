@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { 
   RotateCcw, Search, Download, CheckCircle2, AlertTriangle, 
@@ -29,6 +29,8 @@ export function Recovery() {
   const [deletedFiles, setDeletedFiles] = useState<DeletedFileItem[]>([]);
   const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
 
   const [recoveryHistory, setRecoveryHistory] = useState<RecoveredFileRecord[]>([]);
@@ -53,7 +55,7 @@ export function Recovery() {
 
   // Full List Sorting (Default: Recent to Old) & Pagination State
   const [sortBy, setSortBy] = useState<"recent" | "oldest" | "size_desc" | "name" | "confidence">("recent");
-  const [pageSize, setPageSize] = useState<number>(0); // 0 means Show All Files
+  const [pageSize, setPageSize] = useState<number>(100); // default 100 rows for performance
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   useEffect(() => {
@@ -61,6 +63,17 @@ export function Recovery() {
     loadHistory();
     checkPrivileges();
   }, []);
+
+  // Debounce search input — filter recomputes 150 ms after user stops typing
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 150);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchQuery]);
 
   const checkPrivileges = async () => {
     try {
@@ -258,20 +271,21 @@ export function Recovery() {
     }
   };
 
-  const filteredFiles = deletedFiles.filter(f => {
-    const matchesSearch = f.filename.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          f.original_path.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredFiles = useMemo(() => deletedFiles.filter(f => {
+    const q = debouncedSearch.toLowerCase();
+    const matchesSearch = !q || f.filename.toLowerCase().includes(q) ||
+                          f.original_path.toLowerCase().includes(q);
     const matchesCategory = categoryFilter === "All" || f.category === categoryFilter;
     return matchesSearch && matchesCategory;
-  });
+  }), [deletedFiles, debouncedSearch, categoryFilter]);
 
-  const categoryCounts = deletedFiles.reduce<Record<string, number>>((acc, f) => {
+  const categoryCounts = useMemo(() => deletedFiles.reduce<Record<string, number>>((acc, f) => {
     acc[f.category] = (acc[f.category] || 0) + 1;
     return acc;
-  }, {});
+  }, {}), [deletedFiles]);
 
   // Strict sorting: Default is Recent to Old (Newest deletion at top, with tier-based tie breaker)
-  const sortedFiles = [...filteredFiles].sort((a, b) => {
+  const sortedFiles = useMemo(() => [...filteredFiles].sort((a, b) => {
     if (sortBy === "recent") {
       const tA = a.deleted_at ? new Date(a.deleted_at).getTime() : 0;
       const tB = b.deleted_at ? new Date(b.deleted_at).getTime() : 0;
@@ -298,31 +312,34 @@ export function Recovery() {
       return (b.confidence_score || 0) - (a.confidence_score || 0);
     }
     return 0;
-  });
+  }), [filteredFiles, sortBy]);
 
-  const displayFiles = pageSize > 0 
+  const displayFiles = useMemo(() => pageSize > 0
     ? sortedFiles.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-    : sortedFiles;
+    : sortedFiles, [sortedFiles, pageSize, currentPage]);
 
-  const totalPages = pageSize > 0 ? Math.ceil(sortedFiles.length / pageSize) : 1;
+  const totalPages = useMemo(() => pageSize > 0 ? Math.ceil(sortedFiles.length / pageSize) : 1,
+    [sortedFiles.length, pageSize]);
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = useCallback(() => {
     if (selectedFileIds.size === displayFiles.length && displayFiles.length > 0) {
       setSelectedFileIds(new Set());
     } else {
       setSelectedFileIds(new Set(displayFiles.map(f => f.id)));
     }
-  };
+  }, [selectedFileIds, displayFiles]);
 
-  const toggleSelectFile = (id: string) => {
-    const next = new Set(selectedFileIds);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setSelectedFileIds(next);
-  };
+  const toggleSelectFile = useCallback((id: string) => {
+    setSelectedFileIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
   const selectedDevice = devices.find(d => d.id === selectedDeviceId);
   const isMobileTarget = selectedDevice?.device_type === "MOBILE_DEVICE" || 
