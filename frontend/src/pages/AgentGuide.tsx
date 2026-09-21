@@ -23,7 +23,7 @@ const STEPS = [
     title: "Download FORENSURE Bridge",
     task: "Get the pre-compiled local hardware agent for Windows",
     detail:
-      "The Bridge is a zero-install standalone binary (~29 MB). No Python, Node.js, or any runtime is required. Everything is pre-bundled — just download the zip and you're ready for the next step.",
+      "The Bridge is a zero-install standalone binary (~29 MB). No Python, Node.js, or any runtime is required. Everything is pre-bundled — just download the zip and you're ready for the next step. ⚠️ Windows Defender may flag the EXE as a false positive (it reads raw disk sectors — the same as forensic tools). Before extracting, add the destination folder to Windows Defender exclusions. See the Troubleshooting section on the right for exact steps.",
     badge: "29 MB • Standalone EXE",
     badgeColor: "cyan",
     command: null,
@@ -1005,6 +1005,86 @@ export function AgentGuide() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* ── TROUBLESHOOTING: Virus Alert & Storage Not Showing ── */}
+          <div className="rounded-3xl border border-amber-500/30 bg-[#0b1120]/95 backdrop-blur-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-amber-500/20">
+              <ShieldAlert className="w-5 h-5 text-amber-400" />
+              <h3 className="text-base font-extrabold text-white">Troubleshooting</h3>
+              <span className="ml-auto px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-mono font-bold">READ IF ISSUES</span>
+            </div>
+
+            {/* Issue 1: AV False Positive */}
+            <div className="space-y-2.5 text-xs">
+              <div className="font-extrabold text-amber-300 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[10px] font-black shrink-0">1</span>
+                Windows Defender / Antivirus Is Blocking the Bridge
+              </div>
+              <p className="text-slate-300 leading-relaxed font-sans ml-7">
+                <strong className="text-white">Why it happens:</strong> FORENSURE Bridge reads raw disk sectors, opens{" "}
+                <code className="text-amber-300 bg-black/40 px-1 rounded">\\.\ PHYSICALDRIVE</code> handles, and runs PowerShell — the same behaviour antivirus heuristics flag as malware (e.g.{" "}
+                <code className="text-amber-300 bg-black/40 px-1 rounded">Trojan:Win32/Wacatac.B!ml</code>). The bridge is safe and open-source.
+              </p>
+              <div className="ml-7 rounded-xl bg-[#0d1525] border border-amber-500/20 p-4 space-y-2 text-[11px]">
+                <p className="text-amber-300 font-bold font-mono">How to whitelist in Windows Defender:</p>
+                <ol className="space-y-1.5 text-slate-300 font-sans list-decimal list-inside">
+                  <li>Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600 text-white font-mono text-[10px]">Win + S</kbd> → type <strong>Windows Security</strong> → open it</li>
+                  <li>Click <strong>Virus &amp; threat protection</strong></li>
+                  <li>Click <strong>Manage settings</strong> under "Virus &amp; threat protection settings"</li>
+                  <li>Scroll to <strong>Exclusions</strong> → click <strong>Add or remove exclusions</strong></li>
+                  <li>Click <strong>Add an exclusion → Folder</strong></li>
+                  <li>Select the extracted <code className="text-amber-200 font-mono">FORENSURE-Bridge-Windows</code> folder</li>
+                  <li>Click <strong>Select Folder</strong> — then restart the bridge.</li>
+                </ol>
+              </div>
+              <p className="text-slate-400 font-sans text-[11px] ml-7">
+                If the EXE was already quarantined: Windows Security → <strong className="text-white">Protection history</strong> → find the item → click <strong className="text-white">Restore</strong>, then add the exclusion above.
+              </p>
+            </div>
+
+            <div className="border-t border-[#1e2c40]" />
+
+            {/* Issue 2: Storage Not Showing */}
+            <div className="space-y-2.5 text-xs">
+              <div className="font-extrabold text-amber-300 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[10px] font-black shrink-0">2</span>
+                Storage Devices Not Showing Up
+              </div>
+              <ul className="ml-7 space-y-1.5 text-slate-300 font-sans">
+                {[
+                  ["AV blocked the bridge", "The bridge is terminated silently before it can list devices. Do fix #1 first."],
+                  ["Not running as Administrator", "PowerShell's Get-Disk requires elevated rights. Without Admin, the device list is empty."],
+                  ["Bridge not started", "Open the unzipped folder → right-click RUN-AS-ADMIN.bat → \"Run as administrator\". Wait 5 s, then refresh."],
+                  ["Drive has no drive letter", "Open Disk Management (Win+X) — if the drive shows but has no letter, assign one, then refresh."],
+                  ["USB port / cable issue", "Try a different USB 3.0 port (blue port) and a different cable."],
+                ].map(([title, desc]) => (
+                  <li key={title} className="flex gap-2 items-start text-[11px]">
+                    <span className="text-amber-400 mt-0.5 shrink-0 font-bold">→</span>
+                    <span><strong className="text-white">{title}:</strong> {desc}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="border-t border-[#1e2c40]" />
+
+            {/* Issue 3: Fresh Machine Checklist */}
+            <div className="space-y-2 text-xs">
+              <div className="font-extrabold text-amber-300 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[10px] font-black shrink-0">3</span>
+                Setting Up on Another / Lab Machine
+              </div>
+              <p className="text-slate-300 font-sans ml-7 text-[11px]">Each machine needs its own exclusion. Share this with the other user:</p>
+              <div className="ml-7 rounded-xl bg-[#0d1525] border border-[#1e2c40] p-3.5 font-mono text-[10px] text-slate-300 space-y-1">
+                <p className="text-emerald-400 font-bold mb-1.5">FORENSURE Bridge — Fresh Machine Checklist</p>
+                <p>☐ 1. Unzip to a permanent folder (e.g. C:\FORENSURE\)</p>
+                <p>☐ 2. Add that folder to Windows Defender exclusions</p>
+                <p>☐ 3. Right-click SETUP-AUTO-ADMIN.bat → "Run as administrator"</p>
+                <p>☐ 4. Open FORENSURE web app → Hardware Bridge tab → "Verify Now"</p>
+                <p>☐ 5. Status must show: <span className="text-emerald-400">DAEMON ONLINE</span> + <span className="text-emerald-400">ELEVATED</span></p>
+              </div>
+            </div>
           </div>
 
           {/* Quick FAQ / Safety Standards Card */}
