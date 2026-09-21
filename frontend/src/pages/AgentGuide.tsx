@@ -31,7 +31,7 @@ const STEPS = [
     actionHref:
       "https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-Windows.zip",
     actionDownload: "FORENSURE-Bridge-Windows.zip",
-    confirmLabel: "I've downloaded the zip file",
+    confirmLabel: "Downloaded and extracted the zip file",
   },
   {
     id: "extract",
@@ -58,7 +58,7 @@ const STEPS = [
     RUN-AS-ADMIN.bat            -> Start bridge manually (visible terminal)
     STOP-BRIDGE.bat             -> Stop the running bridge`,
     actionLabel: null,
-    confirmLabel: "Bridge is running as Administrator",
+    confirmLabel: "START-FORENSURE.bat ran — bridge is live",
   },
   {
     id: "connect",
@@ -1032,21 +1032,28 @@ export function AgentGuide() {
                 <code className="text-amber-300 bg-black/40 px-1 rounded">\\.\ PHYSICALDRIVE</code> handles, and runs PowerShell — the same behaviour antivirus heuristics flag as malware (e.g.{" "}
                 <code className="text-amber-300 bg-black/40 px-1 rounded">Trojan:Win32/Wacatac.B!ml</code>). The bridge is safe and open-source.
               </p>
+
+              {/* Quick fix */}
+              <div className="ml-7 rounded-xl bg-emerald-950/20 border border-emerald-500/30 p-3.5 space-y-1.5 text-[11px]">
+                <p className="text-emerald-300 font-bold font-mono">✓ Quick Fix — One Click:</p>
+                <p className="text-slate-300 font-sans">
+                  Double-click <code className="text-emerald-300 font-mono font-bold">START-FORENSURE.bat</code> (or{" "}
+                  <code className="text-amber-200 font-mono">ADD-DEFENDER-EXCLUSION.bat</code>) as Administrator.
+                  It automatically adds the exclusion and restarts the bridge.
+                </p>
+              </div>
+
+              {/* Manual fallback */}
               <div className="ml-7 rounded-xl bg-[#0d1525] border border-amber-500/20 p-4 space-y-2 text-[11px]">
-                <p className="text-amber-300 font-bold font-mono">How to whitelist in Windows Defender:</p>
+                <p className="text-amber-300 font-bold font-mono">If the EXE was already quarantined — manual steps:</p>
                 <ol className="space-y-1.5 text-slate-300 font-sans list-decimal list-inside">
                   <li>Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600 text-white font-mono text-[10px]">Win + S</kbd> → type <strong>Windows Security</strong> → open it</li>
-                  <li>Click <strong>Virus &amp; threat protection</strong></li>
-                  <li>Click <strong>Manage settings</strong> under "Virus &amp; threat protection settings"</li>
-                  <li>Scroll to <strong>Exclusions</strong> → click <strong>Add or remove exclusions</strong></li>
-                  <li>Click <strong>Add an exclusion → Folder</strong></li>
-                  <li>Select the extracted <code className="text-amber-200 font-mono">FORENSURE-Bridge-Windows</code> folder</li>
-                  <li>Click <strong>Select Folder</strong> — then restart the bridge.</li>
+                  <li>Click <strong>Protection history</strong> → find the quarantined item → click <strong>Restore</strong></li>
+                  <li>Go to <strong>Virus &amp; threat protection → Manage settings → Exclusions</strong></li>
+                  <li>Click <strong>Add an exclusion → Folder</strong> → select the <code className="text-amber-200 font-mono">FORENSURE-Bridge-Windows</code> folder</li>
+                  <li>Run <code className="text-emerald-300 font-mono">START-FORENSURE.bat</code> again.</li>
                 </ol>
               </div>
-              <p className="text-slate-400 font-sans text-[11px] ml-7">
-                If the EXE was already quarantined: Windows Security → <strong className="text-white">Protection history</strong> → find the item → click <strong className="text-white">Restore</strong>, then add the exclusion above.
-              </p>
             </div>
 
             <div className="border-t border-[#1e2c40]" />
@@ -1059,9 +1066,9 @@ export function AgentGuide() {
               </div>
               <ul className="ml-7 space-y-1.5 text-slate-300 font-sans">
                 {[
-                  ["AV blocked the bridge", "The bridge is terminated silently before it can list devices. Do fix #1 first."],
-                  ["Not running as Administrator", "PowerShell's Get-Disk requires elevated rights. Without Admin, the device list is empty."],
-                  ["Bridge not started", "Open the unzipped folder → right-click RUN-AS-ADMIN.bat → \"Run as administrator\". Wait 5 s, then refresh."],
+                  ["AV blocked the bridge", "The bridge is terminated before it can list devices. Run START-FORENSURE.bat first — it fixes the AV issue automatically."],
+                  ["Not running as Administrator", "PowerShell's Get-Disk requires elevated rights. START-FORENSURE.bat handles this automatically."],
+                  ["Bridge not started", "Double-click START-FORENSURE.bat in the unzipped folder. Wait 5 seconds, then refresh devices."],
                   ["Drive has no drive letter", "Open Disk Management (Win+X) — if the drive shows but has no letter, assign one, then refresh."],
                   ["USB port / cable issue", "Try a different USB 3.0 port (blue port) and a different cable."],
                 ].map(([title, desc]) => (
@@ -1081,14 +1088,14 @@ export function AgentGuide() {
                 <span className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[10px] font-black shrink-0">3</span>
                 Setting Up on Another / Lab Machine
               </div>
-              <p className="text-slate-300 font-sans ml-7 text-[11px]">Each machine needs its own exclusion. Share this with the other user:</p>
+              <p className="text-slate-300 font-sans ml-7 text-[11px]">Share this 3-step checklist with the other user — that's all they need:</p>
               <div className="ml-7 rounded-xl bg-[#0d1525] border border-[#1e2c40] p-3.5 font-mono text-[10px] text-slate-300 space-y-1">
-                <p className="text-emerald-400 font-bold mb-1.5">FORENSURE Bridge — Fresh Machine Checklist</p>
-                <p>☐ 1. Unzip to a permanent folder (e.g. C:\FORENSURE\)</p>
-                <p>☐ 2. Add that folder to Windows Defender exclusions</p>
-                <p>☐ 3. Right-click SETUP-AUTO-ADMIN.bat → "Run as administrator"</p>
-                <p>☐ 4. Open FORENSURE web app → Hardware Bridge tab → "Verify Now"</p>
-                <p>☐ 5. Status must show: <span className="text-emerald-400">DAEMON ONLINE</span> + <span className="text-emerald-400">ELEVATED</span></p>
+                <p className="text-emerald-400 font-bold mb-1.5">FORENSURE Bridge — Fresh Machine Setup (3 Steps)</p>
+                <p>☐ 1. Unzip <span className="text-cyan-300">FORENSURE-Bridge-Windows.zip</span> to any folder (e.g. C:\FORENSURE\)</p>
+                <p>☐ 2. Double-click <span className="text-emerald-400 font-bold">START-FORENSURE.bat</span> → click Yes on UAC prompt</p>
+                <p className="text-slate-500 pl-4">(This adds AV exclusion + starts bridge + opens web app — all automatic)</p>
+                <p>☐ 3. In the web app → Hardware Bridge tab → click <span className="text-cyan-300">"Verify Now"</span></p>
+                <p className="text-slate-500 pl-4">Status must show: <span className="text-emerald-400">DAEMON ONLINE</span> + <span className="text-emerald-400">ELEVATED</span></p>
               </div>
             </div>
           </div>
