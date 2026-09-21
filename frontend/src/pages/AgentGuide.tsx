@@ -23,7 +23,7 @@ const STEPS = [
     title: "Download FORENSURE Bridge",
     task: "Get the pre-compiled local hardware agent for Windows",
     detail:
-      "The Bridge is a zero-install standalone binary (~29 MB). No Python, Node.js, or any runtime is required. Everything is pre-bundled — just download the zip and you're ready for the next step. ⚠️ Windows Defender may flag the EXE as a false positive (it reads raw disk sectors — the same as forensic tools). Before extracting, add the destination folder to Windows Defender exclusions. See the Troubleshooting section on the right for exact steps.",
+      "The Bridge is a zero-install standalone binary (~29 MB). No Python, Node.js, or any runtime is required. Extract the zip and double-click START-FORENSURE.bat — it handles antivirus exclusion, admin setup, and launching the bridge all in one click.",
     badge: "29 MB • Standalone EXE",
     badgeColor: "cyan",
     command: null,
@@ -37,29 +37,26 @@ const STEPS = [
     id: "extract",
     number: "02",
     icon: ShieldCheck,
-    title: "Extract & Run as Administrator (Mandatory)",
-    task: "Administrator privileges are strictly mandatory to access physical drives and raw sectors",
+    title: "Extract & Launch — One Click",
+    task: "Double-click START-FORENSURE.bat — it handles everything automatically",
     detail:
-      "Windows NT kernel security blocks standard user accounts from reading raw drive volumes (such as \\\\.\\D:). To scan raw sectors, parse NTFS Master File Tables ($MFT), and recover permanently deleted or emptied Recycle Bin files, FORENSURE Bridge MUST run with Administrator privileges.",
-    badge: "MANDATORY REQUIREMENT",
-    badgeColor: "rose",
-    command: `[STEP A - Do this FIRST to fix antivirus alerts]:
-    Right-click ADD-DEFENDER-EXCLUSION.bat -> "Run as administrator"
-    -> Automatically whitelists this folder in Windows Defender.
-    -> Prevents false-positive virus alerts on the bridge EXE.
+      "After extracting the zip, just double-click START-FORENSURE.bat. It automatically: adds Windows Defender exclusion (fixes virus alerts), registers the bridge to start with Windows (no UAC popups ever again), and launches the bridge — all in one go. No need to touch any other file.",
+    badge: "ONE CLICK SETUP",
+    badgeColor: "emerald",
+    command: `[RECOMMENDED — One-Click Setup]:
+    Double-click START-FORENSURE.bat
+    -> Adds Windows Defender exclusion (no more virus alerts)
+    -> Kills any old bridge process on port 8000
+    -> Registers auto-start Windows Task with Highest Privileges
+    -> Launches FORENSURE Bridge as Administrator
+    -> Opens the web app in your browser
+    (UAC will prompt once — click Yes)
 
-[STEP B - Start the bridge (pick one mode)]:
-
-[*] Mode 1 (Silent Auto-Admin - Recommended):
-    Right-click SETUP-AUTO-ADMIN.bat -> "Run as administrator"
-    -> Configures Windows Task Scheduler with Highest Privileges.
-    -> Runs silently in background (Zero UAC Popups, Zero Terminal Windows).
-
-[*] Mode 2 (Interactive Terminal):
-    Right-click RUN-AS-ADMIN.bat -> "Run as administrator"
-
-[*] To Update an existing running bridge:
-    Right-click UPDATE-BRIDGE.bat -> "Run as administrator"`,
+[Advanced — Individual Scripts]:
+    ADD-DEFENDER-EXCLUSION.bat  -> Whitelist folder in Defender only
+    SETUP-AUTO-ADMIN.bat        -> Register auto-start task only
+    RUN-AS-ADMIN.bat            -> Start bridge manually (visible terminal)
+    STOP-BRIDGE.bat             -> Stop the running bridge`,
     actionLabel: null,
     confirmLabel: "Bridge is running as Administrator",
   },
@@ -558,21 +555,31 @@ export function AgentGuide() {
                 </div>
               )}
 
-              {/* Step 2: Extract & Run as Administrator (Mandatory Interactive Section) */}
+              {/* Step 2: One-Click Setup */}
               {step.id === "extract" && (
                 <div className="space-y-4">
-                  {/* Mandatory Requirement Banner */}
-                  <div className="rounded-2xl border border-rose-500/40 bg-rose-950/20 p-5 space-y-2">
-                    <div className="flex items-center gap-2 text-rose-400 font-bold text-xs sm:text-sm">
-                      <ShieldAlert className="w-5 h-5" />
-                      <span>MANDATORY REQUIREMENT: Administrator Privileges</span>
+
+                  {/* Hero: START-FORENSURE.bat */}
+                  <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-5 space-y-3">
+                    <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                      <ShieldCheck className="w-5 h-5" />
+                      <span>ONE-CLICK SETUP — START-FORENSURE.bat</span>
                     </div>
                     <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                      Windows NT kernel security restricts direct physical disk access and NTFS Master File Table ($MFT) carving on drive <span className="text-rose-300 font-mono font-semibold">D:</span> to elevated Administrator accounts. Running without Administrator rights prevents detecting permanently deleted and emptied Recycle Bin files.
+                      After extracting the zip, just <strong className="text-white">double-click</strong>{" "}
+                      <code className="text-emerald-300 bg-black/50 px-2 py-0.5 rounded font-mono font-bold">START-FORENSURE.bat</code>.
+                      Windows will ask for UAC once — click <strong className="text-white">Yes</strong>. That's it.
                     </p>
+                    <div className="p-3.5 bg-black/60 border border-emerald-500/20 rounded-xl text-xs font-mono text-emerald-300/90 space-y-1.5">
+                      <div>✓ Adds Windows Defender exclusion (fixes virus alerts)</div>
+                      <div>✓ Stops any old bridge process on port 8000</div>
+                      <div>✓ Registers Windows Task — auto-starts on every login</div>
+                      <div>✓ Launches FORENSURE Bridge as Administrator</div>
+                      <div>✓ Opens the web app in your browser</div>
+                    </div>
                   </div>
 
-                  {/* Live Status & Interactive "Run as Administrator" Button */}
+                  {/* Live bridge status */}
                   <div className="rounded-2xl border border-[#1e2c40] bg-[#090e1a] p-5 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -590,7 +597,7 @@ export function AgentGuide() {
                             ? "Administrator Mode: Active & Verified"
                             : agentStatus.connected
                             ? "Bridge Running as Standard User — Elevation Required"
-                            : "Bridge Not Running"}
+                            : "Bridge Not Running — Run START-FORENSURE.bat"}
                         </span>
                       </div>
                       {privileges?.is_admin && (
@@ -608,7 +615,7 @@ export function AgentGuide() {
                     ) : agentStatus.connected ? (
                       <div className="space-y-3">
                         <p className="text-xs sm:text-sm text-slate-300">
-                          The bridge is currently running with standard user rights. Click the button below to grant Administrator privileges via Windows UAC:
+                          The bridge is running but not elevated. Click below to grant Administrator privileges:
                         </p>
                         <button
                           onClick={handleElevate}
@@ -626,43 +633,34 @@ export function AgentGuide() {
                       </div>
                     ) : (
                       <p className="text-xs sm:text-sm text-slate-400">
-                        The bridge is not detected yet on http://127.0.0.1:8000. Follow one of the launch options below to start with Administrator rights.
+                        Bridge not detected on http://127.0.0.1:8000. Double-click{" "}
+                        <code className="text-emerald-300 font-mono">START-FORENSURE.bat</code> to start it.
                       </p>
                     )}
                   </div>
 
-                  {/* Option 1: Silent Auto-Admin Card */}
-                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-5 space-y-3">
-                    <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs sm:text-sm">
-                      <ShieldCheck className="w-5 h-5" />
-                      <span>OPTION 1 (Recommended): 100% Silent Background Operation</span>
+                  {/* Advanced alternatives (collapsed look) */}
+                  <div className="rounded-2xl border border-[#1e2c40] bg-[#090e1a] p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-slate-400 font-bold text-xs">
+                      <Terminal className="w-4 h-4" />
+                      <span>Advanced — Individual Scripts</span>
                     </div>
-                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                      Right-click <code className="text-emerald-300 bg-black/50 px-2 py-0.5 rounded font-mono font-bold">SETUP-AUTO-ADMIN.bat</code> and select <strong>"Run as administrator"</strong>.
-                    </p>
-                    <div className="p-3.5 bg-black/60 border border-emerald-500/20 rounded-xl text-xs font-mono text-emerald-300/90 space-y-1.5">
-                      <div>✓ Registers Windows Scheduled Task with Highest Privileges</div>
-                      <div>✓ Zero terminal clutter — runs hidden in the background</div>
-                      <div>✓ Zero future UAC prompts — permanently elevated</div>
-                      <div>✓ Stop anytime with <code className="text-slate-300">STOP-BRIDGE.bat</code></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono">
+                      {[
+                        ["ADD-DEFENDER-EXCLUSION.bat", "Whitelist in Defender only"],
+                        ["SETUP-AUTO-ADMIN.bat", "Register auto-start task only"],
+                        ["RUN-AS-ADMIN.bat", "Start bridge (visible terminal)"],
+                        ["STOP-BRIDGE.bat", "Stop the running bridge"],
+                      ].map(([file, desc]) => (
+                        <div key={file} className="p-2.5 rounded-xl bg-black/40 border border-[#1e2c40]">
+                          <div className="text-cyan-300 font-bold">{file}</div>
+                          <div className="text-slate-500 mt-0.5">{desc}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Option 2: Interactive Terminal Card */}
-                  <div className="rounded-2xl border border-[#1e2c40] bg-[#090e1a] p-5 space-y-2">
-                    <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs sm:text-sm">
-                      <Terminal className="w-5 h-5" />
-                      <span>OPTION 2: Interactive Console Window</span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                      Right-click <code className="text-cyan-300 bg-black/50 px-2 py-0.5 rounded font-mono">RUN-AS-ADMIN.bat</code> and select <strong>"Run as administrator"</strong>.
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      A visible command prompt window will remain open displaying live low-level I/O logs.
-                    </p>
-                  </div>
-
-                  {/* Manual Alternative */}
+                  {/* Manual PowerShell fallback */}
                   <div className="space-y-2">
                     <span className="text-slate-400 text-xs font-semibold">Manual Alternative (PowerShell):</span>
                     <div className="p-3 bg-black/60 border border-[#1e2c40] rounded-xl font-mono text-xs text-cyan-300 flex items-center justify-between gap-2">
@@ -678,6 +676,7 @@ export function AgentGuide() {
                   </div>
                 </div>
               )}
+
 
               {/* Device chips (for connect step) */}
               {step.chips && (
