@@ -43,16 +43,23 @@ const STEPS = [
       "Windows NT kernel security blocks standard user accounts from reading raw drive volumes (such as \\\\.\\D:). To scan raw sectors, parse NTFS Master File Tables ($MFT), and recover permanently deleted or emptied Recycle Bin files, FORENSURE Bridge MUST run with Administrator privileges.",
     badge: "MANDATORY REQUIREMENT",
     badgeColor: "rose",
-    command: `[*] Mode 1 (Silent Auto-Admin - Recommended):
+    command: `[STEP A - Do this FIRST to fix antivirus alerts]:
+    Right-click ADD-DEFENDER-EXCLUSION.bat -> "Run as administrator"
+    -> Automatically whitelists this folder in Windows Defender.
+    -> Prevents false-positive virus alerts on the bridge EXE.
+
+[STEP B - Start the bridge (pick one mode)]:
+
+[*] Mode 1 (Silent Auto-Admin - Recommended):
     Right-click SETUP-AUTO-ADMIN.bat -> "Run as administrator"
     -> Configures Windows Task Scheduler with Highest Privileges.
-    -> Runs silently in background forever (Zero UAC Popups, Zero Terminal Windows).
+    -> Runs silently in background (Zero UAC Popups, Zero Terminal Windows).
 
 [*] Mode 2 (Interactive Terminal):
     Right-click RUN-AS-ADMIN.bat -> "Run as administrator"
 
 [*] To Update an existing running bridge:
-    Right-click UPDATE-BRIDGE.bat -> "Run as administrator" (restarts bridge with latest fixes)`,
+    Right-click UPDATE-BRIDGE.bat -> "Run as administrator"`,
     actionLabel: null,
     confirmLabel: "Bridge is running as Administrator",
   },
