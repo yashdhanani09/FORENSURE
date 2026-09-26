@@ -1,0 +1,263 @@
+name: Build ForenSure Bridge — All Platforms
+
+# ─────────────────────────────────────────────────────────────────
+# Triggers
+# ─────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/build-all-platforms.yml"
+  workflow_dispatch: # allows manual trigger from GitHub UI
+
+# ─────────────────────────────────────────────────────────────────
+# Jobs — run all three OS builds in parallel
+# ─────────────────────────────────────────────────────────────────
+jobs:
+
+  # ── Windows ────────────────────────────────────────────────────
+  build-windows:
+    name: Build Windows (.exe)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies + PyInstaller
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build FORENSURE-Bridge.exe with PyInstaller
+        run: |
+          cd backend
+          pyinstaller --clean --noconfirm FORENSURE-Bridge.spec
+
+      - name: Copy Windows helper scripts into dist
+        run: |
+          cd backend
+          Copy-Item RUN-AS-ADMIN.bat           dist\FORENSURE-Bridge\ -Force
+          Copy-Item START-BRIDGE.bat           dist\FORENSURE-Bridge\ -Force
+          Copy-Item STOP-BRIDGE.bat            dist\FORENSURE-Bridge\ -Force
+          Copy-Item SETUP-AUTO-ADMIN.bat       dist\FORENSURE-Bridge\ -Force
+          if (Test-Path ADD-DEFENDER-EXCLUSION.bat) {
+            Copy-Item ADD-DEFENDER-EXCLUSION.bat dist\FORENSURE-Bridge\ -Force
+          }
+          if (Test-Path START-FORENSURE.bat) {
+            Copy-Item START-FORENSURE.bat dist\FORENSURE-Bridge\ -Force
+          }
+
+      - name: Package into FORENSURE-Bridge-Windows.zip
+        run: |
+          cd backend
+          Compress-Archive -Path "dist\FORENSURE-Bridge\*" `
+            -DestinationPath "FORENSURE-Bridge-Windows.zip" -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FORENSURE-Bridge-Windows
+          path: backend/FORENSURE-Bridge-Windows.zip
+          retention-days: 30
+
+  # ── macOS ──────────────────────────────────────────────────────
+  build-macos:
+    name: Build macOS (Universal Binary)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies + PyInstaller
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build FORENSURE-Bridge binary (macOS)
+        run: |
+          cd backend
+          pyinstaller --clean --noconfirm \
+            --name FORENSURE-Bridge \
+            --hidden-import uvicorn \
+            --hidden-import uvicorn.logging \
+            --hidden-import uvicorn.loops \
+            --hidden-import uvicorn.loops.auto \
+            --hidden-import uvicorn.protocols \
+            --hidden-import uvicorn.protocols.http \
+            --hidden-import uvicorn.protocols.http.auto \
+            --hidden-import uvicorn.protocols.websockets \
+            --hidden-import uvicorn.protocols.websockets.auto \
+            --hidden-import reportlab \
+            --hidden-import PIL \
+            --hidden-import sqlalchemy.sql.default_comparator \
+            --collect-all app \
+            agent_entry.py
+
+      - name: Create macOS launcher script
+        run: |
+          cat > backend/dist/FORENSURE-Bridge/START-FORENSURE.sh << 'EOF'
+          #!/bin/bash
+          # ForenSure Bridge Launcher for macOS
+          # Double-click this file or run: bash START-FORENSURE.sh
+          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          echo "======================================"
+          echo "  FORENSURE Bridge — macOS Launcher  "
+          echo "======================================"
+          echo ""
+          echo "[*] Starting ForenSure Bridge on port 8000..."
+          echo "[*] Keep this terminal window open while using ForenSure."
+          echo "[*] Press Ctrl+C to stop the bridge."
+          echo ""
+          "$SCRIPT_DIR/FORENSURE-Bridge"
+          EOF
+          chmod +x backend/dist/FORENSURE-Bridge/START-FORENSURE.sh
+
+      - name: Package into FORENSURE-Bridge-macOS.zip
+        run: |
+          cd backend/dist
+          zip -r ../../FORENSURE-Bridge-macOS.zip FORENSURE-Bridge/
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FORENSURE-Bridge-macOS
+          path: FORENSURE-Bridge-macOS.zip
+          retention-days: 30
+
+  # ── Linux ──────────────────────────────────────────────────────
+  build-linux:
+    name: Build Linux (x86_64)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y binutils
+
+      - name: Install Python dependencies + PyInstaller
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build FORENSURE-Bridge binary (Linux)
+        run: |
+          cd backend
+          pyinstaller --clean --noconfirm \
+            --name FORENSURE-Bridge \
+            --hidden-import uvicorn \
+            --hidden-import uvicorn.logging \
+            --hidden-import uvicorn.loops \
+            --hidden-import uvicorn.loops.auto \
+            --hidden-import uvicorn.protocols \
+            --hidden-import uvicorn.protocols.http \
+            --hidden-import uvicorn.protocols.http.auto \
+            --hidden-import uvicorn.protocols.websockets \
+            --hidden-import uvicorn.protocols.websockets.auto \
+            --hidden-import reportlab \
+            --hidden-import PIL \
+            --hidden-import sqlalchemy.sql.default_comparator \
+            --collect-all app \
+            agent_entry.py
+
+      - name: Create Linux launcher script
+        run: |
+          cat > backend/dist/FORENSURE-Bridge/START-FORENSURE.sh << 'EOF'
+          #!/bin/bash
+          # ForenSure Bridge Launcher for Linux
+          # Run: bash START-FORENSURE.sh
+          # For raw disk access, run with: sudo bash START-FORENSURE.sh
+          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          echo "======================================"
+          echo "  FORENSURE Bridge — Linux Launcher  "
+          echo "======================================"
+          echo ""
+          if [ "$EUID" -ne 0 ]; then
+            echo "[!] TIP: For raw disk sector access, run as root:"
+            echo "    sudo bash START-FORENSURE.sh"
+            echo ""
+          else
+            echo "[+] Running with root privileges — full raw disk access enabled."
+            echo ""
+          fi
+          echo "[*] Starting ForenSure Bridge on port 8000..."
+          echo "[*] Keep this terminal window open while using ForenSure."
+          echo "[*] Press Ctrl+C to stop."
+          echo ""
+          "$SCRIPT_DIR/FORENSURE-Bridge"
+          EOF
+          chmod +x backend/dist/FORENSURE-Bridge/START-FORENSURE.sh
+          chmod +x backend/dist/FORENSURE-Bridge/FORENSURE-Bridge
+
+      - name: Package into FORENSURE-Bridge-Linux.zip
+        run: |
+          cd backend/dist
+          zip -r ../../FORENSURE-Bridge-Linux.zip FORENSURE-Bridge/
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FORENSURE-Bridge-Linux
+          path: FORENSURE-Bridge-Linux.zip
+          retention-days: 30
+
+  # ── Copy ZIPs to frontend/public after all builds succeed ──────
+  publish-to-frontend:
+    name: Copy ZIPs → frontend/public (for in-app download)
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-macos, build-linux]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Copy ZIPs to frontend/public
+        run: |
+          cp artifacts/FORENSURE-Bridge-Windows/FORENSURE-Bridge-Windows.zip frontend/public/
+          cp artifacts/FORENSURE-Bridge-macOS/FORENSURE-Bridge-macOS.zip     frontend/public/
+          cp artifacts/FORENSURE-Bridge-Linux/FORENSURE-Bridge-Linux.zip     frontend/public/
+
+      - name: Commit and push updated ZIPs
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add frontend/public/FORENSURE-Bridge-Windows.zip \
+                  frontend/public/FORENSURE-Bridge-macOS.zip   \
+                  frontend/public/FORENSURE-Bridge-Linux.zip
+          git diff --staged --quiet || git commit -m "ci: update pre-built binaries for all platforms [skip ci]"
+          git push

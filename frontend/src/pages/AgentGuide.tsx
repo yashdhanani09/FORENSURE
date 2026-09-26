@@ -15,24 +15,90 @@ import {
 // ─────────────────────────────────────────────────────────────────
 // STEP CONFIG — edit this array to customise the entire flow
 // ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+// OS Download configs — one entry per supported platform
+// ─────────────────────────────────────────────────────────────────
+const OS_DOWNLOADS = [
+  {
+    key: "windows",
+    label: "Windows",
+    icon: "🪟",
+    badge: "Win 10 / 11 • .exe • ~29 MB",
+    badgeColor: "cyan",
+    filename: "FORENSURE-Bridge-Windows.zip",
+    href: "https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-Windows.zip",
+    launcher: "START-FORENSURE.bat",
+    launcherNote: "Double-click START-FORENSURE.bat — it auto-handles Defender exclusion, UAC, and auto-start on login.",
+    steps: [
+      "Extract the zip to any folder (e.g. C:\\ForenSure\\)",
+      "Double-click START-FORENSURE.bat",
+      "Click Yes on the UAC prompt — bridge starts with Admin privileges",
+      "Open the ForenSure web app — status bar turns green when live",
+    ],
+  },
+  {
+    key: "macos",
+    label: "macOS",
+    icon: "🍎",
+    badge: "macOS 12+ • Universal Binary • ~30 MB",
+    badgeColor: "emerald",
+    filename: "FORENSURE-Bridge-macOS.zip",
+    href: "https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-macOS.zip",
+    launcher: "START-FORENSURE.sh",
+    launcherNote: "Run START-FORENSURE.sh in Terminal. For raw disk access, prefix with sudo.",
+    steps: [
+      "Extract the zip anywhere (e.g. ~/ForenSure/)",
+      "Open Terminal and cd into the extracted folder",
+      "Run: bash START-FORENSURE.sh",
+      "For raw disk access: sudo bash START-FORENSURE.sh",
+    ],
+  },
+  {
+    key: "linux",
+    label: "Linux",
+    icon: "🐧",
+    badge: "Ubuntu / Debian / Fedora • x86_64 • ~28 MB",
+    badgeColor: "amber",
+    filename: "FORENSURE-Bridge-Linux.zip",
+    href: "https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-Linux.zip",
+    launcher: "START-FORENSURE.sh",
+    launcherNote: "Run START-FORENSURE.sh in a terminal. Use sudo for kernel-level raw sector access via lsblk.",
+    steps: [
+      "Extract the zip: unzip FORENSURE-Bridge-Linux.zip",
+      "Make executable: chmod +x FORENSURE-Bridge",
+      "Run: bash START-FORENSURE.sh",
+      "For raw sector access: sudo bash START-FORENSURE.sh",
+    ],
+  },
+];
+
+/** Detect the user's OS from the browser user agent */
+function detectOS(): "windows" | "macos" | "linux" {
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes("win")) return "windows";
+  if (ua.includes("mac")) return "macos";
+  return "linux";
+}
+
 const STEPS = [
   {
     id: "download",
     number: "01",
     icon: Download,
     title: "Download FORENSURE Bridge",
-    task: "Get the pre-compiled local hardware agent for Windows",
+    task: "Get the pre-compiled standalone binary for your operating system",
     detail:
-      "The Bridge is a zero-install standalone binary (~29 MB). No Python, Node.js, or any runtime is required. Extract the zip and double-click START-FORENSURE.bat — it handles antivirus exclusion, admin setup, and launching the bridge all in one click.",
-    badge: "29 MB • Standalone EXE",
+      "The Bridge is a zero-install standalone binary (~29 MB). No Python, Node.js, or any runtime is required. Pick your OS below — ForenSure supports Windows, macOS, and Linux. Extract the zip and run the launcher script to start the bridge.",
+    badge: "Multi-Platform • Standalone Binary",
     badgeColor: "cyan",
     command: null,
-    actionLabel: "Download FORENSURE-Bridge-Windows.zip",
-    actionHref:
-      "https://github.com/yashdhanani09/FORENSURE/raw/main/frontend/public/FORENSURE-Bridge-Windows.zip",
-    actionDownload: "FORENSURE-Bridge-Windows.zip",
+    actionLabel: null,
+    actionHref: null,
+    actionDownload: null,
     confirmLabel: "Downloaded and extracted the zip file",
+    isDownload: true,
   },
+
   {
     id: "extract",
     number: "02",
@@ -223,6 +289,9 @@ export function AgentGuide() {
   const [checking, setChecking] = useState(false);
   const [panelKey, setPanelKey] = useState(0); // force re-mount for animation
   const navigate = useNavigate();
+
+  // OS selector for the download step — auto-detected from browser
+  const [selectedOS, setSelectedOS] = useState<"windows" | "macos" | "linux">(detectOS());
 
   // Administrator Privileges & Elevation State (ONLY in Hardware Guide)
   const [privileges, setPrivileges] = useState<RecoveryPrivileges | null>(null);
@@ -507,24 +576,98 @@ export function AgentGuide() {
               {/* Detail paragraph */}
               <p className="text-sm sm:text-base text-slate-300 leading-relaxed">{step.detail}</p>
 
-              {/* Download action button (Step 1) */}
-              {step.actionHref && !step.isVerify && (
-                <div className="pt-2">
-                  <a
-                    href={step.actionHref}
-                    download={step.actionDownload}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-black text-base transition shadow-xl shadow-cyan-950/60"
-                  >
-                    <Download className="h-5 w-5" />
-                    {step.actionLabel}
-                  </a>
-                  <div className="mt-3 flex items-center gap-4 text-xs font-mono text-slate-400">
-                    <span>✓ SHA-256 Verified Binary</span>
-                    <span>✓ Standalone EXE</span>
-                    <span>✓ No Runtimes Required</span>
+
+              {/* ── OS-Aware Download Selector (Step 1) ── */}
+              {step.isDownload && (
+                <div className="space-y-4 pt-1">
+                  {/* Auto-detected hint */}
+                  <div className="flex items-center gap-2 text-xs font-mono text-slate-400 bg-slate-800/40 px-3 py-1.5 rounded-lg w-fit">
+                    <Info className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>
+                      Detected OS: <span className="text-cyan-300 font-bold">{selectedOS.charAt(0).toUpperCase() + selectedOS.slice(1)}</span> — auto-selected below
+                    </span>
                   </div>
+
+                  {/* OS Tab Pills */}
+                  <div className="flex gap-2 flex-wrap">
+                    {OS_DOWNLOADS.map((os) => (
+                      <button
+                        key={os.key}
+                        onClick={() => setSelectedOS(os.key as any)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
+                          selectedOS === os.key
+                            ? "bg-cyan-500/20 border-cyan-500/60 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]"
+                            : "bg-slate-800/40 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white"
+                        }`}
+                      >
+                        <span className="text-base">{os.icon}</span>
+                        {os.label}
+                        {detectOS() === os.key && (
+                          <span className="text-[10px] font-mono bg-cyan-500/20 text-cyan-400 px-1.5 py-0.5 rounded-md border border-cyan-500/30">
+                            YOUR OS
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Selected OS Download Card */}
+                  {OS_DOWNLOADS.filter((os) => os.key === selectedOS).map((os) => (
+                    <div key={os.key} className="rounded-2xl border border-[#1e2c40] bg-[#090e1a] p-5 space-y-4">
+                      {/* Badge */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{os.icon}</span>
+                        <div>
+                          <p className="font-bold text-white text-sm">{os.label} Build</p>
+                          <span className="text-[11px] font-mono text-slate-400">{os.badge}</span>
+                        </div>
+                      </div>
+
+                      {/* Big Download Button */}
+                      <a
+                        href={os.href}
+                        download={os.filename}
+                        className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-black text-base transition shadow-xl shadow-cyan-950/60"
+                      >
+                        <Download className="h-5 w-5" />
+                        Download {os.filename}
+                      </a>
+
+                      {/* Trust badges */}
+                      <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-slate-400">
+                        <span>✓ Standalone Binary</span>
+                        <span>✓ No Runtimes Required</span>
+                        <span>✓ Built via GitHub Actions CI</span>
+                      </div>
+
+                      {/* Setup steps */}
+                      <div className="rounded-xl bg-black/40 border border-[#1e2c40] p-4 space-y-2">
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 mb-3">
+                          <Terminal className="h-4 w-4" />
+                          SETUP INSTRUCTIONS — {os.label.toUpperCase()}
+                        </div>
+                        {os.steps.map((s, i) => (
+                          <div key={i} className="flex items-start gap-3 text-xs font-mono">
+                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center font-black text-[10px]">
+                              {i + 1}
+                            </span>
+                            <span className="text-slate-300 leading-relaxed">{s}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Launcher note */}
+                      <div className="flex items-start gap-2 text-xs text-slate-400 bg-slate-800/30 px-3 py-2 rounded-xl border border-slate-700">
+                        <Info className="h-3.5 w-3.5 text-cyan-400 mt-0.5 flex-shrink-0" />
+                        <span>
+                          <span className="text-cyan-300 font-bold">{os.launcher}</span> — {os.launcherNote}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
+
 
               {/* Terminal block (for extract step) */}
               {step.command && (
