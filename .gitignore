@@ -38,6 +38,5 @@ backend/dist/
 *.zip
 !frontend/public/*.zip
 
-# PyInstaller build artifacts
+# PyInstaller build artifacts (keep build output ignored, but track the spec files)
 backend/build/
-backend/*.spec

@@ -43,17 +43,25 @@ jobs:
           pyinstaller --clean --noconfirm FORENSURE-Bridge.spec
 
       - name: Copy Windows helper scripts into dist
+        shell: pwsh
         run: |
           cd backend
-          Copy-Item RUN-AS-ADMIN.bat           dist\FORENSURE-Bridge\ -Force
-          Copy-Item START-BRIDGE.bat           dist\FORENSURE-Bridge\ -Force
-          Copy-Item STOP-BRIDGE.bat            dist\FORENSURE-Bridge\ -Force
-          Copy-Item SETUP-AUTO-ADMIN.bat       dist\FORENSURE-Bridge\ -Force
-          if (Test-Path ADD-DEFENDER-EXCLUSION.bat) {
-            Copy-Item ADD-DEFENDER-EXCLUSION.bat dist\FORENSURE-Bridge\ -Force
-          }
-          if (Test-Path START-FORENSURE.bat) {
-            Copy-Item START-FORENSURE.bat dist\FORENSURE-Bridge\ -Force
+          $dest = "dist\FORENSURE-Bridge"
+          $files = @(
+            "RUN-AS-ADMIN.bat",
+            "START-BRIDGE.bat",
+            "STOP-BRIDGE.bat",
+            "SETUP-AUTO-ADMIN.bat",
+            "ADD-DEFENDER-EXCLUSION.bat",
+            "START-FORENSURE.bat"
+          )
+          foreach ($f in $files) {
+            if (Test-Path $f) {
+              Copy-Item $f $dest -Force
+              Write-Host "Copied: $f"
+            } else {
+              Write-Host "Skipped (not found): $f"
+            }
           }
 
       - name: Package into FORENSURE-Bridge-Windows.zip
